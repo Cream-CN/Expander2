@@ -1,0 +1,7 @@
+<Solution>
+  <Configurations>
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Project Path="Expander.vcxproj" Id="9fd7bb5a-9956-4ee1-a537-69d481697d0a" />
+</Solution>
