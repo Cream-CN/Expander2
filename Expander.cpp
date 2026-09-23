@@ -1,7 +1,6 @@
 ﻿#define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
 #include <windows.h>
-
 #include <algorithm>
 #include <cctype>
 #include <cstdint>
@@ -16,16 +15,14 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
-
 namespace {
     constexpr int IDM_ABOUT = 1001;
     constexpr int IDM_EXIT = 1002;
     constexpr int IDM_HELP = 1003;
+    constexpr int IDM_LEGAL = 1004;
     constexpr int IDM_FS = 101;
     constexpr int IDM_FSALTER = 102;
-
     enum class MagmaType : int { Weak = 0, Medium = 1, Strong = 2 };
-
     [[nodiscard]] std::string wstring_to_utf8(std::wstring_view wstr) {
         if (wstr.empty()) return {};
         const int size_needed = ::WideCharToMultiByte(
@@ -45,7 +42,6 @@ namespace {
             out.data(), size_needed);
         return out;
     }
-
     // ============================================================
     // Entry：新增 ykey 缓存，把 vertical_compare 变成一次整数比较
     // ============================================================
@@ -58,13 +54,11 @@ namespace {
         Entry* rightleg_up = nullptr;
         Entry* rightleg_down = nullptr;
         Entry* leftleg_down = nullptr;
-
         Entry() = default;
         Entry(int v, int x_, std::vector<int> y_)
             : value(v), x(x_), y(std::move(y_)) {
             refresh_key();
         }
-
         // y 改变后必须调用
         void refresh_key() noexcept {
             uint64_t k = static_cast<uint64_t>(y.size() & 0xFF) << 56;
@@ -74,7 +68,6 @@ namespace {
             ykey = k;
         }
     };
-
     [[nodiscard]] inline uint64_t make_ykey(const std::vector<int>& y) noexcept {
         uint64_t k = static_cast<uint64_t>(y.size() & 0xFF) << 56;
         const size_t n = std::min<size_t>(y.size(), 7);
@@ -82,7 +75,6 @@ namespace {
             k |= (static_cast<uint64_t>(y[i] & 0xFFFF) << (i * 8));
         return k;
     }
-
     // ============================================================
     // EntryArena：统一所有权，消除裸 new 泄漏
     // ============================================================
@@ -101,9 +93,7 @@ namespace {
     private:
         std::vector<std::unique_ptr<Entry>> nodes_;
     };
-
     using Mountain = std::vector<std::vector<Entry*>>;
-
     // ============================================================
     // 比较：全部基于 ykey，O(1)
     // ============================================================
@@ -117,7 +107,6 @@ namespace {
     [[nodiscard]] inline bool key_greater(const Entry* a, const Entry* b) noexcept {
         return a->ykey > b->ykey;
     }
-
     // ============================================================
     // y 操作
     // ============================================================
@@ -131,7 +120,6 @@ namespace {
         }
         return -1;
     }
-
     [[nodiscard]] inline std::vector<int> vertical_increase(const std::vector<int>& y, int d) {
         std::vector<int> c = y;
         if (d >= static_cast<int>(c.size())) {
@@ -144,7 +132,6 @@ namespace {
         std::fill_n(c.begin(), d, 0);
         return c;
     }
-
     // ============================================================
     // Entry 创建
     // ============================================================
@@ -161,7 +148,6 @@ namespace {
         parent->leftleg_up.push_back(newentry);
         return newentry;
     }
-
     [[nodiscard]] Mountain from_sequence(EntryArena& arena, const std::vector<int>& seq) {
         Mountain mountain;
         mountain.reserve(seq.size());
@@ -178,7 +164,6 @@ namespace {
         }
         return mountain;
     }
-
     [[nodiscard]] std::vector<int> to_sequence(const Mountain& mountain) {
         std::vector<int> seq;
         seq.reserve(mountain.size());
@@ -189,7 +174,6 @@ namespace {
         }
         return seq;
     }
-
     // ============================================================
     // 列查询：比较改用 ykey
     // ============================================================
@@ -207,7 +191,6 @@ namespace {
         }
         return column[static_cast<size_t>(i2)];
     }
-
     [[nodiscard]] Entry* find_higherequal(const std::vector<Entry*>& column,
         const std::vector<int>& y) {
         if (column.empty()) return nullptr;
@@ -222,14 +205,12 @@ namespace {
         }
         return column[static_cast<size_t>(i1)];
     }
-
     [[nodiscard]] std::vector<Entry*> yslice(const std::vector<Entry*>& column,
         const std::vector<int>& lowequal,
         const std::vector<int>& high) {
         if (column.empty()) return {};
         const uint64_t low_key = make_ykey(lowequal);
         const uint64_t high_key = make_ykey(high);
-
         int i1 = 0, i2 = static_cast<int>(column.size()) - 1;
         while (i1 < i2) {
             int i = (i1 + i2) / 2;
@@ -253,7 +234,6 @@ namespace {
             result.push_back(column[static_cast<size_t>(i)]);
         return result;
     }
-
     // ============================================================
     // 收集
     // ============================================================
@@ -269,7 +249,6 @@ namespace {
         }
         return collection;
     }
-
     [[nodiscard]] std::vector<Entry*> collect1D(
         Entry* working_entry, std::vector<Entry*> collection = {}) {
         for (Entry* child : working_entry->rightleg_down->leftleg_up) {
@@ -281,7 +260,6 @@ namespace {
         }
         return collection;
     }
-
     // ============================================================
     // 列操作
     // ============================================================
@@ -289,7 +267,6 @@ namespace {
         if (idx >= static_cast<int>(m.size()))
             m.resize(static_cast<size_t>(idx) + 1);
     }
-
     // 有序插入（降序），避免全量排序
     inline void insert_sorted_desc(std::vector<Entry*>& column, Entry* e) {
         if (column.empty()) { column.push_back(e); return; }
@@ -301,13 +278,11 @@ namespace {
             [](const Entry* a, const Entry* b) { return a->ykey > b->ykey; });
         column.insert(it, e);
     }
-
     // 兜底：只在列确实乱序时才全排序
     inline void sort_column_desc_if_needed(std::vector<Entry*>& column) {
         if (std::ranges::is_sorted(column, key_greater)) return;
         std::ranges::sort(column, key_greater);
     }
-
     inline void link_vertical(std::vector<Entry*>& column) {
         for (size_t i = 0; i + 1 < column.size(); ++i) {
             if (!column[i] || !column[i + 1]) continue;
@@ -321,7 +296,6 @@ namespace {
             e->value = e->rightleg_up->value + e->rightleg_up->leftleg_down->value;
         }
     }
-
     // ============================================================
     // 边复制 / 填充（改用 arena，修掉裸 new）
     // ============================================================
@@ -340,7 +314,6 @@ namespace {
             insert_sorted_desc(mountain[static_cast<size_t>(targetx)], newentry);
         }
     }
-
     void copy_single_edge(EntryArena& arena, Mountain& mountain,
         Entry* source_entry, int x_offset, int BR_x,
         const std::vector<int>& targety = {}) {
@@ -368,7 +341,6 @@ namespace {
         ensure_column(mountain, col_idx);
         insert_sorted_desc(mountain[static_cast<size_t>(col_idx)], newentry);
     }
-
     // ============================================================
     // draw_mountain
     // ============================================================
@@ -392,7 +364,6 @@ namespace {
         }
         return mountain;
     }
-
     [[nodiscard]] Entry* find_entry_by_coords(const Mountain& mountain,
         int x, const std::vector<int>& y) {
         if (x < 0 || x >= static_cast<int>(mountain.size())) return nullptr;
@@ -402,7 +373,6 @@ namespace {
         }
         return nullptr;
     }
-
     // ============================================================
     // 策略
     // ============================================================
@@ -420,14 +390,12 @@ namespace {
         }
         static constexpr bool kHasPhantomBranch = true;
     };
-
     // ============================================================
     // magma_impl
     // ============================================================
     template <class Policy>
     [[nodiscard]] std::vector<int> magma_impl(const std::vector<int>& seq, int FSterm) {
         if (seq.size() < 2) return seq;
-
         EntryArena arena;
         Mountain mountain = draw_mountain(arena, from_sequence(arena, seq));
         auto& child = mountain.back();
@@ -435,7 +403,6 @@ namespace {
         const int width = static_cast<int>(mountain.size()) - 1 - BR->x;
         const int BR_x = BR->x;
         const std::vector<int> BR_y = BR->y;
-
         auto& top_col = mountain[static_cast<size_t>(BR_x)];
         int idx = 0;
         while (idx < static_cast<int>(top_col.size()) && top_col[static_cast<size_t>(idx)] != BR) ++idx;
@@ -443,14 +410,11 @@ namespace {
         for (int i = idx; i < static_cast<int>(top_col.size()) - 1; ++i)
             top.push_back(top_col[static_cast<size_t>(i)]);
         top.insert(top.begin(), child[0]);
-
         std::vector<int> s = seq;
         --s[s.size() - 1];
         Mountain newmountain = draw_mountain(arena, from_sequence(arena, s));
-
         Entry* BR_new = find_entry_by_coords(newmountain, BR_x, BR_y);
         if (!BR_new) return seq;
-
         std::vector<std::vector<Entry*>> magma_entries(static_cast<size_t>(width) + 1);
         for (Entry* BR1 = BR_new; BR1 != nullptr; BR1 = BR1->rightleg_down) {
             auto collected = Policy::collect(BR1);
@@ -479,7 +443,6 @@ namespace {
             }
             if (BR1->y.empty()) break;
         }
-
         for (int n = 1; n <= FSterm; ++n) {
             std::vector<Entry*> ref;
             if (!newmountain.empty() && !newmountain.back().empty()) {
@@ -488,22 +451,18 @@ namespace {
                     ref.push_back(find_lower(newmountain.back(), topentry->y));
                 }
             }
-
             for (int dx = 1; dx <= width; ++dx) {
                 const int col_idx = BR_new->x + n * width + dx;
                 ensure_column(newmountain, col_idx);
                 auto& column = newmountain[static_cast<size_t>(col_idx)];
                 column.clear();
-
                 for (Entry* magma_entry : magma_entries[static_cast<size_t>(dx)]) {
                     if (!magma_entry) continue;
                     copy_single_edge(arena, newmountain, magma_entry, n * width, BR_new->x);
-
                     Entry* source_entry = magma_entry;
                     Entry* higher = find_higherequal(ref, magma_entry->y);
                     std::vector<int> targety = higher ? higher->y : magma_entry->y;
                     const std::vector<int> targety0 = targety;
-
                     while (!(source_entry->value <= 1 ||
                         std::ranges::find(magma_entries[static_cast<size_t>(dx)],
                             source_entry->rightleg_up) !=
@@ -516,7 +475,6 @@ namespace {
                         copy_single_edge(arena, newmountain, source_entry,
                             n * width, BR_new->x, targety);
                     }
-
                     if (!magma_entry->y.empty()) {
                         const int leftlegx = magma_entry->leftleg_down->x + n * width;
                         ensure_column(newmountain, leftlegx);
@@ -528,15 +486,12 @@ namespace {
                         }
                     }
                 }
-
                 sort_column_desc_if_needed(column);   // 通常直接 return
                 link_vertical(column);
             }
         }
-
         return to_sequence(newmountain);
     }
-
     [[nodiscard]] std::vector<int> weak_magma(const std::vector<int>& seq, int FSterm) {
         return magma_impl<WeakPolicy>(seq, FSterm);
     }
@@ -546,7 +501,6 @@ namespace {
     [[nodiscard]] std::vector<int> strong_magma(const std::vector<int>& seq, int FSterm) {
         return magma_impl<StrongPolicy>(seq, FSterm);
     }
-
     // ============================================================
     // 缓存：vector<int> 直接哈希
     // ============================================================
@@ -560,7 +514,6 @@ namespace {
             return h;
         }
     };
-
     class ExpansionCache {
     public:
         [[nodiscard]] std::optional<std::vector<int>> get(
@@ -581,14 +534,12 @@ namespace {
     private:
         std::unordered_map<std::vector<int>, std::vector<std::vector<int>>, SequenceHash> data_;
     };
-
     // ============================================================
     // ExpanderContext：取代全局 g_currentMagma
     // ============================================================
     struct ExpanderContext {
         MagmaType type = MagmaType::Weak;
         ExpansionCache cache;
-
         std::vector<int> expand(const std::vector<int>& seq, int FSterm, bool removeLast) const {
             std::vector<int> result;
             switch (type) {
@@ -599,33 +550,27 @@ namespace {
             if (removeLast && result.size() > 1) result.pop_back();
             return result;
         }
-
         std::vector<int> FS(const std::vector<int>& seq, int FSterm);
         std::vector<int> FSalter(const std::vector<int>& seq, int FSterm);
     };
-
     template <bool RemoveLast>
     [[nodiscard]] std::vector<int> fs_impl(ExpanderContext& ctx,
         const std::vector<int>& seq, int FSterm) {
         if (seq.empty()) return {};
         if (seq.back() == 1)
             return { seq.begin(), seq.end() - 1 };
-
         auto& cache = ctx.cache;
         if (auto cached = cache.get(seq, FSterm)) return *cached;
-
         auto result = ctx.expand(seq, FSterm, RemoveLast);
         cache.put(seq, FSterm, result);
         return result;
     }
-
     std::vector<int> ExpanderContext::FS(const std::vector<int>& seq, int FSterm) {
         return fs_impl<true>(*this, seq, FSterm);
     }
     std::vector<int> ExpanderContext::FSalter(const std::vector<int>& seq, int FSterm) {
         return fs_impl<false>(*this, seq, FSterm);
     }
-
     // ============================================================
     // 序列解析
     // ============================================================
@@ -642,7 +587,6 @@ namespace {
         }
         return seq;
     }
-
     [[nodiscard]] std::string seq_to_string(const std::vector<int>& seq) {
         if (seq.empty()) return "[]";
         std::string out;
@@ -652,7 +596,6 @@ namespace {
         }
         return out;
     }
-
     // ============================================================
     // UI
     // ============================================================
@@ -660,12 +603,10 @@ namespace {
         void operator()(HMENU m) const noexcept { if (m) ::DestroyMenu(m); }
     };
     using MenuPtr = std::unique_ptr<std::remove_pointer_t<HMENU>, MenuDeleter>;
-
     struct BrushDeleter {
         void operator()(HBRUSH b) const noexcept { if (b) ::DeleteObject(b); }
     };
     using BrushPtr = std::unique_ptr<std::remove_pointer_t<HBRUSH>, BrushDeleter>;
-
     struct UiState {
         HWND hEditSeq{};
         HWND hEditTerm{};
@@ -675,57 +616,45 @@ namespace {
         BrushPtr background;
         ExpanderContext ctx;   // ← 取代全局
     };
-
     [[nodiscard]] UiState* getUi(HWND hwnd) {
         return reinterpret_cast<UiState*>(::GetWindowLongPtrW(hwnd, GWLP_USERDATA));
     }
-
     [[nodiscard]] HMENU createMenuBar() {
         HMENU hMenu = ::CreateMenu();
         HMENU hFileMenu = ::CreatePopupMenu();
         ::AppendMenuW(hFileMenu, MF_STRING, IDM_EXIT, L"退出(&X)");
         ::AppendMenuW(hMenu, MF_POPUP, reinterpret_cast<UINT_PTR>(hFileMenu), L"文件(&F)");
-
         HMENU hHelpMenu = ::CreatePopupMenu();
         ::AppendMenuW(hHelpMenu, MF_STRING, IDM_HELP, L"帮助(&H)...");
-        ::AppendMenuW(hHelpMenu, MF_SEPARATOR, 0, nullptr);
         ::AppendMenuW(hHelpMenu, MF_STRING, IDM_ABOUT, L"关于(&A)...");
+        ::AppendMenuW(hHelpMenu, MF_STRING, IDM_LEGAL, L"法律声明(&L)...");
         ::AppendMenuW(hMenu, MF_POPUP, reinterpret_cast<UINT_PTR>(hHelpMenu), L"帮助(&H)");
         return hMenu;
     }
-
     LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         switch (msg) {
         case WM_CREATE: {
             auto* ui = new UiState{};
             ui->background.reset(::CreateSolidBrush(::GetSysColor(COLOR_WINDOW)));
             ::SetWindowLongPtrW(hwnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(ui));
-
             MenuPtr menu(createMenuBar());
             ::SetMenu(hwnd, menu.release());
-
             constexpr int menuHeight = 25;
-
             ::CreateWindowExW(0, L"STATIC", L"序列 (用逗号分隔):",
                 WS_CHILD | WS_VISIBLE | SS_LEFT,
                 10, menuHeight + 10, 150, 20, hwnd, nullptr, nullptr, nullptr);
-
             ui->hEditSeq = ::CreateWindowExW(0, L"EDIT", L"1,2,3",
                 WS_CHILD | WS_VISIBLE | WS_BORDER | ES_LEFT,
                 10, menuHeight + 30, 200, 20, hwnd, nullptr, nullptr, nullptr);
-
             ::CreateWindowExW(0, L"STATIC", L"项数:",
                 WS_CHILD | WS_VISIBLE | SS_LEFT,
                 10, menuHeight + 55, 50, 20, hwnd, nullptr, nullptr, nullptr);
-
             ui->hEditTerm = ::CreateWindowExW(0, L"EDIT", L"1",
                 WS_CHILD | WS_VISIBLE | WS_BORDER | ES_LEFT,
                 60, menuHeight + 55, 80, 20, hwnd, nullptr, nullptr, nullptr);
-
             ::CreateWindowExW(0, L"STATIC", L"记号:",
                 WS_CHILD | WS_VISIBLE | SS_LEFT,
                 10, menuHeight + 85, 80, 20, hwnd, nullptr, nullptr, nullptr);
-
             ui->hComboMagma = ::CreateWindowExW(0, L"COMBOBOX", L"",
                 WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST | CBS_HASSTRINGS,
                 100, menuHeight + 82, 140, 100, hwnd, nullptr, nullptr, nullptr);
@@ -733,19 +662,16 @@ namespace {
             ::SendMessageW(ui->hComboMagma, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L"Medium Omega-Y"));
             ::SendMessageW(ui->hComboMagma, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L"Strong Omega-Y"));
             ::SendMessageW(ui->hComboMagma, CB_SETCURSEL, 0, 0);
-
             ui->hBtnFS = ::CreateWindowExW(0, L"BUTTON", L"移除末项",
                 WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
                 10, menuHeight + 115, 120, 25, hwnd,
                 reinterpret_cast<HMENU>(IDM_FS), nullptr, nullptr);
-
             ui->hBtnFSalter = ::CreateWindowExW(0, L"BUTTON", L"保留末项",
                 WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
                 140, menuHeight + 115, 120, 25, hwnd,
                 reinterpret_cast<HMENU>(IDM_FSALTER), nullptr, nullptr);
             break;
         }
-
         case WM_ERASEBKGND: {
             auto* ui = getUi(hwnd);
             if (!ui) break;
@@ -755,7 +681,6 @@ namespace {
             ::FillRect(hdc, &rect, ui->background.get());
             return 1;
         }
-
         case WM_PAINT: {
             PAINTSTRUCT ps;
             HDC hdc = ::BeginPaint(hwnd, &ps);
@@ -768,7 +693,6 @@ namespace {
             ::EndPaint(hwnd, &ps);
             return 0;
         }
-
         case WM_CTLCOLORSTATIC:
         case WM_CTLCOLOREDIT:
         case WM_CTLCOLORBTN: {
@@ -779,11 +703,9 @@ namespace {
             ::SetTextColor(hdcStatic, ::GetSysColor(COLOR_WINDOWTEXT));
             return reinterpret_cast<LRESULT>(ui->background.get());
         }
-
         case WM_COMMAND: {
             auto* ui = getUi(hwnd);
             if (!ui) break;
-
             if (HIWORD(wParam) == CBN_SELCHANGE &&
                 reinterpret_cast<HWND>(lParam) == ui->hComboMagma) {
                 int sel = static_cast<int>(::SendMessageW(ui->hComboMagma, CB_GETCURSEL, 0, 0));
@@ -795,35 +717,56 @@ namespace {
                 }
                 break;
             }
-
             switch (LOWORD(wParam)) {
             case IDM_HELP: {
                 ::MessageBoxW(hwnd,
-                    L"一个 ω − Y 序列是形如 ω − Y(a1, a2, . . . , an) 的序列。\n"
-                    L"展开规则请参考相关文档。",
-                    L"ω-Y定义", MB_OK | MB_ICONINFORMATION);
+                    L"鸣谢:Hyp Cos,naruyoko,test_alpha-0\n"
+                    L"请注意 代码系利用人工智能技术生成",
+                    L"帮助", MB_OK | MB_ICONINFORMATION);
                 break;
             }
             case IDM_ABOUT: {
                 ::MessageBoxW(hwnd,
                     L"ω-Y 展开器 v1.2 (性能优化版)\n\n"
                     L"基于 hypcos/notation-explorer 的 C++ 实现\n"
-                    L"三种 Magma 类型：弱、中、强\n"
-                    L"输入格式: 用逗号分隔的数字序列\n"
-                    L"例如: 1,2,3",
+                    L"请注意 代码系利用人工智能技术生成\n"
+                    L"本软件使用Unlicense授权\n但在中华人民共和国大陆地区法律下，它应当是需要署名的\n",
                     L"关于", MB_OK | MB_ICONINFORMATION);
+                break;
+            }
+            case IDM_LEGAL: {
+                ::MessageBoxW(hwnd,
+                    L"This is free and unencumbered software released into the public domain.\n"
+                    L"Anyone is free to copy, modify, publish, use, compile, sell, or\n"
+                    L"distribute this software, either in source code form or as a compiled\n"
+                    L"binary, for any purpose, commercial or non‑commercial, and by any\n"
+                    L"means.\n\n"
+                    L"In jurisdictions that recognize copyright laws, the author or authors\n"
+                    L"of this software dedicate any and all copyright interest in the\n"
+                    L"software to the public domain. We make this dedication for the benefit\n"
+                    L"of the public at large and to the detriment of our heirs and\n"
+                    L"successors. We intend this dedication to be an overt act of\n"
+                    L"relinquishment in perpetuity of all present and future rights to this\n"
+                    L"software under copyright law.\n\n"
+                    L"THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND,\n"
+                    L"EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF\n"
+                    L"MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.\n"
+                    L"IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR\n"
+                    L"OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,\n"
+                    L"ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR\n"
+                    L"OTHER DEALINGS IN THE SOFTWARE.\n\n"
+                    L"备注：在中华人民共和国大陆地区法律下，使用本软件建议保留署名。",
+                    L"法律声明", MB_OK | MB_ICONINFORMATION);
                 break;
             }
             case IDM_EXIT:
                 ::PostQuitMessage(0);
                 break;
-
             case IDM_FS:
             case IDM_FSALTER: {
                 wchar_t bufSeq[256]{}, bufTerm[64]{};
                 ::GetWindowTextW(ui->hEditSeq, bufSeq, 256);
                 ::GetWindowTextW(ui->hEditTerm, bufTerm, 64);
-
                 auto seq = parse_sequence(wstring_to_utf8(bufSeq));
                 int term = 0;
                 try { term = std::stoi(wstring_to_utf8(bufTerm)); }
@@ -840,15 +783,13 @@ namespace {
                     break;
                 }
                 if (seq.size() < 2) {
-                    ::MessageBoxW(hwnd, L"序列至少需要 2 个元素，你难道真的要展开 ω-Y(1) 吗",
+                    ::MessageBoxW(hwnd, L"序列至少需要 2 个元素，你难道真的要展开 ω‑Y(1) 吗",
                         L"错误", MB_OK | MB_ICONERROR);
                     break;
                 }
-
                 std::vector<int> result = (LOWORD(wParam) == IDM_FS)
                     ? ui->ctx.FS(seq, term)
                     : ui->ctx.FSalter(seq, term);
-
                 auto wresult = utf8_to_wstring(seq_to_string(result));
                 ::MessageBoxW(hwnd, wresult.c_str(), L"展开结果", MB_OK | MB_ICONINFORMATION);
                 break;
@@ -857,7 +798,6 @@ namespace {
             }
             break;
         }
-
         case WM_DESTROY: {
             auto* ui = getUi(hwnd);
             delete ui;
@@ -865,34 +805,27 @@ namespace {
             ::PostQuitMessage(0);
             break;
         }
-
         default:
             return ::DefWindowProcW(hwnd, msg, wParam, lParam);
         }
         return 0;
     }
-
 }
-
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int nCmdShow) {
     WNDCLASS wc{};
     wc.lpfnWndProc = WndProc;
     wc.hInstance = hInstance;
     wc.lpszClassName = L"OmegaY";
     wc.hbrBackground = reinterpret_cast<HBRUSH>(COLOR_WINDOW + 1);
-
     if (!::RegisterClassW(&wc)) return 0;
-
     HWND hwnd = ::CreateWindowExW(
-        0, L"OmegaY", L"ω-Y 展开器 (Magma)",
+        0, L"OmegaY", L"ω‑Y 展开器 (Magma)",
         WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX,
         CW_USEDEFAULT, CW_USEDEFAULT, 320, 250,
         nullptr, nullptr, hInstance, nullptr);
     if (!hwnd) return 0;
-
     ::ShowWindow(hwnd, nCmdShow);
     ::UpdateWindow(hwnd);
-
     MSG msg;
     while (::GetMessageW(&msg, nullptr, 0, 0)) {
         ::TranslateMessage(&msg);
