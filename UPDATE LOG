@@ -1,0 +1,13 @@
+Version 1.2
+BUG：优化了一个裸指针的UB问题
+OPI：优化了性能
+COMMIT dcbe3f5f 7521daa1
+2026/09/21
+Version 1.1
+将三种Magma拆成记号，为后续铺路
+发现这里还没有推远程仓库喵，本地的Commit没有了喵
+2026/09/22
+Version 1.0
+立项了喵
+COMMIT f736f976 1c954663
+2026/09/13
