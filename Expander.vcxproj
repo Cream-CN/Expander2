@@ -136,7 +136,11 @@
     </Link>
     <Manifest>
       <EnableSegmentHeap>true</EnableSegmentHeap>
+      <SuppressStartupBanner>false</SuppressStartupBanner>
     </Manifest>
+    <ResourceCompile>
+      <SuppressStartupBanner>false</SuppressStartupBanner>
+    </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="Expander.h" />

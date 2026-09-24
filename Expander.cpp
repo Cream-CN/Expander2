@@ -691,7 +691,7 @@ namespace {
             }
             case IDM_LEGAL: {
                 ::MessageBoxW(hwnd,
-                    L"本软件使用Unlicense授权:"
+                    L"本软件使用Unlicense授权\nThe Unlicense:\n"
                     L"This is free and unencumbered software released into the public domain.\n"
                     L"Anyone is free to copy, modify, publish, use, compile, sell, or\n"
                     L"distribute this software, either in source code form or as a compiled\n"
@@ -709,7 +709,7 @@ namespace {
                     L"MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.\n"
                     L"IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR\n"
                     L"OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,\n"
-                    L"ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR\n"
+                    L"ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR"
                     L"OTHER DEALINGS IN THE SOFTWARE.\n\n"
                     L"在中华人民共和国大陆地区法律下，使用本软件建议保留署名。",
                     L"法律声明", MB_OK | MB_ICONINFORMATION);
