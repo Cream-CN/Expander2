@@ -42,14 +42,11 @@ namespace {
             out.data(), size_needed);
         return out;
     }
-    // ============================================================
-    // Entry：新增 ykey 缓存，把 vertical_compare 变成一次整数比较
-    // ============================================================
     struct Entry {
         int value = 0;
         int x = 0;
         std::vector<int> y;
-        uint64_t ykey = 0;                         // y 的紧凑编码
+        uint64_t ykey = 0;
         std::vector<Entry*> leftleg_up;
         Entry* rightleg_up = nullptr;
         Entry* rightleg_down = nullptr;
@@ -59,7 +56,6 @@ namespace {
             : value(v), x(x_), y(std::move(y_)) {
             refresh_key();
         }
-        // y 改变后必须调用
         void refresh_key() noexcept {
             uint64_t k = static_cast<uint64_t>(y.size() & 0xFF) << 56;
             const size_t n = std::min<size_t>(y.size(), 7);
@@ -75,9 +71,6 @@ namespace {
             k |= (static_cast<uint64_t>(y[i] & 0xFFFF) << (i * 8));
         return k;
     }
-    // ============================================================
-    // EntryArena：统一所有权，消除裸 new 泄漏
-    // ============================================================
     class EntryArena {
     public:
         Entry* make(int v = 0, int x = 0, std::vector<int> y = {}) {
@@ -94,9 +87,6 @@ namespace {
         std::vector<std::unique_ptr<Entry>> nodes_;
     };
     using Mountain = std::vector<std::vector<Entry*>>;
-    // ============================================================
-    // 比较：全部基于 ykey，O(1)
-    // ============================================================
     [[nodiscard]] inline int vertical_compare(const Entry* a, const Entry* b) noexcept {
         if (a->ykey == b->ykey) return 0;
         return a->ykey > b->ykey ? 1 : -1;
@@ -107,9 +97,6 @@ namespace {
     [[nodiscard]] inline bool key_greater(const Entry* a, const Entry* b) noexcept {
         return a->ykey > b->ykey;
     }
-    // ============================================================
-    // y 操作
-    // ============================================================
     [[nodiscard]] inline int dimension_difference(const std::vector<int>& c1,
         const std::vector<int>& c2) noexcept {
         const int maxd = static_cast<int>(std::max(c1.size(), c2.size()));
@@ -132,9 +119,6 @@ namespace {
         std::fill_n(c.begin(), d, 0);
         return c;
     }
-    // ============================================================
-    // Entry 创建
-    // ============================================================
     [[nodiscard]] Entry* create_entry(EntryArena& arena, Entry* parent, Entry* entry) {
         Entry* newentry = arena.make_empty();
         newentry->value = entry->value - parent->value;
@@ -174,9 +158,6 @@ namespace {
         }
         return seq;
     }
-    // ============================================================
-    // 列查询：比较改用 ykey
-    // ============================================================
     [[nodiscard]] Entry* find_lower(const std::vector<Entry*>& column,
         const std::vector<int>& y) {
         if (column.empty()) return nullptr;
@@ -234,9 +215,6 @@ namespace {
             result.push_back(column[static_cast<size_t>(i)]);
         return result;
     }
-    // ============================================================
-    // 收集
-    // ============================================================
     [[nodiscard]] std::vector<Entry*> collect_usual(
         Entry* working_entry, std::vector<Entry*> collection = {}) {
         for (Entry* e : working_entry->leftleg_up) {
@@ -260,17 +238,13 @@ namespace {
         }
         return collection;
     }
-    // ============================================================
-    // 列操作
-    // ============================================================
     inline void ensure_column(Mountain& m, int idx) {
         if (idx >= static_cast<int>(m.size()))
             m.resize(static_cast<size_t>(idx) + 1);
     }
-    // 有序插入（降序），避免全量排序
     inline void insert_sorted_desc(std::vector<Entry*>& column, Entry* e) {
         if (column.empty()) { column.push_back(e); return; }
-        if (column.back()->ykey >= e->ykey) {          // 常见情况：追加尾部
+        if (column.back()->ykey >= e->ykey) {
             column.push_back(e);
             return;
         }
@@ -278,7 +252,6 @@ namespace {
             [](const Entry* a, const Entry* b) { return a->ykey > b->ykey; });
         column.insert(it, e);
     }
-    // 兜底：只在列确实乱序时才全排序
     inline void sort_column_desc_if_needed(std::vector<Entry*>& column) {
         if (std::ranges::is_sorted(column, key_greater)) return;
         std::ranges::sort(column, key_greater);
@@ -296,9 +269,6 @@ namespace {
             e->value = e->rightleg_up->value + e->rightleg_up->leftleg_down->value;
         }
     }
-    // ============================================================
-    // 边复制 / 填充（改用 arena，修掉裸 new）
-    // ============================================================
     void fill_magma_edge(EntryArena& arena, Mountain& mountain,
         Entry* source_entry, Entry* leftleg_entry) {
         const int targetx = source_entry->x - source_entry->leftleg_down->x + leftleg_entry->x;
@@ -341,9 +311,6 @@ namespace {
         ensure_column(mountain, col_idx);
         insert_sorted_desc(mountain[static_cast<size_t>(col_idx)], newentry);
     }
-    // ============================================================
-    // draw_mountain
-    // ============================================================
     [[nodiscard]] Mountain draw_mountain(EntryArena& arena, Mountain mountain) {
         for (auto& column : mountain) {
             while (true) {
@@ -373,9 +340,6 @@ namespace {
         }
         return nullptr;
     }
-    // ============================================================
-    // 策略
-    // ============================================================
     struct WeakPolicy {
         static std::vector<Entry*> collect(Entry* br1) { return collect_usual(br1); }
         static constexpr bool kHasPhantomBranch = false;
@@ -390,9 +354,6 @@ namespace {
         }
         static constexpr bool kHasPhantomBranch = true;
     };
-    // ============================================================
-    // magma_impl
-    // ============================================================
     template <class Policy>
     [[nodiscard]] std::vector<int> magma_impl(const std::vector<int>& seq, int FSterm) {
         if (seq.size() < 2) return seq;
@@ -486,7 +447,7 @@ namespace {
                         }
                     }
                 }
-                sort_column_desc_if_needed(column);   // 通常直接 return
+                sort_column_desc_if_needed(column);
                 link_vertical(column);
             }
         }
@@ -501,9 +462,6 @@ namespace {
     [[nodiscard]] std::vector<int> strong_magma(const std::vector<int>& seq, int FSterm) {
         return magma_impl<StrongPolicy>(seq, FSterm);
     }
-    // ============================================================
-    // 缓存：vector<int> 直接哈希
-    // ============================================================
     struct SequenceHash {
         size_t operator()(const std::vector<int>& v) const noexcept {
             size_t h = 1469598103934665603ull;
@@ -534,9 +492,6 @@ namespace {
     private:
         std::unordered_map<std::vector<int>, std::vector<std::vector<int>>, SequenceHash> data_;
     };
-    // ============================================================
-    // ExpanderContext：取代全局 g_currentMagma
-    // ============================================================
     struct ExpanderContext {
         MagmaType type = MagmaType::Weak;
         ExpansionCache cache;
@@ -727,7 +682,7 @@ namespace {
             }
             case IDM_ABOUT: {
                 ::MessageBoxW(hwnd,
-                    L"ω-Y 展开器 v1.2 (性能优化版)\n\n"
+                    L"ω-Y 展开器 v1.2\n\n"
                     L"基于 hypcos/notation-explorer 的 C++ 实现\n"
                     L"请注意 代码系利用人工智能技术生成\n"
                     L"本软件使用Unlicense授权\n但在中华人民共和国大陆地区法律下，它应当是需要署名的\n",
@@ -736,6 +691,7 @@ namespace {
             }
             case IDM_LEGAL: {
                 ::MessageBoxW(hwnd,
+                    L"本软件使用Unlicense授权:"
                     L"This is free and unencumbered software released into the public domain.\n"
                     L"Anyone is free to copy, modify, publish, use, compile, sell, or\n"
                     L"distribute this software, either in source code form or as a compiled\n"
@@ -755,7 +711,7 @@ namespace {
                     L"OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,\n"
                     L"ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR\n"
                     L"OTHER DEALINGS IN THE SOFTWARE.\n\n"
-                    L"备注：在中华人民共和国大陆地区法律下，使用本软件建议保留署名。",
+                    L"在中华人民共和国大陆地区法律下，使用本软件建议保留署名。",
                     L"法律声明", MB_OK | MB_ICONINFORMATION);
                 break;
             }
