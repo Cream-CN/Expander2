@@ -1,7 +1,204 @@
 关于贡献的详细说明
+前排提示
+    1.代码的来源能且只能是与Unlicense相兼容的，且必须署名，无论要求与否
+    2.对于没有许可证的仓库，原则上必须与仓库控制者联系
+    3.如果你能够自己写代码，可以给写入权限
+    4.不得引入非宽松许可证的库，不得引入链接时依赖，所有的库原则上要放到./Header下，并且无论如何必须署名
 
-1.代码的来源能且只能是与Unlicense相兼容的，且必须署名，无论要求与否
-2.对于没有许可证的仓库，原则上必须与仓库控制者联系
-3.如果你能够自己写代码，可以给写入权限
+工具链和依赖
 
-2026/09/25
+    使用Microsoft Visual Studio 2026，MSVC145 C++20，C默认
+    没有额外的依赖
+
+接口
+
+ω-Y 展开器接口规范
+
+本文档定义项目内部的公共接口契约，供贡献者在添加新记号、修改序列处理逻辑时遵循。
+
+命名空间分层
+
+    omegay
+    ├── common // 通用工具：UTF-8 转换、序列解析与格式化
+    └── notation // 数学记号：每种记号一个独立编译单元
+
+规则：
+
+    common 下只放与具体记号无关的纯工具函数，不得引入 notation 的依赖。
+
+    notation 可以依赖 common，但不得反向依赖。
+
+    记号与记号之间不得互相 #include，避免耦合。
+
+    omegay::common 接口
+
+    2.1 UTF-8 与宽字符转换 — Header/common/utf8.hpp
+
+    namespace omegay::common {
+
+    [[nodiscard]] std::string wstring_to_utf8(std::wstring_view w);
+    [[nodiscard]] std::wstring utf8_to_wstring(std::string_view s);
+
+    }
+
+契约：
+
+    项目 约定
+    输入为空 返回空字符串（非 nullptr 语义）
+    编码 固定 CP_UTF8，不接受其他代码页
+    非法输入 遇非法字节序列时，WideCharToMultiByte / MultiByteToWideChar 的行为由 Win32 决定；不抛出异常
+    返回值 [[nodiscard]]，调用方必须使用返回值
+    线程安全 是（仅使用局部变量与 Win32 纯函数）
+
+    贡献者注意：若将来需要 CP_ACP 支持，请新增独立函数，不要修改现有签名，以免破坏调用点。
+
+    2.2 序列解析与格式化 — Header/common/sequence.hpp
+
+    namespace omegay::common {
+
+    [[nodiscard]] std::vector<int> parse_sequence(std::string_view str);
+    [[nodiscard]] std::string seq_to_string(const std::vector<int>& seq);
+
+    }
+
+    parse_sequence 契约：
+
+输入 行为
+    "" 返回空 vector
+    "1,2,3" 返回 {1, 2, 3}
+    "1, ,3" 跳过空 token，返回 {1, 3}
+    " 1 , 2 " 忽略所有空白字符，返回 {1, 2}
+    "abc" std::stoi 失败被捕获，静默跳过该 token
+    "1,999999999999" 溢出被捕获，静默跳过
+
+关键约定：
+
+    永不抛出异常。所有解析失败均以"跳过该项"处理。
+
+    允许前导/尾随逗号，行为等同于空 token。
+
+    返回值为 [[nodiscard]]。
+
+    待改进项（欢迎 PR）：当前实现静默丢弃非法输入，UI 层无法向用户报告"第 N 项解析失败"。如需改进，建议新增 parse_sequence_ex 返回 (vector, error_list)，保留现有函数作为薄封装。
+
+seq_to_string 契约：
+
+    输入 输出
+    {} "[]"
+    {1} "1"
+    {1,2,3} "1,2,3"
+
+    分隔符固定为半角逗号 ,，无空格。
+
+    空序列固定输出 "[]"，而非空字符串，便于 UI 区分"未解析"与"结果为空"。
+
+    omegay::notation 接口
+
+3.1 记号模块的标准形态
+
+    每个记号（当前仅 EmptyNotation）应位于独立头文件 Header/notation/<name>.hpp，并在命名空间 omegay::notation 中提供以下静态成员约定：
+
+    namespace omegay::notation {
+
+    struct XxxNotation {
+    static constexpr const char* kName; // 显示名（UTF-8）
+
+    static std::vector<int> expand(
+    const std::vector<int>& seq,
+    int term); // 核心展开
+
+    static std::string suffix(); // 结果后缀（UTF-8）
+    };
+
+    }
+
+当前 EmptyNotation 的实际契约：
+
+成员 类型 含义
+kName const char* 记号显示名，UTF-8 编码，供 UI 用 utf8_to_wstring 转换后显示
+expand(seq, term) vector<int>(const vector<int>&, int) 对序列 seq 执行 term 项展开，返回结果序列
+suffix() std::string() 追加在结果文本末尾的标记，UTF-8
+
+expand 通用约定（所有记号必须遵守）：
+
+纯函数：不得修改入参 seq，不得读写全局状态。
+
+seq 为空：返回值由具体记号定义；调用方（UI 层）有责任先行校验空序列。
+
+term < 1：调用方（UI 层）有责任先行校验；expand 本身不保证对非法 term 的行为。
+
+异常：expand 不应抛出异常。若记号内部逻辑可能失败，应返回空 vector 或保持输入不变。
+
+性能：对微型项目不设硬性要求，但应避免 O(n²) 以上的无谓拷贝。
+
+当前 EmptyNotation 行为：expand 原样返回 seq（忽略 term），suffix() 返回空串。这是占位实现，后续版本将替换。
+
+3.2 FS / FSalter 语义
+
+UI 层的"移除末项 / 保留末项"按钮，不属于记号接口，而是调用方对展开结果的后处理：
+
+// Expander.cpp 中：
+std::vector<int> result = notation::EmptyNotation::expand(seq, term);
+if (LOWORD(wParam) == IDM_FS && result.size() > 1)
+result.pop_back();
+
+约定：
+
+当 result.size() <= 1 时，FS 操作不执行移除（避免产生空序列歧义）。
+
+此策略在 UI 层实现，记号模块不应感知 FS/FSalter 概念。
+
+UI 层与记号层的边界
+
+┌─────────────────────────────────────────┐
+│ Expander.cpp (Win32 UI)                 │
+│ - 读取控件文本                           │
+│ - 校验 term >= 1、seq 非空               │
+│ - 调用 utf8/wstring 转换                 │
+│ - 调用 notation::Xxx::expand │
+│ - 后处理 FS/FSalter │
+│ - 显示 MessageBox │
+└──────────────┬──────────────────────────┘
+│ 只通过下列接口通信
+▼
+┌─────────────────────────────────────────┐
+│ common: parse_sequence / seq_to_string │
+│ utf8_to_wstring / wstring_to_utf8│
+│ notation: Xxx::kName / expand / suffix │
+└─────────────────────────────────────────┘
+
+硬性规则：
+
+UI 层不得直接操作 std::vector<int> 的数学含义（例如自行实现"移除末项"以外的记号逻辑）。
+
+记号层不得包含 <windows.h> 或任何 UI 相关头文件。
+
+新增记号时，只需在 Expander.cpp 的 WM_COMMAND 分支中增加调用，不应改动 common。
+
+版本与兼容性
+
+变更类型 要求
+新增记号 只增文件、只增调用分支，不动现有接口
+修改 common 函数签名 破坏性变更，需同步更新所有调用点与本文档
+修改 expand 语义 需在 CONTRIBUTING.md 或 CHANGELOG 中注明
+删除任何 [[nodiscard]] 不允许
+
+贡献者检查清单
+
+提交涉及接口的 PR 前，请确认：
+
+[ ] 新函数/成员是否加了 [[nodiscard]]（若返回值有意义）？
+[ ] common 是否仍不依赖 notation？
+[ ] expand 是否仍为纯函数、不抛异常？
+[ ] 空序列、term < 1、非法 token 的行为是否与本文档一致？
+[ ] 若修改了任何签名，是否同步更新了本文档与调用点？
+
+附：当前唯一记号的实现位置
+
+Header/notation/empty.hpp — EmptyNotation 定义
+
+Expander.cpp — 唯一调用点（IDM_FS / IDM_FSALTER 分支）
+
+新增记号时，请模仿 EmptyNotation 的文件结构与接口形态，并在本文档 3.1 表格中追加一行。
+
+2026/09/25 版本二 version1.3
