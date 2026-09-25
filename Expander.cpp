@@ -5,6 +5,7 @@
 #include "Header/common/utf8.hpp"
 #include "Header/common/sequence.hpp"
 #include "Header/notation/empty.hpp"
+#include "Header/notation/prss.hpp" // 新增
 
 #include <memory>
 #include <string>
@@ -31,6 +32,7 @@ namespace {
     struct UiState {
         HWND hEditSeq{};
         HWND hEditTerm{};
+        HWND hComboNotation{}; // 新增：记号选择下拉框
         HWND hBtnFS{};
         HWND hBtnFSalter{};
         BrushPtr background;
@@ -82,17 +84,22 @@ namespace {
                 WS_CHILD | WS_VISIBLE | WS_BORDER | ES_LEFT,
                 60, mh + 55, 80, 20,
                 hwnd, nullptr, hInst, nullptr);
+
+            // 修改：将原静态文本替换为下拉框
             ::CreateWindowExW(0, L"STATIC", L"记号:",
                 WS_CHILD | WS_VISIBLE | SS_LEFT,
                 10, mh + 85, 80, 20,
                 hwnd, nullptr, hInst, nullptr);
-            {
-                std::wstring name = utf8_to_wstring(notation::EmptyNotation::kName);
-                ::CreateWindowExW(0, L"STATIC", name.c_str(),
-                    WS_CHILD | WS_VISIBLE | SS_LEFT,
-                    100, mh + 85, 220, 20,
-                    hwnd, nullptr, hInst, nullptr);
-            }
+
+            ui->hComboNotation = ::CreateWindowExW(0, L"COMBOBOX", nullptr,
+                WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST | WS_VSCROLL,
+                100, mh + 85, 220, 100,
+                hwnd, nullptr, hInst, nullptr);
+
+            ::SendMessageW(ui->hComboNotation, CB_ADDSTRING, 0, (LPARAM)L"空记号 (Empty)");
+            ::SendMessageW(ui->hComboNotation, CB_ADDSTRING, 0, (LPARAM)L"PrSS (初等序列)");
+            ::SendMessageW(ui->hComboNotation, CB_SETCURSEL, 1, 0); // 默认选中 PrSS
+
             ui->hBtnFS = ::CreateWindowExW(0, L"BUTTON", L"移除末项",
                 WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
                 10, mh + 115, 120, 25,
@@ -146,7 +153,7 @@ namespace {
             case IDM_ABOUT:
                 ::MessageBoxW(hwnd,
                     L"ω-Y 展开器 v1.3\n\n"
-                    L"当前仅有\"空记号\"可用，行为为原样输出。\n"
+                    L"当前已有\"空记号\"和\"PrSS (初等序列)\"可用。\n"
                     L"其它记号将在后续版本中重新加入。",
                     L"关于", MB_OK | MB_ICONINFORMATION);
                 break;
@@ -209,16 +216,27 @@ namespace {
                     break;
                 }
 
-                // 调用唯一记号
-                std::vector<int> result =
-                    notation::EmptyNotation::expand(seq, term);
+                // 修改：根据下拉框获取当前选中的记号
+                int sel = (int)::SendMessageW(ui->hComboNotation, CB_GETCURSEL, 0, 0);
+                std::vector<int> result;
+                std::string suffix_text;
+
+                if (sel == 0) {
+                    // 空记号
+                    result = notation::EmptyNotation::expand(seq, term);
+                    suffix_text = notation::EmptyNotation::suffix();
+                }
+                else {
+                    // PrSS 初等序列
+                    result = notation::PrSSNotation::expand(seq, term);
+                    suffix_text = notation::PrSSNotation::suffix();
+                }
 
                 // 移除末项（FS）还是保留（FSalter）
                 if (LOWORD(wParam) == IDM_FS && result.size() > 1)
                     result.pop_back();
 
-                std::string text = seq_to_string(result)
-                    + notation::EmptyNotation::suffix();
+                std::string text = seq_to_string(result) + suffix_text;
                 std::wstring wtext = utf8_to_wstring(text);
                 ::MessageBoxW(hwnd, wtext.c_str(), L"展开结果",
                     MB_OK | MB_ICONINFORMATION);
@@ -251,7 +269,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int nCmdShow) {
     if (!::RegisterClassW(&wc)) return 0;
 
     HWND hwnd = ::CreateWindowExW(
-        0, L"OmegaY", L"ω-Y 展开器 (重构中)",
+        0, L"OmegaY", L"展开器 (重构中)",
         WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX,
         CW_USEDEFAULT, CW_USEDEFAULT, 380, 240,
         nullptr, nullptr, hInstance, nullptr);
