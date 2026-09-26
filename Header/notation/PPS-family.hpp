@@ -14,15 +14,8 @@ namespace omegay::notation {
         inline bool is_successor(const std::vector<int>& seq) {
             return !seq.empty() && seq.back() == 0;
         }
-
-        // ------------------------------------------------------------------
-        // PPS1 展开
-        // 规则来源：main.txt - PPS1
-        // ------------------------------------------------------------------
         inline std::vector<int> expand_pps1(const std::vector<int>& seq, int n) {
             if (seq.empty()) return seq;
-
-            // 后继序数：基本列为去掉末项
             if (is_successor(seq)) {
                 std::vector<int> res(seq.begin(), seq.end() - 1);
                 return res;

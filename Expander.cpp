@@ -1,6 +1,7 @@
 ﻿#define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
 #include <windows.h>
+#include <richedit.h>
 
 #include "Header/common/utf8.hpp"
 #include "Header/common/sequence.hpp"
@@ -33,6 +34,10 @@ namespace {
     constexpr int IDM_ENTRY_DEMO = 103;
     constexpr int IDC_NOTATION_COMBO = 2001;
 
+    // 定义子项 ID 基址
+    constexpr int IDM_DEFINITION_BASE = 3000;
+    constexpr int IDC_DEFINITION_EDIT = 4001;
+
     // ------------------------------------------------------------------
     // 记号注册表
     // ------------------------------------------------------------------
@@ -41,20 +46,40 @@ namespace {
         const char* id;
         std::vector<int>(*expand)(const std::vector<int>&, int);
         std::string(*suffix)();
+        const wchar_t* definition;   // 记号定义（纯文本，可为 nullptr）
     };
 
     [[nodiscard]] const std::vector<NotationEntry>& notationTable() {
         static const std::vector<NotationEntry> table = {
-            { L"空记号",        "empty",  &notation::EmptyNotation::expand,       &notation::EmptyNotation::suffix },
-            { L"PPS",           "pps",    &notation::PPSNotation::expand,         &notation::PPSNotation::suffix },
-            { L"PPS4",          "pps4",   &notation::PPS4Notation::expand,        &notation::PPS4Notation::suffix },
-            { L"Weak PPS4",     "wpps4",  &notation::WPPS4Notation::expand,       &notation::WPPS4Notation::suffix },
-            { L"Third PPS4",    "tpps4",  &notation::TPPS4Notation::expand,       &notation::TPPS4Notation::suffix },
-            { L"Ex. Weak PPS4", "ewpps4", &notation::EWPPS4Notation::expand,      &notation::EWPPS4Notation::suffix },
-            { L"Second PPS4",   "spps4",  &notation::SecondPPS4Notation::expand,  &notation::SecondPPS4Notation::suffix },
-            { L"2-pps4",        "2-pps4", &notation::PPS2Notation::expand,        &notation::PPS2Notation::suffix },
-            { L"ω-Y (medium)",  "omega-y-medium", &notation::OmegaYMediumNotation::expand, &notation::OmegaYMediumNotation::suffix },
-            { L"ω-Y (strong)",  "omega-y-strong", &notation::OmegaYStrongNotation::expand, &notation::OmegaYStrongNotation::suffix },
+            { L"空记号",        "empty",  &notation::EmptyNotation::expand,       &notation::EmptyNotation::suffix,
+              L"空记号（empty）\n\n不进行任何展开，直接返回输入序列本身。" },
+
+            { L"PPS",           "pps",    &notation::PPSNotation::expand,         &notation::PPSNotation::suffix,
+              L"PPS（Primitive Sequence System）\n\n基本序列记号。展开时对末项做标准基本列展开。" },
+
+            { L"PPS4",          "pps4",   &notation::PPS4Notation::expand,        &notation::PPS4Notation::suffix,
+              L"PPS4\n\nPPS 的四元扩展形式。" },
+
+            { L"Weak PPS4",     "wpps4",  &notation::WPPS4Notation::expand,       &notation::WPPS4Notation::suffix,
+              L"Weak PPS4\n\nPPS4 的弱化版本。" },
+
+            { L"Third PPS4",    "tpps4",  &notation::TPPS4Notation::expand,       &notation::TPPS4Notation::suffix,
+              L"Third PPS4\n\nPPS4 的第三型变体。" },
+
+            { L"Ex. Weak PPS4", "ewpps4", &notation::EWPPS4Notation::expand,      &notation::EWPPS4Notation::suffix,
+              L"Ex. Weak PPS4\n\n扩展弱 PPS4。" },
+
+            { L"Second PPS4",   "spps4",  &notation::SecondPPS4Notation::expand,  &notation::SecondPPS4Notation::suffix,
+              L"Second PPS4\n\nPPS4 的第二型变体。" },
+
+            { L"2-pps4",        "2-pps4", &notation::PPS2Notation::expand,        &notation::PPS2Notation::suffix,
+              L"2-pps4\n\n二元 PPS4 形式。" },
+
+            { L"ω-Y (medium)",  "omega-y-medium", &notation::OmegaYMediumNotation::expand, &notation::OmegaYMediumNotation::suffix,
+              L"ω-Y (medium)\n\nω-Y 记号的中等强度版本。" },
+
+            { L"ω-Y (strong)",  "omega-y-strong", &notation::OmegaYStrongNotation::expand, &notation::OmegaYStrongNotation::suffix,
+              L"ω-Y (strong)\n\nω-Y 记号的强版本。" },
         };
         return table;
     }
@@ -73,6 +98,7 @@ namespace {
         HWND hBtnFS{};
         HWND hBtnFSalter{};
         HWND hComboNotation{};
+        HWND hRichDef{};        // RichEdit：只读纯文本展示定义
         BrushPtr background;
     };
 
@@ -91,10 +117,24 @@ namespace {
         ::AppendMenuW(hMenu, MF_POPUP,
             reinterpret_cast<UINT_PTR>(hFile), L"文件(&F)");
 
-        HMENU hTool = ::CreatePopupMenu();
-        ::AppendMenuW(hTool, MF_STRING, IDM_ENTRY_DEMO, L"Entry 演示(&E)...");
+        // —— 定义菜单：按记号表动态生成子项 ——
+        HMENU hDef = ::CreatePopupMenu();
+        {
+            const auto& table = notationTable();
+            for (int i = 0; i < static_cast<int>(table.size()); ++i) {
+                std::wstring label = table[i].display_name;
+                label += L" 定义(&";
+                label += static_cast<wchar_t>(L'A' + (i % 26));
+                label += L")";
+                ::AppendMenuW(hDef, MF_STRING,
+                    static_cast<UINT_PTR>(IDM_DEFINITION_BASE + i),
+                    label.c_str());
+            }
+            ::AppendMenuW(hDef, MF_SEPARATOR, 0, nullptr);
+            ::AppendMenuW(hDef, MF_STRING, IDM_ENTRY_DEMO, L"Entry 演示(&E)...");
+        }
         ::AppendMenuW(hMenu, MF_POPUP,
-            reinterpret_cast<UINT_PTR>(hTool), L"工具(&T)");
+            reinterpret_cast<UINT_PTR>(hDef), L"定义(&D)");
 
         HMENU hHelp = ::CreatePopupMenu();
         ::AppendMenuW(hHelp, MF_STRING, IDM_HELP, L"帮助(&H)...");
@@ -107,8 +147,7 @@ namespace {
     }
 
     // ------------------------------------------------------------------
-    // 通用：读取序列与项数，失败时弹窗并返回 false
-    // 符合 CONTRIBUTING.txt：UI 层负责 term >= 1、seq 非空校验
+    // 通用：读取序列与项数
     // ------------------------------------------------------------------
     [[nodiscard]] bool readSeqAndTerm(
         HWND hwnd, UiState* ui,
@@ -142,8 +181,28 @@ namespace {
     }
 
     // ------------------------------------------------------------------
-    // Entry 演示：构造一棵小 Entry 图，刷新 ykey，显示结果
-    // 对应 api.txt 中 arena.hpp / entry.hpp / make_ykey 的调用示例
+    // 定义展示（纯文本写入 RichEdit，不使用任何富文本样式）
+    // 先填充记号名字，再接定义正文
+    // ------------------------------------------------------------------
+    void showDefinition(UiState* ui, int index) {
+        const auto& table = notationTable();
+        if (!ui->hRichDef) return;
+        if (index < 0 || index >= static_cast<int>(table.size())) return;
+
+        std::wstring text;
+        text += L"【";
+        text += table[index].display_name;
+        text += L"】\r\n\r\n";
+        text += table[index].definition ? table[index].definition : L"（暂无定义）";
+
+        ::SetWindowTextW(ui->hRichDef, text.c_str());
+
+        ::SendMessageW(ui->hRichDef, EM_SETSEL, 0, 0);
+        ::SendMessageW(ui->hRichDef, EM_SCROLLCARET, 0, 0);
+    }
+
+    // ------------------------------------------------------------------
+    // Entry 演示
     // ------------------------------------------------------------------
     void showEntryDemo(HWND hwnd, UiState* ui) {
         std::vector<int> seq;
@@ -152,13 +211,11 @@ namespace {
 
         omegay::core::EntryArena arena;
 
-        // 根节点：value = seq[0]，x = term，y = seq
         auto* root = arena.make(
             seq.empty() ? 0 : seq[0],
             term,
             seq);
 
-        // 子节点：value = seq.back()，x = 1，y = 截断后的序列
         std::vector<int> childY = seq;
         if (childY.size() > 1) childY.pop_back();
         auto* child = arena.make(
@@ -166,15 +223,12 @@ namespace {
             1,
             childY);
 
-        // 建立 leg 关系，演示 api.txt 中的指针链接用法
         root->rightleg_down = child;
         child->leftleg_up.push_back(root);
 
-        // 修改 child 的 y，并刷新 ykey
         child->y = childY;
         child->refresh_key();
 
-        // 单独计算 ykey，验证与 Entry::ykey 一致
         const std::uint64_t rootKey = omegay::core::make_ykey(root->y);
         const std::uint64_t childKey = omegay::core::make_ykey(child->y);
 
@@ -208,8 +262,6 @@ namespace {
 
         ::MessageBoxW(hwnd, msg.c_str(), L"Entry 演示",
             MB_OK | MB_ICONINFORMATION);
-
-        // arena 析构时自动释放 root / child
     }
 
     // ------------------------------------------------------------------
@@ -285,6 +337,19 @@ namespace {
                 reinterpret_cast<HMENU>(static_cast<UINT_PTR>(IDM_FSALTER)),
                 hInst, nullptr);
 
+            // RichEdit：只读、纯文本展示定义
+            ui->hRichDef = ::CreateWindowExW(
+                0, MSFTEDIT_CLASS, L"",
+                WS_CHILD | WS_VISIBLE | WS_BORDER | WS_VSCROLL |
+                ES_MULTILINE | ES_READONLY | ES_AUTOVSCROLL,
+                10, mh + 150, 360, 110,
+                hwnd,
+                reinterpret_cast<HMENU>(static_cast<UINT_PTR>(IDC_DEFINITION_EDIT)),
+                hInst, nullptr);
+
+            // 启动即展示当前选中记号（第 0 项）的定义
+            showDefinition(ui, 0);
+
             break;
         }
         case WM_ERASEBKGND: {
@@ -319,18 +384,38 @@ namespace {
             auto* ui = getUi(hwnd);
             if (!ui) break;
 
-            switch (LOWORD(wParam)) {
+            const int id = LOWORD(wParam);
+            const auto& table = notationTable();
+
+            // 下拉框选择变化 → 同步 RichEdit
+            if (id == IDC_NOTATION_COMBO && HIWORD(wParam) == CBN_SELCHANGE) {
+                int sel = static_cast<int>(
+                    ::SendMessageW(ui->hComboNotation, CB_GETCURSEL, 0, 0));
+                showDefinition(ui, sel);
+                break;
+            }
+
+            // 菜单“定义”子项 → 切下拉框并展示
+            if (id >= IDM_DEFINITION_BASE &&
+                id < IDM_DEFINITION_BASE + static_cast<int>(table.size())) {
+                const int idx = id - IDM_DEFINITION_BASE;
+                ::SendMessageW(ui->hComboNotation, CB_SETCURSEL, idx, 0);
+                showDefinition(ui, idx);
+                break;
+            }
+
+            switch (id) {
             case IDM_HELP:
                 ::MessageBoxW(hwnd,
-                    L"鸣谢:Hyp Cos,naruyoko,test_alpha-0\n"
-                    L"请注意 代码系利用人工智能技术生成",
+                    L"代码署名\nHypcos 部分记号的代码修改自notation-explorer\nSmileLee-lyx 部分记号的代码修改自 NER\n曹之秋 记号提供给AI的定义使用《大数理论》的原文"
+                    L"\n请注意 代码系利用人工智能技术生成",
                     L"帮助", MB_OK | MB_ICONINFORMATION);
                 break;
 
             case IDM_ABOUT:
                 ::MessageBoxW(hwnd,
-                    L"ω-Y 展开器 v1.6\n\n"
-                    L"已加入 PPS 家族记号、ω-Y magma 展开与 Entry 演示。\n",
+                    L"ω-Y 展开器\n\n"
+                    L"By Cream-CN\n",
                     L"关于", MB_OK | MB_ICONINFORMATION);
                 break;
 
@@ -378,18 +463,14 @@ namespace {
                 int term = 0;
                 if (!readSeqAndTerm(hwnd, ui, seq, term)) break;
 
-                // 读取当前选中的记号
                 int sel = static_cast<int>(
                     ::SendMessageW(ui->hComboNotation, CB_GETCURSEL, 0, 0));
-                const auto& table = notationTable();
                 if (sel < 0 || sel >= static_cast<int>(table.size())) sel = 0;
                 const NotationEntry& entry = table[sel];
 
-                // 调用对应记号的 expand（纯函数，不抛异常）
                 std::vector<int> result = entry.expand(seq, term);
 
-                // FS / FSalter 后处理属于 UI 层，记号层不应感知
-                if (LOWORD(wParam) == IDM_FS && result.size() > 1)
+                if (id == IDM_FS && result.size() > 1)
                     result.pop_back();
 
                 std::string text = seq_to_string(result) + entry.suffix();
@@ -419,6 +500,9 @@ namespace {
 } // namespace
 
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int nCmdShow) {
+    // 运行时加载 RichEdit 5.0（MSFTEDIT_CLASS）
+    ::LoadLibraryW(L"Msftedit.dll");
+
     WNDCLASS wc{};
     wc.lpfnWndProc = WndProc;
     wc.hInstance = hInstance;
@@ -429,7 +513,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int nCmdShow) {
     HWND hwnd = ::CreateWindowExW(
         0, L"OmegaY", L"ω-Y 展开器 (重构中)",
         WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX,
-        CW_USEDEFAULT, CW_USEDEFAULT, 400, 280,
+        CW_USEDEFAULT, CW_USEDEFAULT, 400, 400,
         nullptr, nullptr, hInstance, nullptr);
     if (!hwnd) return 0;
 
