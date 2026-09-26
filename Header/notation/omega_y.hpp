@@ -2,6 +2,7 @@
 #include "../core/arena.hpp"
 #include "../core/entry.hpp"
 #include <algorithm>
+#include <climits>
 #include <string>
 #include <vector>
 
@@ -26,11 +27,9 @@ namespace omegay::notation {
             return !seq.empty() && seq.back() > 1;
         }
 
-        // ---------- 内部工具 ----------
     private:
         using Mountain = std::vector<std::vector<core::Entry*>>;
 
-        // y 是升序坐标（低维在前），逐位比较
         static int vertical_compare(const std::vector<int>& a,
             const std::vector<int>& b) {
             if (a.size() > b.size()) return 1;
@@ -43,10 +42,10 @@ namespace omegay::notation {
         }
 
         static bool same_row(const core::Entry* a, const core::Entry* b) {
+            if (!a || !b) return false;
             return vertical_compare(a->y, b->y) == 0;
         }
 
-        // 从 y 到下一个更高的同维坐标
         static std::vector<int> vertical_increase(std::vector<int> y, int d) {
             if (d < 0) d = 0;
             if ((size_t)d >= y.size()) y.resize((size_t)d + 1, 0);
@@ -55,7 +54,6 @@ namespace omegay::notation {
             return y;
         }
 
-        // 返回第一个不同的维度下标；完全相同时返回 -1
         static int dimension_difference(const std::vector<int>& c1,
             const std::vector<int>& c2) {
             int d = (int)std::max(c1.size(), c2.size());
@@ -67,7 +65,6 @@ namespace omegay::notation {
             return -1;
         }
 
-        // column 按 y 降序排列；找到第一个 y < target 的项
         static core::Entry* find_lower(std::vector<core::Entry*>& column,
             const std::vector<int>& y) {
             if (column.empty()) return nullptr;
@@ -92,7 +89,6 @@ namespace omegay::notation {
             return column[i1];
         }
 
-        // 返回 column 中满足 lowequal <= y < high 的连续段
         static std::vector<core::Entry*> yslice(std::vector<core::Entry*>& column,
             const std::vector<int>& lowequal,
             const std::vector<int>& high) {
@@ -129,7 +125,9 @@ namespace omegay::notation {
         static std::vector<core::Entry*> collect_usual(
             core::Entry* working_entry,
             std::vector<core::Entry*> collection = {}) {
+            if (!working_entry) return collection;
             for (auto* e : working_entry->leftleg_up) {
+                if (!e) continue;
                 auto* child = e->rightleg_down;
                 if (!child) continue;
                 if (contains(collection, child)) continue;
@@ -144,8 +142,9 @@ namespace omegay::notation {
         static std::vector<core::Entry*> collect1D(
             core::Entry* working_entry,
             std::vector<core::Entry*> collection = {}) {
-            if (!working_entry->rightleg_down) return collection;
+            if (!working_entry || !working_entry->rightleg_down) return collection;
             for (auto* child : working_entry->rightleg_down->leftleg_up) {
+                if (!child) continue;
                 if (contains(collection, child)) continue;
                 if (same_row(working_entry, child)) {
                     collection.push_back(child);
@@ -156,6 +155,7 @@ namespace omegay::notation {
         }
 
         static std::vector<core::Entry*> collect(core::Entry* working_entry) {
+            if (!working_entry) return {};
             if (vertical_compare(working_entry->y, { 1 }) > 0 &&
                 working_entry->rightleg_down &&
                 dimension_difference(working_entry->y,
@@ -172,7 +172,9 @@ namespace omegay::notation {
             mountain.resize(seq.size());
             for (size_t i = 0; i < seq.size(); ++i) {
                 auto* bottom = arena.make(seq[i], (int)i, { 1 });
-                auto* phantom = arena.make(0, (int)i, {});
+                // phantom 用 INT_MAX 模拟 JS 的 undefined：
+                // JS 中 undefined < x 恒 false，INT_MAX < x 也恒 false
+                auto* phantom = arena.make(INT_MAX, (int)i, {});
                 bottom->rightleg_down = phantom;
                 phantom->rightleg_up = bottom;
                 if (i > 0) {
@@ -188,7 +190,11 @@ namespace omegay::notation {
             std::vector<int> out;
             out.reserve(mountain.size());
             for (auto& column : mountain) {
-                if (column.size() < 2) continue;   // 防御
+                if (column.size() < 2) {
+                    // 理论不会发生；保险起见给个 0 占位，保持列数对齐
+                    out.push_back(0);
+                    continue;
+                }
                 out.push_back(column[column.size() - 2]->value);
             }
             return out;
@@ -213,6 +219,7 @@ namespace omegay::notation {
                 while (true) {
                     if (column.empty()) break;
                     auto* entry = column[0];
+                    if (!entry) break;
                     if (entry->value == 1) break;
                     core::Entry* parent = entry;
                     while (true) {
@@ -224,7 +231,8 @@ namespace omegay::notation {
                         parent = up;
                         if (parent->value < entry->value) break;
                     }
-                    column.insert(column.begin(), create_entry(arena, parent, entry));
+                    column.insert(column.begin(),
+                        create_entry(arena, parent, entry));
                 }
             }
             return mountain;
@@ -233,8 +241,8 @@ namespace omegay::notation {
         static void fill_magma_edge(core::EntryArena& arena, Mountain& mountain,
             core::Entry* source_entry,
             core::Entry* leftleg_entry) {
-            if (!source_entry->leftleg_down || !leftleg_entry->rightleg_up)
-                return;
+            if (!source_entry || !source_entry->leftleg_down) return;
+            if (!leftleg_entry || !leftleg_entry->rightleg_up) return;
             int targetx = source_entry->x - source_entry->leftleg_down->x +
                 leftleg_entry->x;
             if (targetx < 0) return;
@@ -256,6 +264,7 @@ namespace omegay::notation {
             core::Entry* source_entry, int x_offset,
             int BR_x,
             const std::vector<int>* targety = nullptr) {
+            if (!source_entry) return;
             std::vector<int> ty = targety ? *targety : source_entry->y;
             int tx = source_entry->x + x_offset;
             if (tx < 0) return;
@@ -270,7 +279,7 @@ namespace omegay::notation {
                 if (mountain.size() <= (size_t)lx)
                     mountain.resize((size_t)lx + 1);
 
-                core::Entry* leftleg_entry;
+                core::Entry* leftleg_entry = nullptr;
                 if (source_entry->leftleg_down->x >= BR_x) {
                     leftleg_entry = find_lower(mountain[lx], newentry->y);
                 }
@@ -293,9 +302,9 @@ namespace omegay::notation {
             if (mountain.empty()) return seq;
 
             auto& child = mountain.back();
-            if (child.empty()) return seq;
+            if (child.empty() || !child[0]) return seq;          // ★ child[0] 判空
             core::Entry* BR = child[0]->leftleg_down;
-            if (!BR) return seq;
+            if (!BR) return seq;                                  // ★ BR 判空
             if (BR->x < 0 || BR->x >= (int)mountain.size()) return seq;
 
             int width = (int)mountain.size() - 1 - BR->x;
@@ -318,10 +327,12 @@ namespace omegay::notation {
                 [&](core::Entry* e) { return same_row(e, BR); });
             if (it2 == col2.end()) return seq;
             BR = *it2;
+            if (!BR) return seq;                                  // ★ 再判空
 
             std::vector<std::vector<core::Entry*>> magma_entries;
             for (core::Entry* BR1 = BR; BR1; BR1 = BR1->rightleg_down) {
                 for (auto* entry : collect(BR1)) {
+                    if (!entry) continue;
                     int dx = entry->x - BR->x;
                     if (dx <= 0) continue;
                     if ((size_t)dx >= magma_entries.size())
@@ -335,7 +346,7 @@ namespace omegay::notation {
                 std::vector<core::Entry*> ref;
                 ref.reserve(top.size());
                 for (auto* topentry : top) {
-                    if (mountain.empty()) break;
+                    if (!topentry || mountain.empty()) continue;
                     auto* lo = find_lower(mountain.back(), topentry->y);
                     if (lo) ref.push_back(lo);
                 }
@@ -351,6 +362,7 @@ namespace omegay::notation {
                     if ((size_t)dx >= magma_entries.size()) continue;
 
                     for (auto* magma_entry : magma_entries[dx]) {
+                        if (!magma_entry) continue;
                         copy_single_edge(arena, mountain, magma_entry,
                             n * width, BR->x);
 
@@ -418,10 +430,14 @@ namespace omegay::notation {
             if (seq.back() == 1) {
                 return std::vector<int>(seq.begin(), seq.end() - 1);
             }
+            // 单项且末项 > 1：参考实现未定义，原样返回
+            if (seq.size() == 1) return seq;
+
             core::EntryArena arena;
             try {
-                auto full = omega_Y_limit(arena, seq, term);
-                if (full.empty()) return full;
+                int eff = term + (int)seq.size();
+                auto full = omega_Y_limit(arena, seq, eff);
+                if (full.size() < 2) return full;
                 return std::vector<int>(full.begin(), full.end() - 1);
             }
             catch (...) {
@@ -436,9 +452,12 @@ namespace omegay::notation {
             if (seq.back() == 1) {
                 return std::vector<int>(seq.begin(), seq.end() - 1);
             }
+            if (seq.size() == 1) return seq;
+
             core::EntryArena arena;
             try {
-                return omega_Y_limit(arena, seq, term);
+                int eff = term + (int)seq.size();
+                return omega_Y_limit(arena, seq, eff);
             }
             catch (...) {
                 return seq;
