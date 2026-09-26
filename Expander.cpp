@@ -10,6 +10,7 @@
 #include "Header/notation/empty.hpp"
 #include "Header/notation/PPS-family.hpp"
 #include "Header/notation/Omega-YMagma.hpp"
+#include "Header/notation/mrss121.hpp"
 
 #include <memory>
 #include <string>
@@ -47,6 +48,11 @@ namespace {
         std::vector<int>(*expand)(const std::vector<int>&, int);
         std::string(*suffix)();
         const wchar_t* definition;   // 记号定义（纯文本，可为 nullptr）
+
+        // 可选的文本展开入口。若不为空，UI 会优先用它处理输入文本，
+        // 以支持 MrSS 这类递归嵌套表达式。签名约定：
+        //   std::string expand_string(std::string_view, int)
+        std::string(*expand_text)(std::string_view, int) = nullptr;
     };
 
     [[nodiscard]] const std::vector<NotationEntry>& notationTable() {
@@ -80,6 +86,17 @@ namespace {
 
             { L"ω-Y (strong)",  "omega-y-strong", &notation::OmegaYStrongNotation::expand, &notation::OmegaYStrongNotation::suffix,
               L"ω-Y (strong)\n\nω-Y 记号的强版本。" },
+
+            { L"MrSS1.2.1",     "mrss121",
+              &notation::Mrss121Notation::expand,
+              &notation::Mrss121Notation::suffix,
+              L"MrSS1.2.1（山脉结构序列）\n\n"
+              L"本版本只利用 1 层山脉结构。\n"
+              L"合法表达式形如 S = a1, a2, a3, ...，其中 a1 = 1，\n"
+              L"an 为 MrSS 表达式或有限非零序数。\n\n"
+              L"支持嵌套写法，例如：\n"
+              L"  1,(1,2),(1,2,3)",
+              &notation::Mrss121Notation::expand_string },
         };
         return table;
     }
@@ -459,21 +476,68 @@ namespace {
 
             case IDM_FS:
             case IDM_FSALTER: {
-                std::vector<int> seq;
-                int term = 0;
-                if (!readSeqAndTerm(hwnd, ui, seq, term)) break;
-
                 int sel = static_cast<int>(
                     ::SendMessageW(ui->hComboNotation, CB_GETCURSEL, 0, 0));
                 if (sel < 0 || sel >= static_cast<int>(table.size())) sel = 0;
                 const NotationEntry& entry = table[sel];
 
-                std::vector<int> result = entry.expand(seq, term);
+                std::string text;
 
-                if (id == IDM_FS && result.size() > 1)
-                    result.pop_back();
+                if (entry.expand_text) {
+                    // 文本展开路径：支持 MrSS 这类嵌套表达式。
+                    wchar_t bufSeq[512]{};
+                    wchar_t bufTerm[64]{};
+                    ::GetWindowTextW(ui->hEditSeq, bufSeq, 512);
+                    ::GetWindowTextW(ui->hEditTerm, bufTerm, 64);
 
-                std::string text = seq_to_string(result) + entry.suffix();
+                    std::string utf8Seq = wstring_to_utf8(bufSeq);
+                    int term = 0;
+                    try {
+                        term = std::stoi(wstring_to_utf8(bufTerm));
+                    }
+                    catch (...) {
+                        ::MessageBoxW(hwnd, L"项数必须是整数", L"错误",
+                            MB_OK | MB_ICONERROR);
+                        break;
+                    }
+                    if (term < 1) {
+                        ::MessageBoxW(hwnd, L"项数必须为正整数", L"错误",
+                            MB_OK | MB_ICONERROR);
+                        break;
+                    }
+                    if (utf8Seq.empty()) {
+                        ::MessageBoxW(hwnd, L"序列不能为空", L"错误",
+                            MB_OK | MB_ICONERROR);
+                        break;
+                    }
+
+                    text = entry.expand_text(utf8Seq, term);
+
+                    // FS / FSalter 的“移除末项 / 保留末项”后处理。
+                    // 文本路径下，先解析成表达式序列再决定是否移除。
+                    if (id == IDM_FS) {
+                        auto parsed = notation::Mrss121Notation::parse(text);
+                        if (parsed && parsed->size() > 1) {
+                            parsed->pop_back();
+                            text = notation::Mrss121Notation::to_string(*parsed);
+                        }
+                    }
+                }
+                else {
+                    // 原整数序列路径。
+                    std::vector<int> seq;
+                    int term = 0;
+                    if (!readSeqAndTerm(hwnd, ui, seq, term)) break;
+
+                    std::vector<int> result = entry.expand(seq, term);
+
+                    if (id == IDM_FS && result.size() > 1)
+                        result.pop_back();
+
+                    text = seq_to_string(result);
+                }
+
+                text += entry.suffix();
                 std::wstring wtext = utf8_to_wstring(text);
                 ::MessageBoxW(hwnd, wtext.c_str(), L"展开结果",
                     MB_OK | MB_ICONINFORMATION);

@@ -152,6 +152,7 @@
     <ClInclude Include="Header\core\arena.hpp" />
     <ClInclude Include="Header\core\entry.hpp" />
     <ClInclude Include="Header\notation\empty.hpp" />
+    <ClInclude Include="Header\notation\MrSS121.hpp" />
     <ClInclude Include="Header\notation\Omega-YMagma.hpp" />
     <ClInclude Include="Header\notation\omega_y.hpp" />
     <ClInclude Include="Header\notation\PPS-family.hpp" />
