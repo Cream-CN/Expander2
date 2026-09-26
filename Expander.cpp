@@ -3,12 +3,13 @@
 #include <windows.h>
 #include <shellapi.h>
 #include <sal.h>
+#include <richedit.h>
 
 #include "Header/common/utf8.hpp"
 #include "Header/common/sequence.hpp"
 #include "Header/notation/empty.hpp"
 #include "Header/notation/prss.hpp"
-#include "Header/notation/pps_family.hpp" 
+#include "Header/notation/pps_family.hpp"
 #include "Header/notation/omega_y.hpp"
 #include <memory>
 #include <string>
@@ -25,8 +26,12 @@ namespace {
     constexpr int IDM_HELP = 1003;
     constexpr int IDM_LEGAL = 1004;
     constexpr int IDM_FRDLNK = 1005; // 友情链接
+    constexpr int IDM_NOTE_PRSS = 1101; // 记号定义 - PrSS
+    constexpr int IDM_NOTE_PPS1 = 1102; // 记号定义 - PPS1
     constexpr int IDM_FS = 101;
     constexpr int IDM_FSALTER = 102;
+
+    constexpr wchar_t kNotationWndClass[] = L"NotationDefWnd";
 
     struct MenuDeleter { void operator()(HMENU  m) const noexcept { if (m) ::DestroyMenu(m); } };
     struct BrushDeleter { void operator()(HBRUSH b) const noexcept { if (b) ::DeleteObject(b); } };
@@ -49,17 +54,13 @@ namespace {
         std::string(*suffix)();
     };
 
+    // 只保留实际实现了规则的记号
     constexpr NotationEntry kNotations[] = {
-        { L"空记号",                 &EmptyNotation::expand,      &EmptyNotation::suffix },
-        { L"PrSS",                   &PrSSNotation::expand,       &PrSSNotation::suffix },
-        { L"PPS",                    &PPSNotation::expand,        &PPSNotation::suffix },
-        { L"PPS4",                   &PPS4Notation::expand,       &PPS4Notation::suffix },
-        { L"Weak PPS4",              &WPPS4Notation::expand,      &WPPS4Notation::suffix },
-        { L"Third PPS4",             &TPPS4Notation::expand,      &TPPS4Notation::suffix },
-        { L"Extremely Weak PPS4",    &EWPPS4Notation::expand,     &EWPPS4Notation::suffix },
-        { L"Second PPS4",            &SecondPPS4Notation::expand, &SecondPPS4Notation::suffix },
-        { L"2-pps4",                 &PPS2Notation::expand,       &PPS2Notation::suffix },
-        { L"ω-Y sequence",           &OmegaYNotation::expand,    &OmegaYNotation::suffix },
+        { L"空记号",       &EmptyNotation::expand,  &EmptyNotation::suffix  },
+        { L"PrSS",         &PrSSNotation::expand,   &PrSSNotation::suffix   },
+        { L"PPS",          &PPSNotation::expand,    &PPSNotation::suffix    },
+        { L"PPS4",         &PPS4Notation::expand,   &PPS4Notation::suffix   },
+        { L"ω-Y sequence", &OmegaYNotation::expand, &OmegaYNotation::suffix },
     };
 
     [[nodiscard]] UiState* getUi(HWND h) {
@@ -73,16 +74,141 @@ namespace {
         ::AppendMenuW(hFile, MF_STRING, IDM_EXIT, L"退出(&X)");
         ::AppendMenuW(hMenu, MF_POPUP, reinterpret_cast<UINT_PTR>(hFile), L"文件(&F)");
 
+        HMENU hNotationDef = ::CreatePopupMenu();
+        ::AppendMenuW(hNotationDef, MF_STRING, IDM_NOTE_PRSS, L"初等序列 (PrSS)...");
+        ::AppendMenuW(hNotationDef, MF_STRING, IDM_NOTE_PPS1, L"PPS1...");
+        ::AppendMenuW(hMenu, MF_POPUP, reinterpret_cast<UINT_PTR>(hNotationDef), L"记号定义(&D)");
+
         HMENU hHelp = ::CreatePopupMenu();
         ::AppendMenuW(hHelp, MF_STRING, IDM_HELP, L"帮助(&H)...");
         ::AppendMenuW(hHelp, MF_STRING, IDM_ABOUT, L"关于(&A)...");
         ::AppendMenuW(hHelp, MF_STRING, IDM_LEGAL, L"法律声明(&L)...");
-        // 新增：友情链接（放在“帮助”菜单下）
         ::AppendMenuW(hHelp, MF_SEPARATOR, 0, nullptr);
         ::AppendMenuW(hHelp, MF_STRING, IDM_FRDLNK, L"友情链接(&L)...");
         ::AppendMenuW(hMenu, MF_POPUP, reinterpret_cast<UINT_PTR>(hHelp), L"帮助(&H)");
 
         return hMenu;
+    }
+
+    struct NotationDefWindow {
+        const wchar_t* title;
+        const wchar_t* text;
+    };
+
+    constexpr wchar_t kTextPrSS[] =
+        L"定义 6.1  初等序列 (a_0, a_1, ..., a_{m-1}, a_m) 定义如下：\r\n"
+        L"\r\n"
+        L"  (1)  ( ) = 0\r\n"
+        L"\r\n"
+        L"  (2)  (#, 0) = (#) + 1，式中 # 为任意合法序列。\r\n"
+        L"\r\n"
+        L"  (3)  (#_1, a_i, #_2, a_k) = (#_1, a_i, #_2, a_i, #_2, ...)，\r\n"
+        L"       式中 #_1, #_2 为任意两段合法序列，a_k > 0，\r\n"
+        L"       a_i = a_k - 1 为 a_k 前首个小于 a_k 的数，\r\n"
+        L"       省略号代表任意有限次循环的极限。\r\n";
+
+    constexpr wchar_t kTextPPS1[] =
+        L"PPS1\r\n"
+        L"Parented Predecessor Sequence 1\r\n"
+        L"\r\n"
+        L"PPS 是形如 0,1,0,3 这样用逗号分隔的序列（序列首项是第 1 项）\r\n"
+        L"极限表达式：0,1,2,3,4,5,......\r\n"
+        L"\r\n"
+        L"记末项的值为 x，坏根为第 x 项，坏根的值为 b，末项是序列中的第 y 项，并令 L=y-x\r\n"
+        L"\r\n"
+        L"展开：\r\n"
+        L"  1. 如果末项是 0，则它是后继序数\r\n"
+        L"  2. 末项之前的部分保持不变\r\n"
+        L"  3. 替换末项：如果末项和坏根之间（两边都不含）存在一项，它的值等于 b，那么将末项的值换成 b；否则\r\n"
+        L"     将末项的值减 1\r\n"
+        L"  4. 递归生成其他项（第 i+L 项的值由第 i 项确定）：对任意的 i>x，如果第 i 项的值大于等于 x，那么第 i+L\r\n"
+        L"     项的值等于第 i 项的值 +L，否则第 i+L 项的值等于第 i 项的值\r\n"
+        L"  5. 基本列 [n] 为展开到第 y+n*L-1 项。\r\n";
+
+    LRESULT CALLBACK NotationDefWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+        switch (msg) {
+        case WM_CREATE: {
+            auto* cs = reinterpret_cast<CREATESTRUCTW*>(lParam);
+            auto* def = reinterpret_cast<const NotationDefWindow*>(cs->lpCreateParams);
+            ::SetWindowLongPtrW(hwnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(def));
+
+            HINSTANCE hInst = cs->hInstance;
+
+            HWND hEdit = ::CreateWindowExW(
+                0, MSFTEDIT_CLASS, nullptr,
+                WS_CHILD | WS_VISIBLE | WS_VSCROLL | ES_MULTILINE |
+                ES_READONLY | ES_AUTOVSCROLL | ES_NOHIDESEL,
+                0, 0, 0, 0,
+                hwnd, nullptr, hInst, nullptr);
+
+            if (!hEdit) {
+                ::MessageBoxW(hwnd, L"RichEdit 控件创建失败", L"错误",
+                    MB_OK | MB_ICONERROR);
+                return -1;
+            }
+
+            if (def && def->text) {
+                ::SetWindowTextW(hEdit, def->text);
+            }
+
+            ::SendMessageW(hEdit, EM_SETBKGNDCOLOR, 0,
+                static_cast<LPARAM>(::GetSysColor(COLOR_WINDOW)));
+
+            CHARFORMATW cf{};
+            cf.cbSize = sizeof(cf);
+            cf.dwMask = CFM_FACE | CFM_SIZE;
+            cf.yHeight = 200;
+            ::wcscpy_s(cf.szFaceName, L"Microsoft YaHei UI");
+            ::SendMessageW(hEdit, EM_SETCHARFORMAT,
+                SCF_ALL, reinterpret_cast<LPARAM>(&cf));
+
+            ::SendMessageW(hEdit, EM_SETREADONLY, TRUE, 0);
+            ::SendMessageW(hEdit, EM_SETMARGINS,
+                EC_LEFTMARGIN | EC_RIGHTMARGIN, MAKELPARAM(8, 8));
+
+            return 0;
+        }
+        case WM_SIZE: {
+            HWND hEdit = ::GetWindow(hwnd, GW_CHILD);
+            if (hEdit) {
+                RECT r; ::GetClientRect(hwnd, &r);
+                ::MoveWindow(hEdit, 0, 0, r.right, r.bottom, TRUE);
+            }
+            return 0;
+        }
+        case WM_SETFOCUS: {
+            HWND hEdit = ::GetWindow(hwnd, GW_CHILD);
+            if (hEdit) ::SetFocus(hEdit);
+            return 0;
+        }
+        case WM_CLOSE:
+            ::DestroyWindow(hwnd);
+            return 0;
+        case WM_DESTROY:
+            return 0;
+        default:
+            return ::DefWindowProcW(hwnd, msg, wParam, lParam);
+        }
+    }
+
+    void showNotationDef(HWND owner, const NotationDefWindow* def) {
+        HINSTANCE hInst = reinterpret_cast<HINSTANCE>(
+            ::GetWindowLongPtrW(owner, GWLP_HINSTANCE));
+
+        HWND hwnd = ::CreateWindowExW(
+            WS_EX_TOOLWINDOW,
+            kNotationWndClass, def->title,
+            WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_THICKFRAME |
+            WS_MINIMIZEBOX | WS_VISIBLE,
+            CW_USEDEFAULT, CW_USEDEFAULT, 480, 360,
+            owner, nullptr, hInst, const_cast<NotationDefWindow*>(def));
+        if (hwnd) {
+            ::ShowWindow(hwnd, SW_SHOW);
+            ::UpdateWindow(hwnd);
+            RECT r; ::GetClientRect(hwnd, &r);
+            ::SendMessageW(hwnd, WM_SIZE, SIZE_RESTORED,
+                MAKELPARAM(r.right, r.bottom));
+        }
     }
 
     LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
@@ -184,8 +310,7 @@ namespace {
             case IDM_ABOUT:
                 ::MessageBoxW(hwnd,
                     L"ω-Y 展开器 v1.3\n\n"
-                    L"当前支持：空记号、PrSS、PPS、PPS4、Weak PPS4、\n"
-                    L"Third PPS4、Extremely Weak PPS4、Second PPS4、2-pps4。\n",
+                    L"当前支持：空记号、PrSS、PPS、PPS4、ω-Y sequence。\n",
                     L"关于", MB_OK | MB_ICONINFORMATION);
                 break;
             case IDM_LEGAL:
@@ -228,6 +353,22 @@ namespace {
                     L"友情链接",
                     MB_OK | MB_ICONINFORMATION);
                 break;
+            case IDM_NOTE_PRSS: {
+                static const NotationDefWindow def{
+                    L"记号定义 - 初等序列 (PrSS)",
+                    kTextPrSS
+                };
+                showNotationDef(hwnd, &def);
+                break;
+            }
+            case IDM_NOTE_PPS1: {
+                static const NotationDefWindow def{
+                    L"记号定义 - PPS1",
+                    kTextPPS1
+                };
+                showNotationDef(hwnd, &def);
+                break;
+            }
             case IDM_EXIT:
                 ::PostQuitMessage(0);
                 break;
@@ -301,12 +442,26 @@ int WINAPI wWinMain(
     UNREFERENCED_PARAMETER(hPrevInstance);
     UNREFERENCED_PARAMETER(lpCmdLine);
 
+    if (!::LoadLibraryW(L"Msftedit.dll")) {
+        ::MessageBoxW(nullptr, L"无法加载 Msftedit.dll", L"错误",
+            MB_OK | MB_ICONERROR);
+        return 0;
+    }
+
     WNDCLASS wc{};
     wc.lpfnWndProc = WndProc;
     wc.hInstance = hInstance;
     wc.lpszClassName = L"OmegaY";
     wc.hbrBackground = reinterpret_cast<HBRUSH>(COLOR_WINDOW + 1);
     if (!::RegisterClassW(&wc)) return 0;
+
+    WNDCLASS wcDef{};
+    wcDef.lpfnWndProc = NotationDefWndProc;
+    wcDef.hInstance = hInstance;
+    wcDef.lpszClassName = kNotationWndClass;
+    wcDef.hbrBackground = reinterpret_cast<HBRUSH>(COLOR_WINDOW + 1);
+    wcDef.hCursor = ::LoadCursorW(nullptr, IDC_ARROW);
+    ::RegisterClassW(&wcDef);
 
     HWND hwnd = ::CreateWindowExW(
         0, L"OmegaY", L"展开器 (重构中)",
