@@ -1,0 +1,493 @@
+以下为这四个头文件编写“调用时文档”，即面向使用者的接口说明与调用示例，纯文本形式。
+
+====================================================================
+文件：sequence.hpp
+命名空间：omegay::common
+功能：整数序列的解析与序列化
+====================================================================
+
+一、提供的接口
+
+parse_sequence
+声明：
+std::vector<int> parse_sequence(std::string_view str);
+
+功能：
+将以逗号分隔的字符串解析为整数序列。
+
+输入：
+str —— 待解析的字符串视图，可包含逗号、空白字符。
+
+输出：
+返回 std::vector<int>，为解析出的整数序列。
+
+行为说明：
+
+以逗号 ',' 作为分隔符切分字符串。
+
+对每个分段去除所有空白字符（空格、制表、换行等）。
+
+空分段（如连续逗号、首尾逗号）被忽略。
+
+对每个非空分段调用 std::stoi 转成 int。
+
+若 std::stoi 抛出异常（如非数字、溢出），该分段被静默跳过，
+不抛出异常，不报错。
+
+若全部分段均无效，返回空 vector。
+
+注意：
+
+本函数不区分非法输入与空输入，均返回空序列。
+
+不支持负数以外的正号以外的格式由 stoi 决定，例如 "0x10" 会被
+stoi 按十进制解析为 0 后遇到 'x' 停止，得到 0。
+
+调用示例：
+auto a = omegay::common::parse_sequence("1,2,3");
+// a == {1, 2, 3}
+
+auto b = omegay::common::parse_sequence(" 10 , 20 ,, 30 ");
+// b == {10, 20, 30}
+
+auto c = omegay::common::parse_sequence("");
+// c == {}
+
+auto d = omegay::common::parse_sequence("abc,5,def");
+// d == {5} （abc 与 def 被跳过）
+
+seq_to_string
+声明：
+std::string seq_to_string(const std::vector<int>& seq);
+
+功能：
+将整数序列序列化为逗号分隔的字符串。
+
+输入：
+seq —— 待序列化的整数序列。
+
+输出：
+返回 std::string。
+
+行为说明：
+
+若 seq 为空，返回字符串 "[]"。
+
+否则按顺序用逗号 ',' 连接各元素的十进制字符串。
+
+不添加空格，不添加首尾逗号。
+
+调用示例：
+auto s1 = omegay::common::seq_to_string({1, 2, 3});
+// s1 == "1,2,3"
+
+auto s2 = omegay::common::seq_to_string({});
+// s2 == "[]"
+
+auto s3 = omegay::common::seq_to_string({42});
+// s3 == "42"
+
+往返一致性：
+对不含非法分段的输入，parse_sequence 与 seq_to_string 满足：
+seq_to_string(parse_sequence(s)) 与规范化后的 s 语义一致。
+空序列往返结果为 "[]"。
+
+二、典型使用场景
+
+从配置、命令行、文本协议中读取整数列表。
+
+将内部整数列表输出为可读文本。
+
+两者常配合使用，例如：
+auto seq = omegay::common::parse_sequence(input);
+seq.push_back(100);
+std::string out = omegay::common::seq_to_string(seq);
+
+三、头文件依赖
+
+<algorithm> <cctype> <ranges> <string> <string_view> <vector>
+需要 C++20 或以上（使用了 std::views::split）。
+
+====================================================================
+文件：utf8.hpp
+命名空间：omegay::common
+平台：Windows（依赖 windows.h 的 WideCharToMultiByte / MultiByteToWideChar）
+功能：UTF-8 与 UTF-16 宽字符串互转
+====================================================================
+
+一、提供的接口
+
+wstring_to_utf8
+声明：
+std::string wstring_to_utf8(std::wstring_view w);
+
+功能：
+将宽字符串（Windows 下为 UTF-16）转换为 UTF-8 编码的窄字符串。
+
+输入：
+w —— 宽字符串视图。
+
+输出：
+返回 std::string，内容为 UTF-8 编码。
+
+行为说明：
+
+若 w 为空，直接返回空字符串。
+
+使用 CP_UTF8 调用 WideCharToMultiByte 计算长度并转换。
+
+不处理转换失败（正常输入下不会失败）。
+
+调用示例：
+std::wstring w = L"你好, world";
+std::string u8 = omegay::common::wstring_to_utf8(w);
+// u8 为 "你好, world" 的 UTF-8 字节序列
+
+utf8_to_wstring
+声明：
+std::wstring utf8_to_wstring(std::string_view s);
+
+功能：
+将 UTF-8 编码的窄字符串转换为宽字符串（Windows 下为 UTF-16）。
+
+输入：
+s —— UTF-8 编码的字符串视图。
+
+输出：
+返回 std::wstring。
+
+行为说明：
+
+若 s 为空，直接返回空字符串。
+
+使用 CP_UTF8 调用 MultiByteToWideChar 计算长度并转换。
+
+输入必须是合法 UTF-8；非法输入行为由系统 API 决定。
+
+调用示例：
+std::string u8 = "你好, world";
+std::wstring w = omegay::common::utf8_to_wstring(u8);
+// w == L"你好, world"
+
+二、往返一致性
+
+对合法 UTF-8/UTF-16 文本：
+utf8_to_wstring(wstring_to_utf8(w)) == w
+wstring_to_utf8(utf8_to_wstring(s)) == s
+
+三、注意事项
+
+本头文件仅适用于 Windows。
+
+已定义 WIN32_LEAN_AND_MEAN 与 NOMINMAX，避免引入多余 Windows 头
+并防止 min/max 宏污染。
+
+字符串长度以 int 传给系统 API，超长字符串（>2GB）不在支持范围。
+
+四、典型使用场景
+
+Windows API 返回宽字符串，需要转为 UTF-8 存储或输出。
+
+读取 UTF-8 文本后需要传给 Windows 宽字符 API。
+
+====================================================================
+文件：arena.hpp
+命名空间：omegay::core
+依赖：entry.hpp
+功能：Entry 对象 arena 分配器，统一持有并管理 Entry 生命周期
+====================================================================
+
+一、类 EntryArena
+
+职责：
+集中创建并持有 Entry 对象，返回裸指针供外部使用；
+所有 Entry 的生命周期由 EntryArena 统一管理。
+
+成员函数：
+
+make
+声明：
+Entry* make(int v = 0, int x = 0, std::vector<int> y = {});
+
+功能：
+在 arena 内创建一个 Entry，使用给定参数构造。
+
+参数：
+v —— Entry::value，默认 0。
+x —— Entry::x，默认 0。
+y —— Entry::y，默认空 vector，按值传入后移动构造。
+
+返回：
+指向新建 Entry 的裸指针，非空。
+
+行为说明：
+
+内部使用 std::make_unique<Entry>(v, x, std::move(y)) 创建。
+
+指针存入内部容器，arena 销毁时统一释放。
+
+返回的指针在 arena 生命周期内有效。
+
+注意：内部使用 vector<unique_ptr>，当 vector 扩容时，
+unique_ptr 本身移动，但其所指向的 Entry 对象地址不变，
+因此已返回的 Entry* 不会失效。
+
+调用示例：
+omegay::core::EntryArena arena;
+auto* e1 = arena.make(1, 2, {3, 4});
+auto* e2 = arena.make(); // value=0, x=0, y={}
+
+make_empty
+声明：
+Entry* make_empty();
+
+功能：
+在 arena 内创建一个默认构造的 Entry。
+
+返回：
+指向新建 Entry 的裸指针，非空。
+
+行为说明：
+等价于 make()，但语义更明确表示“空 Entry”。
+
+调用示例：
+auto* e = arena.make_empty();
+
+clear
+声明：
+void clear() noexcept;
+
+功能：
+释放 arena 中所有 Entry。
+
+行为说明：
+
+清空内部容器，所有由此 arena 创建的 Entry* 立即失效。
+
+不抛异常。
+
+调用示例：
+arena.clear();
+
+size
+声明：
+size_t size() const noexcept;
+
+功能：
+返回当前 arena 中 Entry 的数量。
+
+返回：
+Entry 个数。
+
+调用示例：
+size_t n = arena.size();
+
+二、生命周期与指针有效性
+
+EntryArena 对象必须比其返回的所有 Entry* 存活更久。
+
+clear() 之后，之前返回的所有指针均失效。
+
+arena 析构时，所有 Entry 被释放，指针全部失效。
+
+make/make_empty 返回的指针在未 clear、arena 未析构前始终有效。
+
+由于 Entry 之间可能存在指针链接（leftleg_up、rightleg_up、
+rightleg_down、leftleg_down），clear 或析构后这些链接也会失效，
+使用前需自行保证不再访问。
+
+三、典型使用场景
+
+构建大量相互引用的 Entry 图/树结构，由 arena 统一管理内存。
+
+避免手动 new/delete，降低泄漏风险。
+
+四、使用示例
+
+omegay::core::EntryArena arena;
+auto* root = arena.make(1, 0, {1, 2, 3});
+auto* child = arena.make(2, 1, {4, 5});
+root->rightleg_down = child;
+child->leftleg_down = root;
+// ... 使用 ...
+arena.clear(); // 全部释放
+
+====================================================================
+文件：entry.hpp
+命名空间：omegay::core
+功能：Entry 数据结构及其 ykey 计算
+====================================================================
+
+一、结构体 Entry
+
+字段说明：
+
+int value
+整数值，默认 0。语义由使用方定义。
+
+int x
+整数值，默认 0。语义由使用方定义。
+
+std::vector<int> y
+整数序列，默认空。语义由使用方定义。
+
+uint64_t ykey
+由 y 派生的紧凑键值，默认 0。
+由 refresh_key() 或 make_ykey() 计算。
+用于快速比较/索引，不自动随 y 变化，需手动刷新。
+
+std::vector<Entry*> leftleg_up
+指向上层左侧相关 Entry 的指针列表，默认空。
+
+Entry* rightleg_up
+指向上层右侧相关 Entry 的指针，默认 nullptr。
+
+Entry* rightleg_down
+指向下层右侧相关 Entry 的指针，默认 nullptr。
+
+Entry* leftleg_down
+指向下层左侧相关 Entry 的指针，默认 nullptr。
+
+构造函数：
+
+Entry()
+默认构造。
+所有字段使用默认值，ykey 为 0。
+
+Entry(int v, int x_, std::vector<int> y_)
+带参构造。
+依次设置 value = v，x = x_，y = std::move(y_)，
+然后调用 refresh_key() 计算 ykey。
+
+调用示例：
+omegay::core::Entry e1;
+omegay::core::Entry e2(1, 2, {3, 4, 5});
+
+成员函数：
+
+refresh_key
+声明：
+void refresh_key() noexcept;
+
+功能：
+根据当前 y 重新计算 ykey。
+
+行为说明：
+
+不抛异常。
+
+y 改变后必须调用此函数，ykey 才会更新。
+
+计算规则见下方 make_ykey。
+
+调用示例：
+e.y = {9, 8, 7};
+e.refresh_key();
+
+二、自由函数 make_ykey
+
+声明：
+uint64_t make_ykey(const std::vector<int>& y) noexcept;
+
+功能：
+根据整数序列 y 计算 64 位键值 ykey。
+
+参数：
+y —— 整数序列。
+
+返回：
+uint64_t 键值。
+
+计算规则：
+
+取 y.size() 的低 8 位，左移 56 位，放入最高字节。
+
+取 y 的前 7 个元素（不足则取全部）。
+
+第 i 个元素（i 从 0 起）取低 16 位，左移 (i * 8) 位，
+按位或进结果。
+
+因此元素之间在键中并非严格 16 位对齐，而是按字节递增，
+实际每个元素占用 8 位步进，仅低 16 位参与且会相互重叠。
+这是该实现的既定行为，使用方需知悉。
+
+注意：
+
+该键不是 y 的精确编码，存在碰撞可能。
+
+元素仅低 16 位参与，高位被丢弃。
+
+超过 7 个元素的部分不参与。
+
+长度为 256 的倍数时，长度字节为 0，可能与其他长度碰撞。
+
+调用示例：
+uint64_t k1 = omegay::core::make_ykey({1, 2, 3});
+omegay::core::Entry e(1, 0, {1, 2, 3});
+uint64_t k2 = e.ykey;
+// k1 == k2
+
+三、ykey 的一致使用建议
+
+创建 Entry 时若通过带参构造，ykey 自动计算。
+
+直接修改 e.y 后，必须调用 e.refresh_key()。
+
+需要单独计算时使用 make_ykey(e.y)。
+
+比较两个 Entry 的 y 是否“键等价”，可比较 ykey，
+但需接受上述碰撞与截断特性。
+
+四、典型使用场景
+
+作为图/树节点，通过 leg 指针建立上下左右关系。
+
+使用 ykey 做快速分组、哈希或索引。
+
+配合 EntryArena 批量创建与管理。
+
+五、完整调用示例
+
+#include "arena.hpp"
+#include "entry.hpp"
+
+omegay::core::EntryArena arena;
+
+auto* a = arena.make(1, 0, {1, 2, 3});
+auto* b = arena.make(2, 1, {4, 5, 6});
+
+a->rightleg_down = b;
+b->leftleg_up.push_back(a);
+
+// 修改 y 后刷新键
+b->y = {7, 8, 9};
+b->refresh_key();
+
+// 单独计算键
+uint64_t key = omegay::core::make_ykey(b->y);
+
+// 使用完毕后统一释放
+arena.clear();
+
+====================================================================
+通用注意事项
+====================================================================
+
+命名空间：
+sequence.hpp 与 utf8.hpp 位于 omegay::common；
+arena.hpp 与 entry.hpp 位于 omegay::core。
+
+C++ 标准：
+sequence.hpp 使用 std::views::split，需要 C++20。
+其余头文件 C++17 即可（utf8.hpp 依赖 Windows API）。
+
+异常：
+parse_sequence 内部捕获 std::stoi 异常并跳过；
+其余接口基本不抛异常（除容器分配失败等系统级异常）。
+
+线程安全：
+各接口未做同步，多线程访问同一对象需外部加锁。
+
+指针有效性：
+EntryArena 返回的 Entry* 在 clear 或 arena 析构后失效；
+Entry 之间的 leg 指针不参与生命周期管理，需自行保证不悬空。

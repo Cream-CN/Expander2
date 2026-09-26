@@ -5,8 +5,8 @@
 #include "Header/common/utf8.hpp"
 #include "Header/common/sequence.hpp"
 #include "Header/notation/empty.hpp"
-#include "Header/notation/prss.hpp" // 新增
-
+#include "Header/notation/prss.hpp"
+#include "Header/notation/pps_family.hpp" // PPS 家族：PPS / PPS4 / Weak PPS4 / Third PPS4 / ...
 #include <memory>
 #include <string>
 #include <vector>
@@ -32,10 +32,29 @@ namespace {
     struct UiState {
         HWND hEditSeq{};
         HWND hEditTerm{};
-        HWND hComboNotation{}; // 新增：记号选择下拉框
+        HWND hComboNotation{};
         HWND hBtnFS{};
         HWND hBtnFSalter{};
         BrushPtr background;
+    };
+
+    // 下拉框每一项对应的记号接口
+    struct NotationEntry {
+        const wchar_t* display_name;
+        std::vector<int> (*expand)(const std::vector<int>&, int);
+        std::string (*suffix)();
+    };
+
+    constexpr NotationEntry kNotations[] = {
+        { L"空记号",                 &EmptyNotation::expand,      &EmptyNotation::suffix },
+        { L"PrSS",                   &PrSSNotation::expand,       &PrSSNotation::suffix },
+        { L"PPS",                    &PPSNotation::expand,        &PPSNotation::suffix },
+        { L"PPS4",                   &PPS4Notation::expand,       &PPS4Notation::suffix },
+        { L"Weak PPS4",              &WPPS4Notation::expand,      &WPPS4Notation::suffix },
+        { L"Third PPS4",             &TPPS4Notation::expand,      &TPPS4Notation::suffix },
+        { L"Extremely Weak PPS4",    &EWPPS4Notation::expand,     &EWPPS4Notation::suffix },
+        { L"Second PPS4",            &SecondPPS4Notation::expand, &SecondPPS4Notation::suffix },
+        { L"2-pps4",                 &PPS2Notation::expand,       &PPS2Notation::suffix },
     };
 
     [[nodiscard]] UiState* getUi(HWND h) {
@@ -85,7 +104,6 @@ namespace {
                 60, mh + 55, 80, 20,
                 hwnd, nullptr, hInst, nullptr);
 
-            // 修改：将原静态文本替换为下拉框
             ::CreateWindowExW(0, L"STATIC", L"记号:",
                 WS_CHILD | WS_VISIBLE | SS_LEFT,
                 10, mh + 85, 80, 20,
@@ -93,12 +111,14 @@ namespace {
 
             ui->hComboNotation = ::CreateWindowExW(0, L"COMBOBOX", nullptr,
                 WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST | WS_VSCROLL,
-                100, mh + 85, 220, 100,
+                100, mh + 85, 220, 200,
                 hwnd, nullptr, hInst, nullptr);
 
-            ::SendMessageW(ui->hComboNotation, CB_ADDSTRING, 0, (LPARAM)L"空记号 (Empty)");
-            ::SendMessageW(ui->hComboNotation, CB_ADDSTRING, 0, (LPARAM)L"PrSS (初等序列)");
-            ::SendMessageW(ui->hComboNotation, CB_SETCURSEL, 1, 0); // 默认选中 PrSS
+            for (const auto& entry : kNotations) {
+                ::SendMessageW(ui->hComboNotation, CB_ADDSTRING, 0,
+                    reinterpret_cast<LPARAM>(entry.display_name));
+            }
+            ::SendMessageW(ui->hComboNotation, CB_SETCURSEL, 1, 0); // 默认 PrSS
 
             ui->hBtnFS = ::CreateWindowExW(0, L"BUTTON", L"移除末项",
                 WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
@@ -153,8 +173,8 @@ namespace {
             case IDM_ABOUT:
                 ::MessageBoxW(hwnd,
                     L"ω-Y 展开器 v1.3\n\n"
-                    L"当前已有\"空记号\"和\"PrSS (初等序列)\"可用。\n"
-                    L"其它记号将在后续版本中重新加入。",
+                    L"当前支持：空记号、PrSS、PPS、PPS4、Weak PPS4、\n"
+                    L"Third PPS4、Extremely Weak PPS4、Second PPS4、2-pps4。\n",
                     L"关于", MB_OK | MB_ICONINFORMATION);
                 break;
             case IDM_LEGAL:
@@ -216,23 +236,14 @@ namespace {
                     break;
                 }
 
-                // 修改：根据下拉框获取当前选中的记号
-                int sel = (int)::SendMessageW(ui->hComboNotation, CB_GETCURSEL, 0, 0);
-                std::vector<int> result;
-                std::string suffix_text;
-
-                if (sel == 0) {
-                    // 空记号
-                    result = notation::EmptyNotation::expand(seq, term);
-                    suffix_text = notation::EmptyNotation::suffix();
-                }
-                else {
-                    // PrSS 初等序列
-                    result = notation::PrSSNotation::expand(seq, term);
-                    suffix_text = notation::PrSSNotation::suffix();
+                int sel = static_cast<int>(::SendMessageW(ui->hComboNotation, CB_GETCURSEL, 0, 0));
+                if (sel < 0 || sel >= static_cast<int>(std::size(kNotations))) {
+                    sel = 0;
                 }
 
-                // 移除末项（FS）还是保留（FSalter）
+                std::vector<int> result = kNotations[sel].expand(seq, term);
+                std::string suffix_text = kNotations[sel].suffix();
+
                 if (LOWORD(wParam) == IDM_FS && result.size() > 1)
                     result.pop_back();
 

@@ -151,6 +151,7 @@
     <ClInclude Include="Header\core\arena.hpp" />
     <ClInclude Include="Header\core\entry.hpp" />
     <ClInclude Include="Header\notation\empty.hpp" />
+    <ClInclude Include="Header\notation\pps_family.hpp" />
     <ClInclude Include="Header\notation\prss.hpp" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="targetver.h" />
