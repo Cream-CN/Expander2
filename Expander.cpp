@@ -1,6 +1,8 @@
 ﻿#define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
 #include <windows.h>
+#include <shellapi.h>
+#include <sal.h>
 
 #include "Header/common/utf8.hpp"
 #include "Header/common/sequence.hpp"
@@ -21,10 +23,11 @@ namespace {
     constexpr int IDM_EXIT = 1002;
     constexpr int IDM_HELP = 1003;
     constexpr int IDM_LEGAL = 1004;
+    constexpr int IDM_FRDLNK = 1005; // 友情链接
     constexpr int IDM_FS = 101;
     constexpr int IDM_FSALTER = 102;
 
-    struct MenuDeleter { void operator()(HMENU m)  const noexcept { if (m) ::DestroyMenu(m); } };
+    struct MenuDeleter { void operator()(HMENU  m) const noexcept { if (m) ::DestroyMenu(m); } };
     struct BrushDeleter { void operator()(HBRUSH b) const noexcept { if (b) ::DeleteObject(b); } };
     using MenuPtr = std::unique_ptr<std::remove_pointer_t<HMENU>, MenuDeleter>;
     using BrushPtr = std::unique_ptr<std::remove_pointer_t<HBRUSH>, BrushDeleter>;
@@ -41,8 +44,8 @@ namespace {
     // 下拉框每一项对应的记号接口
     struct NotationEntry {
         const wchar_t* display_name;
-        std::vector<int> (*expand)(const std::vector<int>&, int);
-        std::string (*suffix)();
+        std::vector<int>(*expand)(const std::vector<int>&, int);
+        std::string(*suffix)();
     };
 
     constexpr NotationEntry kNotations[] = {
@@ -63,14 +66,20 @@ namespace {
 
     [[nodiscard]] HMENU createMenuBar() {
         HMENU hMenu = ::CreateMenu();
+
         HMENU hFile = ::CreatePopupMenu();
         ::AppendMenuW(hFile, MF_STRING, IDM_EXIT, L"退出(&X)");
         ::AppendMenuW(hMenu, MF_POPUP, reinterpret_cast<UINT_PTR>(hFile), L"文件(&F)");
+
         HMENU hHelp = ::CreatePopupMenu();
         ::AppendMenuW(hHelp, MF_STRING, IDM_HELP, L"帮助(&H)...");
         ::AppendMenuW(hHelp, MF_STRING, IDM_ABOUT, L"关于(&A)...");
         ::AppendMenuW(hHelp, MF_STRING, IDM_LEGAL, L"法律声明(&L)...");
+        // 新增：友情链接（放在“帮助”菜单下）
+        ::AppendMenuW(hHelp, MF_SEPARATOR, 0, nullptr);
+        ::AppendMenuW(hHelp, MF_STRING, IDM_FRDLNK, L"友情链接(&L)...");
         ::AppendMenuW(hMenu, MF_POPUP, reinterpret_cast<UINT_PTR>(hHelp), L"帮助(&H)");
+
         return hMenu;
     }
 
@@ -207,6 +216,16 @@ namespace {
                     L"法律声明",
                     MB_OK | MB_ICONINFORMATION);
                 break;
+            case IDM_FRDLNK:
+                ::MessageBoxW(hwnd,
+                    L"友情链接\n\n"
+                    L"SmileLee-lyx NER :\n https://github.com/SmileLee-lyx/ne-rewritten\n"
+                    L"Hypcos NE：\n https://github.com/hypcos/notation-explorer\n"
+                    L"《大数理论》:\n https://github.com/zhiqiucao/googology\n"
+                    L"Googology Wiki:\n https://wiki.googology.top\n",
+                    L"友情链接",
+                    MB_OK | MB_ICONINFORMATION);
+                break;
             case IDM_EXIT:
                 ::PostQuitMessage(0);
                 break;
@@ -271,7 +290,15 @@ namespace {
 
 } // namespace
 
-int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int nCmdShow) {
+int WINAPI wWinMain(
+    _In_     HINSTANCE hInstance,
+    _In_opt_ HINSTANCE hPrevInstance,
+    _In_     PWSTR     lpCmdLine,
+    _In_     int       nCmdShow)
+{
+    UNREFERENCED_PARAMETER(hPrevInstance);
+    UNREFERENCED_PARAMETER(lpCmdLine);
+
     WNDCLASS wc{};
     wc.lpfnWndProc = WndProc;
     wc.hInstance = hInstance;
