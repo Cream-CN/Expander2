@@ -146,11 +146,13 @@
   <ItemGroup>
     <ClInclude Include="Expander.h" />
     <ClInclude Include="framework.h" />
+    <ClInclude Include="Header\common\mrssshare.hpp" />
     <ClInclude Include="Header\common\sequence.hpp" />
     <ClInclude Include="Header\common\utf8.hpp" />
     <ClInclude Include="Header\core\arena.hpp" />
     <ClInclude Include="Header\core\entry.hpp" />
     <ClInclude Include="Header\notation\empty.hpp" />
+    <ClInclude Include="Header\notation\Omega-YMagma.hpp" />
     <ClInclude Include="Header\notation\omega_y.hpp" />
     <ClInclude Include="Header\notation\PPS-family.hpp" />
     <ClInclude Include="Header\notation\prss.hpp" />

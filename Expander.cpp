@@ -8,6 +8,7 @@
 #include "Header/core/entry.hpp"
 #include "Header/notation/empty.hpp"
 #include "Header/notation/PPS-family.hpp"
+#include "Header/notation/Omega-YMagma.hpp"
 
 #include <memory>
 #include <string>
@@ -52,6 +53,8 @@ namespace {
             { L"Ex. Weak PPS4", "ewpps4", &notation::EWPPS4Notation::expand,      &notation::EWPPS4Notation::suffix },
             { L"Second PPS4",   "spps4",  &notation::SecondPPS4Notation::expand,  &notation::SecondPPS4Notation::suffix },
             { L"2-pps4",        "2-pps4", &notation::PPS2Notation::expand,        &notation::PPS2Notation::suffix },
+            { L"ω-Y (medium)",  "omega-y-medium", &notation::OmegaYMediumNotation::expand, &notation::OmegaYMediumNotation::suffix },
+            { L"ω-Y (strong)",  "omega-y-strong", &notation::OmegaYStrongNotation::expand, &notation::OmegaYStrongNotation::suffix },
         };
         return table;
     }
@@ -326,8 +329,8 @@ namespace {
 
             case IDM_ABOUT:
                 ::MessageBoxW(hwnd,
-                    L"ω-Y 展开器 v1.5\n\n"
-                    L"已加入 PPS 家族记号与 Entry 演示。\n",
+                    L"ω-Y 展开器 v1.6\n\n"
+                    L"已加入 PPS 家族记号、ω-Y magma 展开与 Entry 演示。\n",
                     L"关于", MB_OK | MB_ICONINFORMATION);
                 break;
 
