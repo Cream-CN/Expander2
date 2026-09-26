@@ -39,6 +39,11 @@ namespace {
     constexpr int IDM_DEFINITION_BASE = 3000;
     constexpr int IDC_DEFINITION_EDIT = 4001;
 
+    // 独立定义弹窗相关
+    constexpr wchar_t kDefWindowClass[] = L"OmegaYDefPopup";
+    constexpr int IDC_POPUP_DEF_EDIT = 5001;
+    constexpr int IDC_POPUP_DEF_CLOSE = 5002;
+
     // ------------------------------------------------------------------
     // 记号注册表
     // ------------------------------------------------------------------
@@ -82,10 +87,10 @@ namespace {
               L"2-pps4\n\n二元 PPS4 形式。" },
 
             { L"ω-Y (medium)",  "omega-y-medium", &notation::OmegaYMediumNotation::expand, &notation::OmegaYMediumNotation::suffix,
-              L"ω-Y (medium)\n\nω-Y 记号的中等强度版本。" },
+              L"ω-Y (medium)\n\nω-Y Medium Magma Style" },
 
             { L"ω-Y (strong)",  "omega-y-strong", &notation::OmegaYStrongNotation::expand, &notation::OmegaYStrongNotation::suffix,
-              L"ω-Y (strong)\n\nω-Y 记号的强版本。" },
+              L"ω-Y (strong)\n\nω-Y Strong Magam Style" },
 
             { L"MrSS1.2.1",     "mrss121",
               &notation::Mrss121Notation::expand,
@@ -115,7 +120,7 @@ namespace {
         HWND hBtnFS{};
         HWND hBtnFSalter{};
         HWND hComboNotation{};
-        HWND hRichDef{};        // RichEdit：只读纯文本展示定义
+        HWND hRichDef{};
         BrushPtr background;
     };
 
@@ -198,8 +203,7 @@ namespace {
     }
 
     // ------------------------------------------------------------------
-    // 定义展示（纯文本写入 RichEdit，不使用任何富文本样式）
-    // 先填充记号名字，再接定义正文
+    // 定义展示（主窗口内的 RichEdit，纯文本，与下拉框联动）
     // ------------------------------------------------------------------
     void showDefinition(UiState* ui, int index) {
         const auto& table = notationTable();
@@ -216,6 +220,134 @@ namespace {
 
         ::SendMessageW(ui->hRichDef, EM_SETSEL, 0, 0);
         ::SendMessageW(ui->hRichDef, EM_SCROLLCARET, 0, 0);
+    }
+
+    // ------------------------------------------------------------------
+    // 独立定义弹窗
+    //   字号 10pt，用 RichEdit 只读展示定义正文
+    // ------------------------------------------------------------------
+    void applyRichEdit10pt(HWND hRich) {
+        // 10pt 转 twips：1pt = 20 twips（RichEdit 使用 twips）
+        const LONG sizeTwips = 10 * 20;
+
+        CHARFORMAT2W cf{};
+        cf.cbSize = sizeof(cf);
+        cf.dwMask = CFM_SIZE | CFM_FACE;
+        cf.yHeight = sizeTwips;
+        wcscpy_s(cf.szFaceName, L"Microsoft YaHei UI");
+
+        ::SendMessageW(hRich, EM_SETCHARFORMAT, SCF_ALL, reinterpret_cast<LPARAM>(&cf));
+    }
+
+    void fillPopupDefinition(HWND hRich, const NotationEntry& entry) {
+        std::wstring text;
+        text += L"【";
+        text += entry.display_name;
+        text += L"】\r\n\r\n";
+        text += entry.definition ? entry.definition : L"（暂无定义）";
+
+        // 先设置字符格式为 10pt，再写入文本，避免空文档时设置无效
+        applyRichEdit10pt(hRich);
+
+        ::SetWindowTextW(hRich, text.c_str());
+        applyRichEdit10pt(hRich);
+
+        ::SendMessageW(hRich, EM_SETSEL, 0, 0);
+        ::SendMessageW(hRich, EM_SCROLLCARET, 0, 0);
+    }
+
+    LRESULT CALLBACK DefPopupProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+        switch (msg) {
+        case WM_CREATE: {
+            auto* cs = reinterpret_cast<CREATESTRUCTW*>(lParam);
+            const int index = static_cast<int>(reinterpret_cast<INT_PTR>(cs->lpCreateParams));
+            ::SetWindowLongPtrW(hwnd, GWLP_USERDATA, static_cast<LONG_PTR>(index));
+
+            HINSTANCE hInst = cs->hInstance;
+
+            HWND hRich = ::CreateWindowExW(
+                0, MSFTEDIT_CLASS, L"",
+                WS_CHILD | WS_VISIBLE | WS_BORDER | WS_VSCROLL |
+                ES_MULTILINE | ES_READONLY | ES_AUTOVSCROLL,
+                10, 10, 380, 260,
+                hwnd,
+                reinterpret_cast<HMENU>(static_cast<UINT_PTR>(IDC_POPUP_DEF_EDIT)),
+                hInst, nullptr);
+
+            HWND hClose = ::CreateWindowExW(
+                0, L"BUTTON", L"关闭",
+                WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+                320, 280, 70, 25,
+                hwnd,
+                reinterpret_cast<HMENU>(static_cast<UINT_PTR>(IDC_POPUP_DEF_CLOSE)),
+                hInst, nullptr);
+
+            const auto& table = notationTable();
+            if (index >= 0 && index < static_cast<int>(table.size())) {
+                fillPopupDefinition(hRich, table[index]);
+            }
+            (void)hClose;
+            break;
+        }
+        case WM_COMMAND: {
+            if (LOWORD(wParam) == IDC_POPUP_DEF_CLOSE) {
+                ::DestroyWindow(hwnd);
+            }
+            break;
+        }
+        case WM_CLOSE:
+            ::DestroyWindow(hwnd);
+            break;
+        case WM_DESTROY:
+            break;
+        case WM_CTLCOLORSTATIC:
+        case WM_CTLCOLOREDIT: {
+            HDC hdc = reinterpret_cast<HDC>(wParam);
+            ::SetBkMode(hdc, TRANSPARENT);
+            ::SetTextColor(hdc, ::GetSysColor(COLOR_WINDOWTEXT));
+            return reinterpret_cast<LRESULT>(::GetSysColorBrush(COLOR_WINDOW));
+        }
+        default:
+            return ::DefWindowProcW(hwnd, msg, wParam, lParam);
+        }
+        return 0;
+    }
+
+    void registerDefPopupClass(HINSTANCE hInst) {
+        static bool registered = false;
+        if (registered) return;
+
+        WNDCLASSW wc{};
+        wc.lpfnWndProc = DefPopupProc;
+        wc.hInstance = hInst;
+        wc.lpszClassName = kDefWindowClass;
+        wc.hbrBackground = ::GetSysColorBrush(COLOR_WINDOW);
+        wc.hCursor = ::LoadCursorW(nullptr, IDC_ARROW);
+        ::RegisterClassW(&wc);
+        registered = true;
+    }
+
+    void showDefinitionPopup(HINSTANCE hInst, HWND hParent, int index) {
+        const auto& table = notationTable();
+        if (index < 0 || index >= static_cast<int>(table.size())) return;
+
+        registerDefPopupClass(hInst);
+
+        std::wstring title = L"定义 - ";
+        title += table[index].display_name;
+
+        HWND hPopup = ::CreateWindowExW(
+            WS_EX_TOOLWINDOW,
+            kDefWindowClass, title.c_str(),
+            WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU,
+            CW_USEDEFAULT, CW_USEDEFAULT, 420, 360,
+            hParent, nullptr, hInst,
+            reinterpret_cast<LPVOID>(static_cast<INT_PTR>(index)));
+
+        if (hPopup) {
+            ::ShowWindow(hPopup, SW_SHOW);
+            ::UpdateWindow(hPopup);
+        }
     }
 
     // ------------------------------------------------------------------
@@ -354,7 +486,7 @@ namespace {
                 reinterpret_cast<HMENU>(static_cast<UINT_PTR>(IDM_FSALTER)),
                 hInst, nullptr);
 
-            // RichEdit：只读、纯文本展示定义
+            // RichEdit：主窗口内的定义展示区（与下拉框联动）
             ui->hRichDef = ::CreateWindowExW(
                 0, MSFTEDIT_CLASS, L"",
                 WS_CHILD | WS_VISIBLE | WS_BORDER | WS_VSCROLL |
@@ -363,6 +495,9 @@ namespace {
                 hwnd,
                 reinterpret_cast<HMENU>(static_cast<UINT_PTR>(IDC_DEFINITION_EDIT)),
                 hInst, nullptr);
+
+            // 主窗口内的 RichEdit 也设为 10pt，保持一致观感
+            applyRichEdit10pt(ui->hRichDef);
 
             // 启动即展示当前选中记号（第 0 项）的定义
             showDefinition(ui, 0);
@@ -404,7 +539,7 @@ namespace {
             const int id = LOWORD(wParam);
             const auto& table = notationTable();
 
-            // 下拉框选择变化 → 同步 RichEdit
+            // 下拉框选择变化 → 只同步主窗口内的 RichEdit，不影响弹窗
             if (id == IDC_NOTATION_COMBO && HIWORD(wParam) == CBN_SELCHANGE) {
                 int sel = static_cast<int>(
                     ::SendMessageW(ui->hComboNotation, CB_GETCURSEL, 0, 0));
@@ -412,20 +547,21 @@ namespace {
                 break;
             }
 
-            // 菜单“定义”子项 → 切下拉框并展示
+            // 菜单“定义”子项 → 单独弹窗展示，不再切换下拉框
             if (id >= IDM_DEFINITION_BASE &&
                 id < IDM_DEFINITION_BASE + static_cast<int>(table.size())) {
                 const int idx = id - IDM_DEFINITION_BASE;
-                ::SendMessageW(ui->hComboNotation, CB_SETCURSEL, idx, 0);
-                showDefinition(ui, idx);
+                HINSTANCE hInst = reinterpret_cast<HINSTANCE>(
+                    ::GetWindowLongPtrW(hwnd, GWLP_HINSTANCE));
+                showDefinitionPopup(hInst, hwnd, idx);
                 break;
             }
 
             switch (id) {
             case IDM_HELP:
                 ::MessageBoxW(hwnd,
-                    L"代码署名\nHypcos 部分记号的代码修改自notation-explorer\nSmileLee-lyx 部分记号的代码修改自 NER\n曹之秋 记号提供给AI的定义使用《大数理论》的原文"
-                    L"\n请注意 代码系利用人工智能技术生成",
+                    L"代码署名\nHypcos 部分记号的代码修改自notation-explorer\nSmileLee-lyx 部分记号的代码修改自 NER\n曹知秋 记号提供给AI的定义使用《大数理论》的原文\nMrSS的定义来自 AAA滚木批发 (QQ3682911373)"
+                    L"\n请注意 代码系利用人工智能技术生成，我（和所有贡献者）不保证展开结果正确",
                     L"帮助", MB_OK | MB_ICONINFORMATION);
                 break;
 
