@@ -48,6 +48,9 @@
     <ClInclude Include="Header\notation\pps_family.hpp">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="Header\notation\omega_y.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Expander.cpp">

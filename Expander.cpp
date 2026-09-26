@@ -8,7 +8,8 @@
 #include "Header/common/sequence.hpp"
 #include "Header/notation/empty.hpp"
 #include "Header/notation/prss.hpp"
-#include "Header/notation/pps_family.hpp" // PPS 家族：PPS / PPS4 / Weak PPS4 / Third PPS4 / ...
+#include "Header/notation/pps_family.hpp" 
+#include "Header/notation/omega_y.hpp"
 #include <memory>
 #include <string>
 #include <vector>
@@ -58,6 +59,7 @@ namespace {
         { L"Extremely Weak PPS4",    &EWPPS4Notation::expand,     &EWPPS4Notation::suffix },
         { L"Second PPS4",            &SecondPPS4Notation::expand, &SecondPPS4Notation::suffix },
         { L"2-pps4",                 &PPS2Notation::expand,       &PPS2Notation::suffix },
+        { L"ω-Y sequence",           &OmegaYNotation::expand,    &OmegaYNotation::suffix },
     };
 
     [[nodiscard]] UiState* getUi(HWND h) {
