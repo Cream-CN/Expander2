@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="Expander.Backend/Expander_CS.Backend.fsproj" Id="e26523aa-1650-4f9d-bbcb-da06d1bef96b" />
+  <Project Path="Expander_CS.csproj" />
+</Solution>
