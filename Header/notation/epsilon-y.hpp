@@ -308,26 +308,29 @@ namespace omegay::notation {
             }
         }
 
+        // 修复 1：b 可能为 nullptr，且 b->cloumn 可能为 -1
         inline void setElementNo(std::vector<std::vector<Entry*>>& m, Entry* b) {
             int id = 0;
+            const int b_col = (b != nullptr) ? b->cloumn : -1;
             for (std::size_t i = 0; i < m.size(); ++i) {
                 for (std::size_t j = 0; j < m[i].size(); ++j) {
                     Entry* e = m[i][j];
-                    if (static_cast<int>(i) == b->cloumn) {
+                    if (static_cast<int>(i) == b_col) {
                         e->no = static_cast<int>(j) + 1;
                     }
-                    else if (static_cast<int>(i) < b->cloumn ||
-                        (e->value <= 1 && j == 0)) {
+                    else if (b != nullptr &&
+                        (static_cast<int>(i) < b->cloumn ||
+                            (e->value <= 1 && j == 0))) {
                         e->no = 0;
                     }
                     else if (e->ref != nullptr) {
                         e->no = e->ref->no;
                     }
 
-                    if (static_cast<int>(i) > b->cloumn) {
+                    if (b != nullptr && static_cast<int>(i) > b->cloumn) {
                         e->id = id++;
                     }
-                    if (static_cast<int>(i) == b->cloumn || i == m.size() - 1) {
+                    if (static_cast<int>(i) == b_col || i == m.size() - 1) {
                         e->id = e->no;
                     }
                 }
@@ -510,6 +513,7 @@ namespace omegay::notation {
         // 复制与展开
         // ------------------------------------------------------------------
 
+        // 修复 2：it->ref 可能为 nullptr；c 可能越界
         inline void copyElement(const std::vector<std::vector<Entry*>>& m,
             Entry* b,
             Entry* t,
@@ -534,15 +538,25 @@ namespace omegay::notation {
             {
                 int c;
                 if (f) {
-                    c = it->ref->cloumn + (t->cloumn - b->cloumn) * (i + 1);
+                    const int base_col = (it->ref != nullptr) ? it->ref->cloumn : it->cloumn;
+                    c = base_col + (t->cloumn - b->cloumn) * (i + 1);
                 }
                 else {
                     c = t->cloumn + i;
                 }
+
+                // 边界保护
+                if (c < 0 || static_cast<std::size_t>(c) >= m.size()) {
+                    c = (t->cloumn >= 0 && static_cast<std::size_t>(t->cloumn) < m.size())
+                        ? t->cloumn
+                        : 0;
+                }
                 r = m[static_cast<std::size_t>(c)][0];
 
-                while (r->foot != nullptr && r->foot->id <= it->ref->id) {
-                    r = r->foot;
+                if (it->ref != nullptr) {
+                    while (r->foot != nullptr && r->foot->id <= it->ref->id) {
+                        r = r->foot;
+                    }
                 }
 
                 std::vector<int> fr;
@@ -553,7 +567,10 @@ namespace omegay::notation {
                     fr = it->foot->row;
                 }
 
-                if (compareRow(rowDifference(it->row, it->ref->row), { 1, 2 }) < 0) {
+                if (it->ref == nullptr) {
+                    max_row = it->row;
+                }
+                else if (compareRow(rowDifference(it->row, it->ref->row), { 1, 2 }) < 0) {
                     max_row = rowAddition(r->row, rowDifference(it->row, it->ref->row));
                 }
                 else {
@@ -568,20 +585,24 @@ namespace omegay::notation {
                 }
             }
 
+            // 修复 3：it->ref / t->ref 可能为 nullptr
             if (it->cloumn == t->cloumn && it->idx == t->idx &&
+                it->ref != nullptr &&
                 compareRow(rowDifference(it->row, it->ref->row), { 1, 2 }) >= 0) {
                 Entry* p = t->parent;
                 t->parent = b;
 
-                const std::vector<Entry*> seq =
-                    toSequence(rowDifference(getFootRow(*t, d, arena), t->ref->row), arena);
-                const std::vector<int> expanded = expand_impl(
-                    seq,
-                    static_cast<int>(it->row.size()) + i + 1,
-                    { 0 },
-                    false,
-                    arena);
-                max_row = rowAddition(r->row, rowDifference(expanded, t->ref->row));
+                if (t->ref != nullptr) {
+                    const std::vector<Entry*> seq =
+                        toSequence(rowDifference(getFootRow(*t, d, arena), t->ref->row), arena);
+                    const std::vector<int> expanded = expand_impl(
+                        seq,
+                        static_cast<int>(it->row.size()) + i + 1,
+                        { 0 },
+                        false,
+                        arena);
+                    max_row = rowAddition(r->row, rowDifference(expanded, t->ref->row));
+                }
 
                 t->parent = p;
             }
@@ -610,18 +631,20 @@ namespace omegay::notation {
 
                 int pc;
                 if (f) {
-                    pc = it->parent->cloumn >= b->cloumn
-                        ? static_cast<int>(m.size()) - 1 + it->parent->cloumn - it->cloumn
-                        : it->parent->cloumn;
+                    const int parent_col = (it->parent != nullptr) ? it->parent->cloumn : -1;
+                    pc = (parent_col >= b->cloumn)
+                        ? static_cast<int>(m.size()) - 1 + parent_col - it->cloumn
+                        : parent_col;
                 }
                 else {
-                    pc = it->parent->cloumn >= b->cloumn
+                    const int parent_col = (it->parent != nullptr) ? it->parent->cloumn : -1;
+                    pc = (parent_col >= b->cloumn)
                         ? static_cast<int>(m.size()) - 2
-                        : it->parent->cloumn;
+                        : parent_col;
                 }
 
                 Entry* p = nullptr;
-                if (pc >= 0) {
+                if (pc >= 0 && static_cast<std::size_t>(pc) < m.size()) {
                     p = m[static_cast<std::size_t>(pc)].back();
                 }
                 else {
@@ -666,7 +689,9 @@ namespace omegay::notation {
 
             it = new_col.back();
             while (it->head != nullptr) {
-                it->head->value = it->value + it->head->parent->value;
+                if (it->head->parent != nullptr) {
+                    it->head->value = it->value + it->head->parent->value;
+                }
                 it = it->head;
             }
         }
@@ -723,40 +748,57 @@ namespace omegay::notation {
                 e->value--;
             }
 
-            for (int i = b->no; i < static_cast<int>(m[static_cast<std::size_t>(b->cloumn)].size()); ++i) {
-                int idx = t->idx;
-                Entry* src = m[static_cast<std::size_t>(b->cloumn)][static_cast<std::size_t>(i)];
-                Entry* e = arena.make(src->value,
-                    src->row,
-                    t->cloumn,
-                    ++idx,
-                    src->no,
-                    src->no,
-                    src->parent,
-                    m[static_cast<std::size_t>(t->cloumn)].back(),
-                    nullptr,
-                    src);
-                m[static_cast<std::size_t>(t->cloumn)].push_back(e);
-                m[static_cast<std::size_t>(t->cloumn)]
-                    [m[static_cast<std::size_t>(t->cloumn)].size() - 2]
-                    ->foot = e;
+            // 修复 4：b 可能为 nullptr，或 b->cloumn < 0
+            if (b != nullptr && b->cloumn >= 0 &&
+                static_cast<std::size_t>(b->cloumn) < m.size() &&
+                t->cloumn >= 0 &&
+                static_cast<std::size_t>(t->cloumn) < m.size()) {
+                const int limit =
+                    static_cast<int>(m[static_cast<std::size_t>(b->cloumn)].size());
+                for (int i = b->no; i < limit; ++i) {
+                    int idx = t->idx;
+                    Entry* src = m[static_cast<std::size_t>(b->cloumn)]
+                        [static_cast<std::size_t>(i)];
+                    Entry* e = arena.make(src->value,
+                        src->row,
+                        t->cloumn,
+                        ++idx,
+                        src->no,
+                        src->no,
+                        src->parent,
+                        m[static_cast<std::size_t>(t->cloumn)].back(),
+                        nullptr,
+                        src);
+                    m[static_cast<std::size_t>(t->cloumn)].push_back(e);
+                    m[static_cast<std::size_t>(t->cloumn)]
+                        [m[static_cast<std::size_t>(t->cloumn)].size() - 2]
+                        ->foot = e;
+                }
             }
 
             for (int i = 0; i < n; ++i) {
                 if (f) {
-                    for (int j = b->cloumn + 1; j <= t->cloumn; ++j) {
-                        copyCloumn(m, b, t, j, i, ex, d, true, arena);
+                    if (b != nullptr) {
+                        for (int j = b->cloumn + 1; j <= t->cloumn; ++j) {
+                            if (j >= 0 && static_cast<std::size_t>(j) < m.size()) {
+                                copyCloumn(m, b, t, j, i, ex, d, true, arena);
+                            }
+                        }
                     }
                 }
                 else {
-                    copyCloumn(m, b, t, t->cloumn, i, ex, d, false, arena);
+                    if (t->cloumn >= 0 && static_cast<std::size_t>(t->cloumn) < m.size()) {
+                        copyCloumn(m, b, t, t->cloumn, i, ex, d, false, arena);
+                    }
                 }
             }
 
             std::vector<int> result;
             result.reserve(m.size());
             for (const std::vector<Entry*>& col : m) {
-                result.push_back(col[0]->value);
+                if (!col.empty()) {
+                    result.push_back(col[0]->value);
+                }
             }
             return result;
         }

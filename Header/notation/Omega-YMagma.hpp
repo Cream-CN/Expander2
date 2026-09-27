@@ -1,11 +1,3 @@
-// Header/notation/Omega-YMagma.hpp
-// ω-Y 展开器：Medium magma / Strong magma
-// 依据 omega-Y-magma.js 翻译，遵循 CONTRIBUTING.txt 接口契约。
-//
-// 约定：
-//   - Infinity 哨兵用 INT_MAX 表示（序列中 y 坐标不会出现该值）。
-//   - 对外 expand 不抛异常；内部异常一律退化为安全值。
-//   - 本头文件不包含 <windows.h> 或任何 UI 头。
 #pragma once
 
 #include "../core/entry.hpp"
@@ -22,18 +14,9 @@ namespace omegay::notation::omega_y_detail {
 using omegay::core::Entry;
 
 inline constexpr int kInfinity = (std::numeric_limits<int>::max)();
-
-// ---------------------------------------------------------------------
-// 判定：seq 是否为极限哨兵 [Infinity]
-// ---------------------------------------------------------------------
 [[nodiscard]] inline bool is_limit_sentinel(const std::vector<int>& s) noexcept {
     return s.size() == 1 && s[0] == kInfinity;
 }
-
-// ---------------------------------------------------------------------
-// vertical_compare —— 逐字照搬 JS：先比长度，再从高位到低位比
-// 返回 1(a>b) / -1(a<b) / 0(相等)
-// ---------------------------------------------------------------------
 [[nodiscard]] inline int vertical_compare(
     const std::vector<int>& a, const std::vector<int>& b) noexcept
 {
@@ -49,11 +32,6 @@ inline constexpr int kInfinity = (std::numeric_limits<int>::max)();
 [[nodiscard]] inline bool same_row(const Entry* e1, const Entry* e2) noexcept {
     return vertical_compare(e1->y, e2->y) == 0;
 }
-
-// ---------------------------------------------------------------------
-// vertical_increase(y, d)
-// 从 [r0, r1, ..., r(d-1), rd #] 变为 [0, 0, ..., 0, rd+1 #]
-// ---------------------------------------------------------------------
 [[nodiscard]] inline std::vector<int> vertical_increase(
     const std::vector<int>& y, int d)
 {
@@ -66,11 +44,6 @@ inline constexpr int kInfinity = (std::numeric_limits<int>::max)();
         c[static_cast<std::size_t>(i)] = 0;
     return c;
 }
-
-// ---------------------------------------------------------------------
-// dimension_difference：逐位从高到低找第一个不同的维度
-// 完全相同返回 -1
-// ---------------------------------------------------------------------
 [[nodiscard]] inline int dimension_difference(
     const std::vector<int>& c1, const std::vector<int>& c2) noexcept
 {
@@ -78,7 +51,6 @@ inline constexpr int kInfinity = (std::numeric_limits<int>::max)();
     while (d-- > 0) {
         const int v1 = (d < static_cast<int>(c1.size())) ? c1[static_cast<std::size_t>(d)] : 0;
         const int v2 = (d < static_cast<int>(c2.size())) ? c2[static_cast<std::size_t>(d)] : 0;
-        // JS 里 c1[d] !== c2[d]，undefined !== 0 也会触发返回 d
         const bool has1 = d < static_cast<int>(c1.size());
         const bool has2 = d < static_cast<int>(c2.size());
         if (has1 != has2) return d;
@@ -86,12 +58,6 @@ inline constexpr int kInfinity = (std::numeric_limits<int>::max)();
     }
     return -1;
 }
-
-// ---------------------------------------------------------------------
-// Mountain 内部表示
-// 每一列是一个 vector<Entry*>，列内按 y 从高到低（大 y 在前）排序
-// 全部 Entry 由内部 Arena 持有
-// ---------------------------------------------------------------------
 struct Arena {
     std::vector<std::unique_ptr<Entry>> owned;
 
@@ -102,10 +68,6 @@ struct Arena {
 };
 
 using Mountain = std::vector<std::vector<Entry*>>;
-
-// ---------------------------------------------------------------------
-// from_sequence
-// ---------------------------------------------------------------------
 [[nodiscard]] inline Mountain from_sequence(
     Arena& arena, const std::vector<int>& seq)
 {
@@ -114,7 +76,6 @@ using Mountain = std::vector<std::vector<Entry*>>;
     for (int i = 0; i < static_cast<int>(seq.size()); ++i) {
         Entry* bottom = arena.make(seq[static_cast<std::size_t>(i)], i, {1});
         Entry* phantom = arena.make(0, i, {});
-        // 底行下方默认边
         bottom->rightleg_down = phantom;
         phantom->rightleg_up  = bottom;
         if (i > 0) {
@@ -125,10 +86,6 @@ using Mountain = std::vector<std::vector<Entry*>>;
     }
     return mountain;
 }
-
-// ---------------------------------------------------------------------
-// to_sequence
-// ---------------------------------------------------------------------
 [[nodiscard]] inline std::vector<int> to_sequence(const Mountain& mountain) {
     std::vector<int> out;
     out.reserve(mountain.size());
@@ -138,10 +95,6 @@ using Mountain = std::vector<std::vector<Entry*>>;
     }
     return out;
 }
-
-// ---------------------------------------------------------------------
-// create_entry
-// ---------------------------------------------------------------------
 [[nodiscard]] inline Entry* create_entry(Arena& arena, Entry* parent, Entry* entry) {
     const int dd = dimension_difference(parent->y, entry->y) + 1;
     Entry* newentry = arena.make(
@@ -154,10 +107,6 @@ using Mountain = std::vector<std::vector<Entry*>>;
     parent->leftleg_up.push_back(newentry);
     return newentry;
 }
-
-// ---------------------------------------------------------------------
-// draw_mountain
-// ---------------------------------------------------------------------
 inline Mountain draw_mountain(Arena& arena, Mountain mountain) {
     for (auto& column : mountain) {
         while (true) {
@@ -178,10 +127,6 @@ inline Mountain draw_mountain(Arena& arena, Mountain mountain) {
     }
     return mountain;
 }
-
-// ---------------------------------------------------------------------
-// find_lower / find_higherequal / yslice
-// ---------------------------------------------------------------------
 [[nodiscard]] inline Entry* find_lower(
     const std::vector<Entry*>& column, const std::vector<int>& y) noexcept
 {
@@ -227,10 +172,6 @@ inline Mountain draw_mountain(Arena& arena, Mountain mountain) {
     }
     return std::vector<Entry*>(column.begin() + start, column.begin() + i2);
 }
-
-// ---------------------------------------------------------------------
-// collect_weak / collect_strong
-// ---------------------------------------------------------------------
 inline void collect_weak(Entry* working, std::vector<Entry*>& collection) {
     for (Entry* e : working->leftleg_up) {
         Entry* child = e->rightleg_down;
@@ -254,10 +195,6 @@ inline void collect_strong(Entry* working, std::vector<Entry*>& collection) {
         }
     }
 }
-
-// ---------------------------------------------------------------------
-// fill_magma_edge
-// ---------------------------------------------------------------------
 inline void fill_magma_edge(
     Arena& arena, Mountain& mountain,
     Entry* source_entry, Entry* leftleg_entry)
@@ -274,11 +211,6 @@ inline void fill_magma_edge(
         mountain[static_cast<std::size_t>(targetx)].push_back(newentry);
     }
 }
-
-// ---------------------------------------------------------------------
-// copy_single_edge
-// targety == nullptr 时表示用 source_entry->y
-// ---------------------------------------------------------------------
 inline void copy_single_edge(
     Arena& arena, Mountain& mountain,
     Entry* source_entry, int x_offset, int BR_x,
@@ -300,10 +232,6 @@ inline void copy_single_edge(
     }
     mountain[static_cast<std::size_t>(source_entry->x + x_offset)].push_back(newentry);
 }
-
-// ---------------------------------------------------------------------
-// 公共骨架：medium_magma / strong_magma 只差 magma_entries 的收集方式
-// ---------------------------------------------------------------------
 enum class MagmaKind { Medium, Strong };
 
 [[nodiscard]] inline std::vector<int> magma_expand(
@@ -320,8 +248,6 @@ enum class MagmaKind { Medium, Strong };
     std::vector<Entry*>& child = mountain.back();
     Entry* BR = child[0]->leftleg_down;
     const int width = static_cast<int>(mountain.size()) - 1 - BR->x;
-
-    // top = mountain[BR.x] 从 BR 起（不含末项），前置 child[0]
     std::vector<Entry*> top;
     {
         auto& col = mountain[static_cast<std::size_t>(BR->x)];
@@ -329,21 +255,15 @@ enum class MagmaKind { Medium, Strong };
         top.assign(it, col.end() - 1);
         top.insert(top.begin(), child[0]);
     }
-
-    // s = seq，末项减 1
     std::vector<int> s = seq;
     s.back() -= 1;
     mountain = draw_mountain(arena, from_sequence(arena, s));
-
-    // 在新 mountain 里恢复 BR
     {
         auto& col = mountain[static_cast<std::size_t>(BR->x)];
         for (Entry* e : col) {
             if (same_row(e, BR)) { BR = e; break; }
         }
     }
-
-    // magma_entries[dx] —— 用 vector<vector<Entry*>>，dx 从 1 起
     std::vector<std::vector<Entry*>> magma_entries(
         static_cast<std::size_t>(width) + 1);
 
@@ -369,7 +289,6 @@ enum class MagmaKind { Medium, Strong };
                         magma_entries[static_cast<std::size_t>(dx)].push_back(entry);
                 }
             } else {
-                // mountain.slice(BR.x+1) 每列取末项
                 for (int dx1 = 0;
                      BR->x + 1 + dx1 < static_cast<int>(mountain.size()); ++dx1) {
                     auto& col = mountain[static_cast<std::size_t>(BR->x + 1 + dx1)];
@@ -383,7 +302,6 @@ enum class MagmaKind { Medium, Strong };
     }
 
     for (int n = 1; n <= FSterm; ++n) {
-        // ref = top 每个元素在最后一列找 find_lower
         std::vector<Entry*> ref;
         ref.reserve(top.size());
         for (Entry* t : top)
@@ -414,10 +332,7 @@ enum class MagmaKind { Medium, Strong };
                     copy_single_edge(arena, mountain, source_entry, n * width, BR->x,
                                      &targety);
                 }
-                if (magma_entry->y.empty()) continue; // JS: if(!magma_entry.y.length) return;
-
-                // medium: leftlegx = magma_entry.leftleg_down.x + n*width
-                // strong: 同样公式（strong 用 magma_entry.leftleg_down.x）
+                if (magma_entry->y.empty()) continue;
                 const int leftlegx = magma_entry->leftleg_down->x + n * width;
                 for (Entry* leftleg_entry :
                      yslice(mountain[static_cast<std::size_t>(leftlegx)],
@@ -426,8 +341,6 @@ enum class MagmaKind { Medium, Strong };
                     fill_magma_edge(arena, mountain, magma_entry, leftleg_entry);
                 }
             }
-
-            // 列内按 y 从大到小排序（-vertical_compare）
             std::sort(mountain[static_cast<std::size_t>(BR->x + n * width + dx)].begin(),
                       mountain[static_cast<std::size_t>(BR->x + n * width + dx)].end(),
                       [](Entry* a, Entry* b) {
@@ -451,10 +364,6 @@ enum class MagmaKind { Medium, Strong };
 }
 
 } // namespace omegay::notation::omega_y_detail
-
-// =====================================================================
-// 对外接口
-// =====================================================================
 namespace omegay::notation {
 
 struct OmegaYMediumNotation {

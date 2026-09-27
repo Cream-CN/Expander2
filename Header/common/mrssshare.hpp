@@ -1,12 +1,4 @@
 #pragma once
-
-// Header/notation/mrssshare.hpp
-// MrSS 系列共享的递归表达式、解析器与基础工具。
-// 供 MrSS1.2.1 及其他 MrSS 记号复用。
-//
-// 命名空间：omegay::notation::mrss
-// 依赖：标准库，无 Windows API，纯头文件，C++20。
-
 #include <algorithm>
 #include <cctype>
 #include <cstddef>
@@ -17,10 +9,6 @@
 #include <vector>
 
 namespace omegay::notation::mrss {
-
-    // ---------------------------------------------------------------------------
-    // 递归表达式
-    // ---------------------------------------------------------------------------
 
     struct Expr {
         bool atom = true;
@@ -39,14 +27,8 @@ namespace omegay::notation::mrss {
         [[nodiscard]] bool is_expr() const noexcept { return !atom; }
     };
 
-    // ---------------------------------------------------------------------------
-    // 解析器 / 格式化器
-    // ---------------------------------------------------------------------------
-
     class Parser {
     public:
-        // 解析整个字符串为表达式序列。
-        // 成功返回序列，失败返回 std::nullopt。
         [[nodiscard]] static std::optional<std::vector<Expr>>
             parse(std::string_view str) {
             Parser p(str);
@@ -56,8 +38,6 @@ namespace omegay::notation::mrss {
             if (!p.eof()) return std::nullopt;
             return seq;
         }
-
-        // 序列格式化。空序列输出 "[]"。
         [[nodiscard]] static std::string
             to_string(const std::vector<Expr>& seq) {
             if (seq.empty()) return "[]";
@@ -68,8 +48,6 @@ namespace omegay::notation::mrss {
             }
             return r;
         }
-
-        // 单个表达式格式化。
         [[nodiscard]] static std::string
             to_string(const Expr& e) {
             if (e.is_atom()) {
@@ -152,8 +130,6 @@ namespace omegay::notation::mrss {
 
                 if (get() != ',') return std::nullopt;
                 skip_ws();
-
-                // 允许尾随逗号
                 if (!eof() && peek() == end) break;
             }
 
@@ -164,18 +140,9 @@ namespace omegay::notation::mrss {
         std::size_t pos_ = 0;
     };
 
-    // ---------------------------------------------------------------------------
-    // 基础工具
-    // ---------------------------------------------------------------------------
-
     [[nodiscard]] inline bool is_one(const Expr& e) {
         return e.is_atom() && e.value == 1;
     }
-
-    // n 阶元素定义：
-    //   单个 1 为 0 阶元素；
-    //   单个数值项或由 1 组成的项为 1 阶元素；
-    //   由 0~n 阶元素组成的元素为 n+1 阶元素。
     [[nodiscard]] inline int element_order(const Expr& e) {
         if (e.is_atom()) {
             return e.value == 1 ? 0 : 1;
@@ -219,8 +186,6 @@ namespace omegay::notation::mrss {
         }
         return r;
     }
-
-    // 从纯整数序列构造表达式序列。
     [[nodiscard]] inline std::vector<Expr> from_int_sequence(
         const std::vector<int>& seq) {
         std::vector<Expr> out;
@@ -230,8 +195,6 @@ namespace omegay::notation::mrss {
         }
         return out;
     }
-
-    // 尝试转回纯整数序列；若含嵌套表达式则返回 std::nullopt。
     [[nodiscard]] inline std::optional<std::vector<int>> to_int_sequence(
         const std::vector<Expr>& seq) {
         std::vector<int> out;

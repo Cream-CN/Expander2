@@ -170,8 +170,6 @@ namespace omegay::notation {
             mountain.resize(seq.size());
             for (size_t i = 0; i < seq.size(); ++i) {
                 auto* bottom = arena.make(seq[i], (int)i, { 1 });
-                // phantom 用 INT_MAX 模拟 JS 的 undefined：
-                // JS 中 undefined < x 恒 false，INT_MAX < x 也恒 false
                 auto* phantom = arena.make(INT_MAX, (int)i, {});
                 bottom->rightleg_down = phantom;
                 phantom->rightleg_up = bottom;
@@ -189,7 +187,6 @@ namespace omegay::notation {
             out.reserve(mountain.size());
             for (auto& column : mountain) {
                 if (column.size() < 2) {
-                    // 理论不会发生；保险起见给个 0 占位，保持列数对齐
                     out.push_back(0);
                     continue;
                 }
@@ -291,8 +288,6 @@ namespace omegay::notation {
             }
             mountain[tx].push_back(newentry);
         }
-
-        // ---------- 核心展开 ----------
         static std::vector<int> omega_Y_limit(core::EntryArena& arena,
             const std::vector<int>& seq,
             int FSterm) {
@@ -300,9 +295,9 @@ namespace omegay::notation {
             if (mountain.empty()) return seq;
 
             auto& child = mountain.back();
-            if (child.empty() || !child[0]) return seq;          // ★ child[0] 判空
+            if (child.empty() || !child[0]) return seq;
             core::Entry* BR = child[0]->leftleg_down;
-            if (!BR) return seq;                                  // ★ BR 判空
+            if (!BR) return seq;
             if (BR->x < 0 || BR->x >= (int)mountain.size()) return seq;
 
             int width = (int)mountain.size() - 1 - BR->x;
@@ -313,8 +308,6 @@ namespace omegay::notation {
             if (it == brCol.end() || it + 1 == brCol.end()) return seq;
             std::vector<core::Entry*> top(it, brCol.end() - 1);
             top.insert(top.begin(), child[0]);
-
-            // 第二座山
             std::vector<int> s = seq;
             --s[s.size() - 1];
             mountain = draw_mountain(arena, from_sequence(arena, s));
@@ -325,7 +318,7 @@ namespace omegay::notation {
                 [&](core::Entry* e) { return same_row(e, BR); });
             if (it2 == col2.end()) return seq;
             BR = *it2;
-            if (!BR) return seq;                                  // ★ 再判空
+            if (!BR) return seq;
 
             std::vector<std::vector<core::Entry*>> magma_entries;
             for (core::Entry* BR1 = BR; BR1; BR1 = BR1->rightleg_down) {
@@ -420,7 +413,6 @@ namespace omegay::notation {
         }
 
     public:
-        // ---------- 对外接口 ----------
         [[nodiscard]] static std::vector<int> expand(
             const std::vector<int>& seq, int term) {
             if (seq.empty()) return {};
@@ -428,7 +420,6 @@ namespace omegay::notation {
             if (seq.back() == 1) {
                 return std::vector<int>(seq.begin(), seq.end() - 1);
             }
-            // 单项且末项 > 1：参考实现未定义，原样返回
             if (seq.size() == 1) return seq;
 
             core::EntryArena arena;
@@ -442,8 +433,6 @@ namespace omegay::notation {
                 return seq;
             }
         }
-
-        // FSalter：保留末项
         [[nodiscard]] static std::vector<int> expand_alter(
             const std::vector<int>& seq, int term) {
             if (seq.empty()) return {};

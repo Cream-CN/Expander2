@@ -7,10 +7,6 @@
 namespace omegay::notation {
 
     namespace pps_detail {
-
-        // ------------------------------------------------------------------
-        // 通用辅助：判断后继序数（末项为 0）
-        // ------------------------------------------------------------------
         inline bool is_successor(const std::vector<int>& seq) {
             return !seq.empty() && seq.back() == 0;
         }
@@ -21,19 +17,15 @@ namespace omegay::notation {
                 return res;
             }
 
-            const int y = static_cast<int>(seq.size()); // 末项列标（1-based）
-            const int x = seq.back();                   // 末项值
-            if (x <= 0 || x > y) return seq;            // 非法输入，原样返回
+            const int y = static_cast<int>(seq.size());
+            const int x = seq.back();
+            if (x <= 0 || x > y) return seq;
 
-            const int bad_root_index = x - 1;           // 坏根 0-based 索引
-            const int b = seq[bad_root_index];          // 坏根值
-            const int L = y - x;                        // L = y - x
+            const int bad_root_index = x - 1;
+            const int b = seq[bad_root_index];
+            const int L = y - x;
             if (L <= 0) return seq;
-
-            // 构造初始序列：原序列前 y-1 项 + 新末项
             std::vector<int> res(seq.begin(), seq.end() - 1);
-
-            // 判断弱展开 / 强展开
             bool weak = false;
             for (int i = bad_root_index + 1; i < y - 1; ++i) {
                 if (seq[i] == b) {
@@ -44,25 +36,21 @@ namespace omegay::notation {
 
             int new_last;
             if (weak) {
-                new_last = b;               // 弱展开：末项换成 b
+                new_last = b;
             }
             else {
-                new_last = seq.back() - 1;  // 强展开：末项减 1
+                new_last = seq.back() - 1;
             }
             res.push_back(new_last);
-
-            // 目标长度：第 y + n*L - 1 项
             int target_len = y + n * L - 1;
             if (target_len < y) target_len = y;
-
-            // 递归生成其他项
             for (int i = x + 1; i <= target_len - L; ++i) {
                 int val_i;
                 if (i < y) {
                     val_i = seq[i - 1];
                 }
                 else if (i == y) {
-                    val_i = res[y - 1];     // 新末项
+                    val_i = res[y - 1];
                 }
                 else {
                     if (i - 1 < static_cast<int>(res.size())) {
@@ -74,7 +62,7 @@ namespace omegay::notation {
                 }
 
                 int new_val = (val_i >= x) ? (val_i + L) : val_i;
-                int target_index = i + L;   // 1-based
+                int target_index = i + L;
                 if (target_index <= target_len) {
                     if (target_index - 1 >= static_cast<int>(res.size())) {
                         res.resize(target_index);
@@ -85,41 +73,32 @@ namespace omegay::notation {
 
             return res;
         }
-
-        // ------------------------------------------------------------------
-        // PPS4 家族展开
-        // 对应 PPS-family.js 中的 expand_pps4(sequence, fs_term, variant)
-        // ------------------------------------------------------------------
         enum class PPS4Variant {
-            PPS4,     // 找 <= b
-            WPPS4,    // 只找 === b
-            TPPS4,    // 找 <= b，且找到后走 strong_expand 独立构造
-            EWPPS4,   // 找 === b；遇到 < b 立即停止
+            PPS4,
+            WPPS4,
+            TPPS4,
+            EWPPS4,
         };
 
         inline std::vector<int> expand_pps4_variant(
             const std::vector<int>& seq, int n, PPS4Variant variant)
         {
             if (seq.empty()) return seq;
-
-            // 后继序数：基本列为去掉末项
             if (is_successor(seq)) {
                 std::vector<int> res(seq.begin(), seq.end() - 1);
                 return res;
             }
 
-            const int y = static_cast<int>(seq.size()); // 末项列标（1-based）
-            const int x = seq.back();                   // 末项值
+            const int y = static_cast<int>(seq.size());
+            const int x = seq.back();
             if (x <= 0 || x > y) return seq;
 
-            const int bad_root_index = x - 1;           // 坏根 0-based 索引
-            const int b = seq[bad_root_index];          // 坏根值
+            const int bad_root_index = x - 1;
+            const int b = seq[bad_root_index];
             const int L = y - x;
             if (L <= 0) return seq;
 
             std::vector<int> res(seq.begin(), seq.end() - 1);
-
-            // 判断弱展开：x+1 .. y-1 中是否存在 === b
             bool weak = false;
             for (int i = bad_root_index + 1; i < y - 1; ++i) {
                 if (seq[i] == b) {
@@ -135,7 +114,6 @@ namespace omegay::notation {
                 int found_col = -1;
 
                 if (variant == PPS4Variant::EWPPS4) {
-                    // 从 x-2 向左找 === b；遇到 < b 停止
                     for (int candidate = x - 2; candidate >= b; --candidate) {
                         if (candidate < 0 || candidate >= y) continue;
                         const int v = seq[candidate];
@@ -147,7 +125,6 @@ namespace omegay::notation {
                     }
                 }
                 else if (variant == PPS4Variant::WPPS4) {
-                    // 只找 === b
                     for (int candidate = x - 2; candidate >= b; --candidate) {
                         if (candidate < 0 || candidate >= y) continue;
                         if (seq[candidate] == b) {
@@ -157,7 +134,6 @@ namespace omegay::notation {
                     }
                 }
                 else {
-                    // pps4 / tpps4：找 <= b
                     for (int candidate = x - 2; candidate >= b; --candidate) {
                         if (candidate < 0 || candidate >= y) continue;
                         if (seq[candidate] <= b) {
@@ -172,15 +148,11 @@ namespace omegay::notation {
                     strong_expand = (variant == PPS4Variant::TPPS4);
                 }
                 else {
-                    new_last = b;           // 找不到则等同弱展开
+                    new_last = b;
                 }
             }
 
             res.push_back(new_last);
-
-            // ----------------------------------------------------------
-            // TPPS4 的强展开：走独立构造
-            // ----------------------------------------------------------
             if (strong_expand) {
                 const int total_len = y + n * L;
                 std::vector<int> out;
@@ -205,10 +177,6 @@ namespace omegay::notation {
                 }
                 return out;
             }
-
-            // ----------------------------------------------------------
-            // 其余变体：逐项 + 偏移构造
-            // ----------------------------------------------------------
             int target_len = y + n * L - 1;
             if (target_len < y) target_len = y;
 
@@ -241,23 +209,16 @@ namespace omegay::notation {
 
             return res;
         }
-
-        // 保留原名字，默认等价于 pps4
         inline std::vector<int> expand_pps4(const std::vector<int>& seq, int n) {
             return expand_pps4_variant(seq, n, PPS4Variant::PPS4);
         }
-
-        // ------------------------------------------------------------------
-        // Second PPS4 展开
-        // 对应 PPS-family.js 中的 expand_second_pps4
-        // ------------------------------------------------------------------
         inline std::vector<int> expand_second_pps4(const std::vector<int>& seq, int count) {
             if (seq.empty()) return seq;
 
             const int y = static_cast<int>(seq.size());
             const int x = seq.back();
             if (x == 0) return std::vector<int>(seq.begin(), seq.end() - 1);
-            if (x > y) return seq; // 原 JS 抛异常，这里按你的接口约定原样返回
+            if (x > y) return seq;
 
             const int b = seq[x - 1];
             const int L = y - x;
@@ -318,18 +279,11 @@ namespace omegay::notation {
 
             return result;
         }
-
-        // ------------------------------------------------------------------
-        // 2-pps4 展开
-        // 对应 PPS-family.js 中的 expandPPS / FS 对 [0,2] 的特判
-        // ------------------------------------------------------------------
         inline std::vector<int> expand_2_pps4(const std::vector<int>& seq, int n) {
             if (seq.empty()) return seq;
 
             const int y = static_cast<int>(seq.size());
             const int x = seq.back();
-
-            // 原 JS 中 n === 0 先于 [0,2] 特判
             if (n == 0) {
                 return std::vector<int>(seq.begin(), seq.end() - 1);
             }
@@ -338,8 +292,6 @@ namespace omegay::notation {
                 return std::vector<int>(seq.begin(), seq.end() - 1);
             }
             if (x > y) return seq;
-
-            // 特判 [0,2]
             if (y == 2 && seq[0] == 0 && seq[1] == 2) {
                 std::vector<int> result;
                 for (int i = 0; i <= n; ++i) result.push_back(i);
@@ -398,12 +350,6 @@ namespace omegay::notation {
         }
 
     } // namespace pps_detail
-
-    // ==================================================================
-    // PPS 家族接口定义
-    // ==================================================================
-
-    // PPS1（简称 PPS）
     struct PPSNotation {
         static constexpr const char* kName = "PPS";
         static std::vector<int> expand(const std::vector<int>& seq, int term) {
@@ -411,8 +357,6 @@ namespace omegay::notation {
         }
         static std::string suffix() { return ""; }
     };
-
-    // PPS4
     struct PPS4Notation {
         static constexpr const char* kName = "PPS4";
         static std::vector<int> expand(const std::vector<int>& seq, int term) {
@@ -421,8 +365,6 @@ namespace omegay::notation {
         }
         static std::string suffix() { return ""; }
     };
-
-    // Weak PPS4
     struct WPPS4Notation {
         static constexpr const char* kName = "Weak PPS4";
         static std::vector<int> expand(const std::vector<int>& seq, int term) {
@@ -431,8 +373,6 @@ namespace omegay::notation {
         }
         static std::string suffix() { return ""; }
     };
-
-    // Third PPS4
     struct TPPS4Notation {
         static constexpr const char* kName = "Third PPS4";
         static std::vector<int> expand(const std::vector<int>& seq, int term) {
@@ -441,8 +381,6 @@ namespace omegay::notation {
         }
         static std::string suffix() { return ""; }
     };
-
-    // Extremely Weak PPS4
     struct EWPPS4Notation {
         static constexpr const char* kName = "Extremely Weak PPS4";
         static std::vector<int> expand(const std::vector<int>& seq, int term) {
@@ -451,8 +389,6 @@ namespace omegay::notation {
         }
         static std::string suffix() { return ""; }
     };
-
-    // Second PPS4
     struct SecondPPS4Notation {
         static constexpr const char* kName = "Second PPS4";
         static std::vector<int> expand(const std::vector<int>& seq, int term) {
@@ -460,8 +396,6 @@ namespace omegay::notation {
         }
         static std::string suffix() { return ""; }
     };
-
-    // 2-pps4
     struct PPS2Notation {
         static constexpr const char* kName = "2-pps4";
         static std::vector<int> expand(const std::vector<int>& seq, int term) {

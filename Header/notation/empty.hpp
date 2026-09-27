@@ -12,14 +12,10 @@ namespace omegay::notation {
 struct EmptyNotation {
     static constexpr const char* kName        = "空记号 (Passthrough)";
     static constexpr const char* kDescription = "原样输出，尚在重构中";
-
-    // 展开接口与旧记号保持一致的调用形态，方便日后替换。
     [[nodiscard]] static std::vector<int> expand(
         const std::vector<int>& seq, int /*FSterm*/) {
-        return seq; // 原样输出
+        return seq;
     }
-
-    // 追加给 UI 的提示
     [[nodiscard]] static std::string suffix() {
         return "  (尚在重构中)";
     }

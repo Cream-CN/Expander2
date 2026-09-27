@@ -709,7 +709,6 @@ namespace {
 } // namespace
 
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int nCmdShow) {
-    // 运行时加载 RichEdit 5.0（MSFTEDIT_CLASS）
     ::LoadLibraryW(L"Msftedit.dll");
 
     WNDCLASS wc{};
