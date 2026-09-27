@@ -32,15 +32,23 @@ namespace omegay
 
 		private readonly NotationInfo[] _notations =
 		{
-	new NotationInfo
-	{
-		DisplayName = EmptyNotation.Name,
-		Definition  = EmptyNotation.definition,
-		Expand      = EmptyNotation.expand,
-		Suffix      = EmptyNotation.suffix,
-		ExpandText  = null,
-	},
-};
+			new NotationInfo
+			{
+				DisplayName = EmptyNotation.Name,
+				Definition  = EmptyNotation.definition,
+				Expand      = EmptyNotation.expand,
+				Suffix      = EmptyNotation.suffix,
+				ExpandText  = null,
+			},
+			new NotationInfo
+			{
+				DisplayName = PrSSNotation.Name,
+				Definition  = PrSSNotation.definition,
+				Expand      = PrSSNotation.expand,
+				Suffix      = PrSSNotation.suffix,
+				ExpandText  = null, // PrSS 不支持文本展开
+			},
+		};
 
 		public Form1()
 		{
@@ -68,6 +76,11 @@ namespace omegay
 			menuFile.DropDownItems.Add(menuExit);
 
 			menuDefinition = new ToolStripMenuItem("定义(&D)");
+			{
+				var menuDefPrSS = new ToolStripMenuItem("PrSS");
+				menuDefPrSS.Click += MenuDefinitionPrSS_Click;
+				menuDefinition.DropDownItems.Add(menuDefPrSS);
+			}
 
 			menuHelp = new ToolStripMenuItem("帮助(&H)");
 			menuHelpItem = new ToolStripMenuItem("帮助(&H)...");
@@ -151,6 +164,16 @@ namespace omegay
 				Font = new Font("Microsoft YaHei UI", 10f),
 			};
 
+			// ---------- 下拉框联动 definition ----------
+			cmbNotation.SelectedIndexChanged += (s, e) =>
+			{
+				int idx = cmbNotation.SelectedIndex;
+				if (idx >= 0 && idx < _notations.Length)
+					rtbDef.Text = _notations[idx].Definition;
+			};
+			if (cmbNotation.SelectedIndex >= 0)
+				rtbDef.Text = _notations[cmbNotation.SelectedIndex].Definition;
+
 			// ---------- 加入窗体 ----------
 			Controls.Add(rtbDef);
 			Controls.Add(btnFSalter);
@@ -222,6 +245,50 @@ namespace omegay
 				MessageBoxButtons.OK, MessageBoxIcon.Information);
 		}
 		// ================= 菜单事件 =================
+		private void MenuDefinitionPrSS_Click(object? sender, EventArgs e)
+		{
+			ShowDefinitionDialog("PrSS 定义", PrSSNotation.definition);
+		}
+
+		private void ShowDefinitionDialog(string title, string text)
+		{
+			using var dlg = new Form
+			{
+				Text = title,
+				ClientSize = new Size(420, 260),
+				FormBorderStyle = FormBorderStyle.FixedDialog,
+				MaximizeBox = false,
+				MinimizeBox = false,
+				StartPosition = FormStartPosition.CenterParent,
+				ShowInTaskbar = false,
+			};
+
+			var rtb = new RichTextBox
+			{
+				Location = new Point(10, 10),
+				Size = new Size(400, 200),
+				ReadOnly = true,
+				ScrollBars = RichTextBoxScrollBars.Vertical,
+				Font = new Font("Microsoft YaHei UI", 10f),
+				Text = text,
+			};
+
+			var btnOk = new Button
+			{
+				Text = "确定",
+				DialogResult = DialogResult.OK,
+				Location = new Point(330, 220),
+				Size = new Size(80, 25),
+			};
+
+			dlg.Controls.Add(rtb);
+			dlg.Controls.Add(btnOk);
+			dlg.AcceptButton = btnOk;
+			dlg.CancelButton = btnOk;
+
+			dlg.ShowDialog(this);
+		}
+
 		private void MenuHelpItem_Click(object sender, EventArgs e)
 		{
 			MessageBox.Show(this,
