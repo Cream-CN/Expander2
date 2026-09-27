@@ -1,16 +1,25 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <ItemGroup>
-    <ProjectReference Include="Expander.Backend\Expander_CS.Backend.fsproj" />
-  </ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="Expander.Backend\Expander_CS.Backend.fsproj" />
+	</ItemGroup>
 
-  <PropertyGroup>
-    <OutputType>WinExe</OutputType>
-    <TargetFramework>net10.0-windows</TargetFramework>
-    <RootNamespace>Expander_CS</RootNamespace>
-    <Nullable>enable</Nullable>
-    <UseWindowsForms>true</UseWindowsForms>
-    <ImplicitUsings>enable</ImplicitUsings>
-  </PropertyGroup>
+	<PropertyGroup>
+		<OutputType>WinExe</OutputType>
+		<TargetFramework>net10.0-windows</TargetFramework>
+		<RootNamespace>Expander_CS</RootNamespace>
+		<Nullable>enable</Nullable>
+		<UseWindowsForms>true</UseWindowsForms>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<AssemblyTitle>Expander</AssemblyTitle>
+		<Company>Cream-CN</Company>
+		<Product>Googology Expander</Product>
+		<Copyright>Copyright © 2026 Cream-CN</Copyright>
+		<Description>Expander MainProgram</Description>
+		<AssemblyVersion>1.0.0.0</AssemblyVersion>
+		<FileVersion>1.0.0.0</FileVersion>
+		<InformationalVersion>1.0.0</InformationalVersion>
+		<SatelliteResourceLanguages>en;zh-Hans</SatelliteResourceLanguages>
+	</PropertyGroup>
 
 </Project>
