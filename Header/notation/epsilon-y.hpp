@@ -121,8 +121,8 @@ namespace omegay::notation {
                 if (i >= r1.size()) {
                     std::vector<int> result;
                     result.reserve(i + (r2.size() - j));
-                    result.insert(result.end(), r1.begin(), r1.begin() + i);
-                    result.insert(result.end(), r2.begin() + j, r2.end());
+                    result.insert(result.end(), r1.begin(), r1.begin() + static_cast<std::ptrdiff_t>(i));
+                    result.insert(result.end(), r2.begin() + static_cast<std::ptrdiff_t>(j), r2.end());
                     return result;
                 }
                 if (j >= r2.size()) {
@@ -131,8 +131,8 @@ namespace omegay::notation {
                 if (r1[i] < r2[j]) {
                     std::vector<int> result;
                     result.reserve(i + (r2.size() - j));
-                    result.insert(result.end(), r1.begin(), r1.begin() + i);
-                    result.insert(result.end(), r2.begin() + j, r2.end());
+                    result.insert(result.end(), r1.begin(), r1.begin() + static_cast<std::ptrdiff_t>(i));
+                    result.insert(result.end(), r2.begin() + static_cast<std::ptrdiff_t>(j), r2.end());
                     return result;
                 }
                 if (r1[i] == r2[j] && j + 1 < r2.size() && r2[j + 1] > r2[j]) {
@@ -197,7 +197,7 @@ namespace omegay::notation {
 
         inline std::vector<int> proc(const std::vector<int>& d) {
             if (d.size() > 2 && d[0] == 0 && d[1] > 0) {
-                const auto div = divide(d);
+                const std::vector<std::vector<int>> div = divide(d);
                 if (div.size() > 1) {
                     return { static_cast<int>(div[0].size()) - 1 };
                 }
@@ -211,8 +211,8 @@ namespace omegay::notation {
         inline bool isDimensionLimited(const Entry& it,
             const std::vector<int>& d,
             Arena& arena) {
-            const auto pd = proc(d);
-            const auto foot = getFootRow(it, d, arena);
+            const std::vector<int> pd = proc(d);
+            const std::vector<int> foot = getFootRow(it, d, arena);
 
             if (pd.size() == 1 && pd[0] != 0 && foot.size() > 1 && foot[1] > pd[0]) {
                 return true;
@@ -234,7 +234,8 @@ namespace omegay::notation {
             std::vector<int> s(r.begin(), r.end() - 1);
             s[s.size() - 1]++;
 
-            const auto rr = expand_impl(toSequence(s, arena), 2, d, false, arena);
+            const std::vector<Entry*> seq = toSequence(s, arena);
+            const std::vector<int> rr = expand_impl(seq, 2, d, false, arena);
             if (rr.size() > r.size() - 1 &&
                 rr[r.size() - 1] <= r[r.size() - 1] - 1) {
                 return rowStandardization(s, d, arena);
@@ -252,7 +253,7 @@ namespace omegay::notation {
                 (d.size() == 1 && d[0] == 0) ||
                 (d.size() == 2 && d[0] == 0) ||
                 (d.size() == 3 && d[0] == 0 && d[1] == 1 && d[2] == 0)) {
-                auto row = it.row;
+                std::vector<int> row = it.row;
                 row.push_back(1);
                 return row;
             }
@@ -283,7 +284,7 @@ namespace omegay::notation {
         // ------------------------------------------------------------------
 
         inline void setElementRefrence(std::vector<std::vector<Entry*>>& m) {
-            for (auto& col : m) {
+            for (std::vector<Entry*>& col : m) {
                 for (Entry* e : col) {
                     if (e->row.size() <= 1 && e->value <= 1) continue;
                     if (e->parent == nullptr) continue;
@@ -397,7 +398,7 @@ namespace omegay::notation {
                 while (it->value > 1) {
                     if (isDimensionLimited(*it, d, arena)) break;
 
-                    auto foot_row = getFootRow(*it, d, arena);
+                    std::vector<int> foot_row = getFootRow(*it, d, arena);
                     Entry* foot = arena.make(it->value - it->parent->value,
                         std::move(foot_row),
                         static_cast<int>(i),
@@ -427,7 +428,7 @@ namespace omegay::notation {
             std::vector<Entry*> o;
             o.reserve(m.size());
 
-            for (const auto& col : m) {
+            for (const std::vector<Entry*>& col : m) {
                 Entry* last = col.back();
                 Entry* parent = nullptr;
 
@@ -449,7 +450,7 @@ namespace omegay::notation {
         inline std::vector<Entry*> getMds(const std::vector<std::vector<Entry*>>& m,
             Arena& arena) {
             Entry* last = m.back().back();
-            const auto chain = getReferenceChain(last);
+            const std::vector<Entry*> chain = getReferenceChain(last);
 
             std::vector<int> seq;
             seq.reserve(chain.size());
@@ -462,7 +463,7 @@ namespace omegay::notation {
         inline std::pair<int, int> getBootIndex(const std::vector<Entry*>& s,
             const std::vector<int>& d,
             Arena& arena) {
-            auto m = drawMountain(s, d, arena);
+            std::vector<std::vector<Entry*>> m = drawMountain(s, d, arena);
             setElementRefrence(m);
 
             Entry* t = m.back().back();
@@ -470,24 +471,24 @@ namespace omegay::notation {
             Entry* b = t->parent;
 
             if (b != nullptr && t->value - b->value > 1 && proc(d).size() == 1) {
-                auto o = getOds(m, arena);
+                std::vector<Entry*> o = getOds(m, arena);
 
                 std::vector<int> new_d;
                 if (d.size() == 1 || divide(d).size() == 1) {
                     new_d = d;
                 }
                 else {
-                    const auto div = divide(d);
+                    const std::vector<std::vector<int>> div = divide(d);
                     std::vector<std::vector<int>> sub(div.begin() + 1, div.end());
                     new_d = merge(sub);
                 }
 
-                const auto [c, _] = getBootIndex(o, new_d, arena);
-                return { c, static_cast<int>(m[static_cast<std::size_t>(c)].size()) - 1 };
+                const std::pair<int, int> boot = getBootIndex(o, new_d, arena);
+                return { boot.first, static_cast<int>(m[static_cast<std::size_t>(boot.first)].size()) - 1 };
             }
 
             if (b != nullptr && compareDimension(b->row, t->row) < 0) {
-                const auto ch = getReferenceChain(t);
+                const std::vector<Entry*> ch = getReferenceChain(t);
                 std::vector<int> dd = { 0, 1 };
                 if (d.size() > 2 && d[0] == 0 && d[1] == 0) {
                     dd.assign(d.begin() + 2, d.end());
@@ -496,9 +497,9 @@ namespace omegay::notation {
                     dd = d;
                 }
 
-                const auto mds = getMds(m, arena);
-                const auto [idx, _] = getBootIndex(mds, dd, arena);
-                const int c = ch[static_cast<std::size_t>(idx)]->cloumn;
+                const std::vector<Entry*> mds = getMds(m, arena);
+                const std::pair<int, int> boot = getBootIndex(mds, dd, arena);
+                const int c = ch[static_cast<std::size_t>(boot.first)]->cloumn;
                 return { c, m[static_cast<std::size_t>(c)].back()->idx };
             }
 
@@ -556,8 +557,8 @@ namespace omegay::notation {
                     max_row = rowAddition(r->row, rowDifference(it->row, it->ref->row));
                 }
                 else {
-                    const auto seq = toSequence(rowDifference(fr, it->ref->row), arena);
-                    const auto expanded = expand_impl(
+                    const std::vector<Entry*> seq = toSequence(rowDifference(fr, it->ref->row), arena);
+                    const std::vector<int> expanded = expand_impl(
                         seq,
                         static_cast<int>(it->row.size()) + i + 1,
                         { 0 },
@@ -572,9 +573,9 @@ namespace omegay::notation {
                 Entry* p = t->parent;
                 t->parent = b;
 
-                const auto seq =
+                const std::vector<Entry*> seq =
                     toSequence(rowDifference(getFootRow(*t, d, arena), t->ref->row), arena);
-                const auto expanded = expand_impl(
+                const std::vector<int> expanded = expand_impl(
                     seq,
                     static_cast<int>(it->row.size()) + i + 1,
                     { 0 },
@@ -647,7 +648,7 @@ namespace omegay::notation {
             Arena& arena) {
             Entry* it = m[static_cast<std::size_t>(c)][0];
             m.push_back({});
-            auto& new_col = m.back();
+            std::vector<Entry*>& new_col = m.back();
 
             while (true) {
                 copyElement(m, b, t, it, new_col, i, d, f, arena);
@@ -685,7 +686,7 @@ namespace omegay::notation {
                 return result;
             }
 
-            auto m = drawMountain(s, d, arena);
+            std::vector<std::vector<Entry*>> m = drawMountain(s, d, arena);
             Entry* t = m.back().back();
             std::vector<int> ex;
 
@@ -696,14 +697,14 @@ namespace omegay::notation {
             setElementNo(m, b);
 
             if (b != nullptr && t->value - b->value > 1 && proc(d).size() == 1) {
-                auto o = getOds(m, arena);
+                std::vector<Entry*> o = getOds(m, arena);
 
                 std::vector<int> new_d;
                 if (d.size() == 1 || divide(d).size() == 1) {
                     new_d = d;
                 }
                 else {
-                    const auto div = divide(d);
+                    const std::vector<std::vector<int>> div = divide(d);
                     std::vector<std::vector<int>> sub(div.begin() + 1, div.end());
                     new_d = merge(sub);
                 }
@@ -754,7 +755,7 @@ namespace omegay::notation {
 
             std::vector<int> result;
             result.reserve(m.size());
-            for (const auto& col : m) {
+            for (const std::vector<Entry*>& col : m) {
                 result.push_back(col[0]->value);
             }
             return result;
