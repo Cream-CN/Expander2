@@ -1,0 +1,392 @@
+以下为 Expander_CS（C# WinForms + F# 后端）项目中后端接口的调用文档。
+原 C++ 头文件 sequence.hpp / utf8.hpp / arena.hpp / entry.hpp 已按 C#+F# 方案重新映射。
+
+当前状态说明：
+- C# 项目 Expander_CS 为 WinForms UI 层，命名空间 omegay。
+- F# 项目 Expander_CS.Backend 为算法层，命名空间 Expander_CS.Backend。
+- F# 项目目前仍只有模板 Library.fs，下列接口为规划契约，实现后生效。
+- C# 项目在 F# 接口稳定后再添加对 Expander_CS.Backend 的项目引用。
+
+====================================================================
+对应文件：Sequence.fs
+命名空间：Expander_CS.Backend.Common
+原 C++ 文件：sequence.hpp
+功能：整数序列的解析与序列化
+====================================================================
+
+一、提供的接口
+
+F# 侧形态：
+
+namespace Expander_CS.Backend.Common
+
+module Sequence =
+    let parseSequence (text: string) : int[] = ...
+    let seqToString (seq: int[]) : string = ...
+
+C# 可见形态：
+
+public static class Sequence
+{
+    public static int[] parseSequence(string text);
+    public static string seqToString(int[] seq);
+}
+
+parseSequence
+功能：
+将以逗号分隔的字符串解析为 int[]。
+
+输入：
+text —— 待解析字符串，可包含逗号、空白字符。
+
+输出：
+返回 int[]，为解析出的整数序列。
+
+行为说明：
+- 以半角逗号 ',' 作为分隔符切分字符串。
+- 对每个分段去除所有空白字符。
+- 空分段（连续逗号、首尾逗号）被忽略。
+- 对每个非空分段使用 int.TryParse 转成 int。
+- TryParse 失败（非数字、溢出等）时静默跳过该分段。
+- 不抛出异常，不报错。
+- 若全部分段均无效，返回空数组 Array.Empty<int>()。
+- F# 中空数组写作 [||]。
+
+C# 调用示例：
+
+using Expander_CS.Backend.Common;
+
+int[] a = Sequence.parseSequence("1,2,3");
+// a == new[] { 1, 2, 3 }
+
+int[] b = Sequence.parseSequence(" 10 , 20 ,, 30 ");
+// b == new[] { 10, 20, 30 }
+
+int[] c = Sequence.parseSequence("");
+// c == Array.Empty<int>()
+
+int[] d = Sequence.parseSequence("abc,5,def");
+// d == new[] { 5 }，abc 与 def 被跳过
+
+seqToString
+功能：
+将 int[] 序列化为逗号分隔字符串。
+
+输入：
+seq —— 待序列化的整数序列。
+
+输出：
+返回 string。
+
+行为说明：
+- 若 seq 为 null 或空，返回字符串 "[]"。
+- 否则按顺序用半角逗号 ',' 连接各元素的十进制字符串。
+- 不添加空格，不添加首尾逗号。
+
+C# 调用示例：
+
+string s1 = Sequence.seqToString(new[] { 1, 2, 3 });
+// s1 == "1,2,3"
+
+string s2 = Sequence.seqToString(Array.Empty<int>());
+// s2 == "[]"
+
+string s3 = Sequence.seqToString(new[] { 42 });
+// s3 == "42"
+
+往返一致性：
+对不含非法分段的输入，parseSequence 与 seqToString 满足：
+seqToString(parseSequence(s)) 与规范化后的 s 语义一致。
+空序列往返结果为 "[]"。
+
+二、典型使用场景
+
+- 从 UI 文本框、配置、文本协议中读取整数列表。
+- 将内部整数列表输出为可读文本。
+- 两者常配合使用：
+
+int[] seq = Sequence.parseSequence(input);
+string outText = Sequence.seqToString(seq);
+
+三、项目依赖
+
+- F# 侧：Expander_CS.Backend.Common。
+- C# 调用方需要 using Expander_CS.Backend.Common;。
+- 不需要额外 NuGet 包，使用 .NET 自带类库。
+
+====================================================================
+对应文件：无独立文件
+命名空间：无
+原 C++ 文件：utf8.hpp
+功能：UTF-8 与 UTF-16 宽字符串互转
+====================================================================
+
+在 C# + F# 项目中，不再单独提供 utf8_to_wstring / wstring_to_utf8 接口。
+
+原因：
+- .NET 的 string 本身是 UTF-16。
+- WinForms 控件文本、MessageBox、RichTextBox 均直接使用 string。
+- C# 与 F# 之间传递字符串时也直接使用 string，不需要经过 UTF-8 字节数组。
+- 因此原 utf8.hpp 在 UI 与后端边界上基本不再需要对应模块。
+
+若确实需要与外部 UTF-8 字节流交互，使用 .NET BCL：
+
+using System.Text;
+
+string w = "你好, world";
+byte[] u8 = Encoding.UTF8.GetBytes(w);
+string back = Encoding.UTF8.GetString(u8);
+
+行为说明：
+- 编码固定为 UTF-8。
+- 不提供 CP_ACP 版本。
+- 非法 UTF-8 字节序列行为由 System.Text.Encoding.UTF8 决定。
+- 不需要在 Expander_CS.Backend 中新增专用 Utf8 模块，除非将来出现明确的字节协议需求。
+
+====================================================================
+对应文件：Entry.fs
+命名空间：Expander_CS.Backend.Core
+原 C++ 文件：entry.hpp
+功能：Entry 数据结构及其 ykey 计算
+====================================================================
+
+一、类型 Entry
+
+F# 侧建议形态：
+
+namespace Expander_CS.Backend.Core
+
+open System.Collections.Generic
+
+[<AllowNullLiteral>]
+type Entry() =
+    ...
+    new(v: int, x: int, y: int[]) = Entry(...)
+
+C# 可见形态：
+
+public sealed class Entry
+{
+    public Entry();
+    public Entry(int v, int x, int[] y);
+
+    public int Value { get; set; }
+    public int X { get; set; }
+    public int[] Y { get; set; }
+    public ulong YKey { get; }
+
+    public List<Entry> LeftLegUp { get; }
+    public Entry? RightLegUp { get; set; }
+    public Entry? RightLegDown { get; set; }
+    public Entry? LeftLegDown { get; set; }
+
+    public void RefreshKey();
+
+    public static ulong MakeYKey(int[] y);
+}
+
+字段 / 属性说明：
+
+Value
+int，默认 0。语义由使用方定义。
+
+X
+int，默认 0。语义由使用方定义。
+
+Y
+int[]，默认空数组。语义由使用方定义。
+修改 Y 后不会自动刷新 YKey，必须手动调用 RefreshKey()。
+
+YKey
+ulong，由 Y 派生的紧凑键值，默认 0。
+由 RefreshKey() 或 Entry.MakeYKey() 计算。
+用于快速比较/索引，不自动随 Y 变化。
+
+LeftLegUp
+List<Entry>，指向上层左侧相关 Entry 的列表，默认空。
+F# 侧可用 ResizeArray<Entry>，它等价于 System.Collections.Generic.List<Entry>。
+
+RightLegUp
+Entry?，指向上层右侧相关 Entry，默认 null。
+跨 C# 边界避免 F# option，使用 null 表示空引用。
+
+RightLegDown
+Entry?，指向下层右侧相关 Entry，默认 null。
+
+LeftLegDown
+Entry?，指向下层左侧相关 Entry，默认 null。
+
+构造函数：
+
+Entry()
+默认构造。所有字段使用默认值，YKey 为 0。
+
+Entry(int v, int x, int[] y)
+带参构造。依次设置 Value = v，X = x，Y = y，然后调用 RefreshKey() 计算 YKey。
+
+成员函数：
+
+RefreshKey()
+根据当前 Y 重新计算 YKey。
+不抛异常。
+Y 改变后必须调用此函数，YKey 才会更新。
+
+静态函数：
+
+Entry.MakeYKey(int[] y)
+根据整数序列 y 计算 64 位键值。
+
+计算规则：
+- 取 y.Length 的低 8 位，左移 56 位，放入最高字节。
+- 取 y 的前 7 个元素（不足则取全部）。
+- 第 i 个元素（i 从 0 起）取低 16 位，左移 (i * 8) 位，按位或进结果。
+- 元素之间在键中按字节递增，实际每个元素占用 8 位步进，仅低 16 位参与且会相互重叠。
+- 该键不是 y 的精确编码，存在碰撞可能。
+- 超过 7 个元素的部分不参与。
+- 长度为 256 的倍数时，长度字节为 0，可能与其他长度碰撞。
+
+C# 调用示例：
+
+using Expander_CS.Backend.Core;
+
+Entry e1 = new Entry();
+Entry e2 = new Entry(1, 2, new[] { 3, 4, 5 });
+
+e2.Y = new[] { 9, 8, 7 };
+e2.RefreshKey();
+
+ulong k1 = Entry.MakeYKey(new[] { 1, 2, 3 });
+Entry e3 = new Entry(1, 0, new[] { 1, 2, 3 });
+ulong k2 = e3.YKey;
+// k1 == k2
+
+二、ykey 的一致使用建议
+
+- 创建 Entry 时若通过带参构造，YKey 自动计算。
+- 直接修改 e.Y 后，必须调用 e.RefreshKey()。
+- 需要单独计算时使用 Entry.MakeYKey(e.Y)。
+- 比较两个 Entry 的 Y 是否“键等价”，可比较 YKey，但需接受碰撞与截断特性。
+
+三、典型使用场景
+
+- 作为图/树节点，通过 leg 引用建立上下左右关系。
+- 使用 YKey 做快速分组、哈希或索引。
+- 配合 EntryArena 批量创建与管理。
+
+====================================================================
+对应文件：EntryArena.fs
+命名空间：Expander_CS.Backend.Core
+原 C++ 文件：arena.hpp
+功能：Entry 对象 arena 分配器，统一持有并管理 Entry 生命周期
+====================================================================
+
+一、类 EntryArena
+
+F# 侧建议形态：
+
+namespace Expander_CS.Backend.Core
+
+type EntryArena() =
+    member _.Make() : Entry = ...
+    member _.Make(v: int, x: int, y: int[]) : Entry = ...
+    member _.MakeEmpty() : Entry = ...
+    member _.Clear() : unit = ...
+    member _.Size : int = ...
+
+C# 可见形态：
+
+public sealed class EntryArena
+{
+    public EntryArena();
+
+    public Entry Make();
+    public Entry Make(int v, int x, int[] y);
+    public Entry MakeEmpty();
+
+    public void Clear();
+    public int Size { get; }
+}
+
+职责：
+集中创建并持有 Entry 对象，返回引用供外部使用；
+所有 Entry 的生命周期由 EntryArena 统一管理。
+
+成员说明：
+
+Make()
+在 arena 内创建一个默认 Entry。
+
+Make(int v, int x, int[] y)
+在 arena 内创建一个 Entry，使用给定参数构造。
+
+MakeEmpty()
+在 arena 内创建一个默认构造的 Entry。
+语义等价于 Make()，但更明确表示“空 Entry”。
+
+Clear()
+释放 arena 中所有 Entry。
+清空内部容器，所有由此 arena 创建的 Entry 引用立即失效。
+不抛异常。
+
+Size
+返回当前 arena 中 Entry 的数量。
+
+注意：
+原 C++ 的 make(int v = 0, int x = 0, std::vector<int> y = {}) 默认参数形式，
+在 F#/C# 跨边界时改为重载，避免 F# option 和可选参数在 C# 侧处理繁琐。
+
+二、生命周期与引用有效性
+
+- EntryArena 对象必须比其返回的所有 Entry 引用存活更久。
+- Clear() 之后，之前返回的所有 Entry 引用均失效。
+- arena 析构时，所有 Entry 被释放，引用全部失效。
+- Make / MakeEmpty 返回的引用在未 Clear、arena 未析构前始终有效。
+- Entry 之间可能存在引用链接：LeftLegUp、RightLegUp、RightLegDown、LeftLegDown。
+  这些链接不参与生命周期管理，Clear 或析构后需自行保证不再访问。
+
+三、C# 调用示例
+
+using Expander_CS.Backend.Core;
+
+var arena = new EntryArena();
+
+Entry root = arena.Make(1, 0, new[] { 1, 2, 3 });
+Entry child = arena.Make(2, 1, new[] { 4, 5 });
+
+root.RightLegDown = child;
+child.LeftLegUp.Add(root);
+
+child.Y = new[] { 7, 8, 9 };
+child.RefreshKey();
+
+ulong key = Entry.MakeYKey(child.Y);
+
+arena.Clear();
+
+====================================================================
+通用注意事项
+====================================================================
+
+命名空间：
+- Sequence.fs 位于 Expander_CS.Backend.Common。
+- Entry.fs / EntryArena.fs 位于 Expander_CS.Backend.Core。
+- 记号模块位于 Expander_CS.Backend.Notation。
+
+项目引用：
+- C# 项目 Expander_CS 需要添加对 Expander_CS.Backend 的项目引用后，
+  才能 using Expander_CS.Backend.Common / Core / Notation。
+- 当前 F# 侧尚未实现真实算法，因此 C# 侧暂不添加引用。
+
+异常：
+- parseSequence 内部使用 TryParse 并跳过失败项，不抛异常。
+- 其余接口基本不抛异常，除容器分配失败等系统级异常。
+- F# 记号层 expand 不应抛出异常。
+
+线程安全：
+各接口未做同步，多线程访问同一对象需外部加锁。
+
+引用有效性：
+EntryArena 返回的 Entry 引用在 Clear 或 arena 析构后失效；
+Entry 之间的 leg 引用不参与生命周期管理，需自行保证不悬空。
+
+2026/09/23

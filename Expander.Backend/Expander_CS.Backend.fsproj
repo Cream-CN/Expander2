@@ -6,7 +6,10 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="Library.fs" />
+    <Compile Include="Common\Sequence.fs" />
+    <Compile Include="Core\Entry.fs" />
+    <Compile Include="Core\EntryArena.fs" />
+    <Compile Include="Notation\Empty.fs" />
   </ItemGroup>
 
 </Project>

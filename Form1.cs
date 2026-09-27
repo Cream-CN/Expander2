@@ -2,6 +2,8 @@ using System;
 using System.Drawing;
 using System.Text;
 using System.Windows.Forms;
+using Expander_CS.Backend.Common;
+using Expander_CS.Backend.Notation;
 
 namespace omegay
 {
@@ -19,13 +21,26 @@ namespace omegay
 		private RichTextBox rtbDef;
 
 		// 记号名列表（占位，只用于 UI 展示）
-		private static readonly string[] NotationNames =
+		public sealed class NotationInfo
 		{
-			"空记号", "PPS", "PPS4", "Weak PPS4", "Third PPS4",
-			"Ex. Weak PPS4", "Second PPS4", "2-pps4",
-			"ω-Y (medium)", "ω-Y (strong)", "MrSS1.2.1",
-			"ω-Y sequence", "ε-Y",
-		};
+			public string DisplayName { get; init; } = "";
+			public string Definition { get; init; } = "";
+			public Func<int[], int, int[]>? Expand { get; init; }
+			public Func<string>? Suffix { get; init; }
+			public Func<string, int, string>? ExpandText { get; init; }
+		}
+
+		private readonly NotationInfo[] _notations =
+		{
+	new NotationInfo
+	{
+		DisplayName = EmptyNotation.Name,
+		Definition  = EmptyNotation.definition,
+		Expand      = EmptyNotation.expand,
+		Suffix      = EmptyNotation.suffix,
+		ExpandText  = null,
+	},
+};
 
 		public Form1()
 		{
@@ -108,7 +123,7 @@ namespace omegay
 				Location = new Point(100, mh + 85),
 				Size = new Size(220, 20),
 			};
-			foreach (var n in NotationNames) cmbNotation.Items.Add(n);
+			foreach (var n in _notations) cmbNotation.Items.Add(n.DisplayName);
 			if (cmbNotation.Items.Count > 0) cmbNotation.SelectedIndex = 0;
 
 			btnFS = new Button
@@ -160,7 +175,6 @@ namespace omegay
 
 		private void RunExpand(bool removeLast)
 		{
-			// 输入校验（先保证 UI 流程能跑通）
 			string seqText = txtSeq.Text;
 			string termText = txtTerm.Text.Trim();
 
@@ -183,17 +197,30 @@ namespace omegay
 				return;
 			}
 
-			// TODO: 接入 F# 展开接口。
-			// 约定：F# 侧 (Expander_CS.Backend) 暴露
-			//   Notation.expandXxx(seq: int[], term: int) : int[]
-			//   Notation.suffixXxx() : string
-			// 这里按记号索引分发，并做「移除末项 / 保留末项」后处理。
+			int[] seq = Sequence.parseSequence(seqText);
+			if (seq.Length == 0)
+			{
+				MessageBox.Show(this, "序列中没有可解析的整数", "错误",
+					MessageBoxButtons.OK, MessageBoxIcon.Error);
+				return;
+			}
 
-			string result = "（展开逻辑待接入）";
-			MessageBox.Show(this, result, "展开结果",
+			int sel = cmbNotation.SelectedIndex;
+			if (sel < 0 || sel >= _notations.Length) sel = 0;
+			var info = _notations[sel];
+
+			int[] result = info.Expand!(seq, term);
+
+			if (removeLast && result.Length > 1)
+				Array.Resize(ref result, result.Length - 1);
+
+			string body = Sequence.seqToString(result);
+			string tail = info.Suffix?.Invoke() ?? "";
+			string final = body + tail;
+
+			MessageBox.Show(this, final, "展开结果",
 				MessageBoxButtons.OK, MessageBoxIcon.Information);
 		}
-
 		// ================= 菜单事件 =================
 		private void MenuHelpItem_Click(object sender, EventArgs e)
 		{
