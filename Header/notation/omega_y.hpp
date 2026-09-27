@@ -10,8 +10,6 @@ namespace omegay::notation {
 
     struct OmegaYNotation {
         static constexpr const char* kName = "ω-Y sequence";
-
-        // ---------- 序列比较（与 JS 的 sequence_compare 一致）----------
         static int sequence_compare(const std::vector<int>& a,
             const std::vector<int>& b) {
             size_t n = std::min(a.size(), b.size());

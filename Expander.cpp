@@ -11,6 +11,7 @@
 #include "Header/notation/PPS-family.hpp"
 #include "Header/notation/Omega-YMagma.hpp"
 #include "Header/notation/mrss121.hpp"
+#include "Header/notation/omega_y.hpp"
 
 #include <memory>
 #include <string>
@@ -63,13 +64,13 @@ namespace {
     [[nodiscard]] const std::vector<NotationEntry>& notationTable() {
         static const std::vector<NotationEntry> table = {
             { L"空记号",        "empty",  &notation::EmptyNotation::expand,       &notation::EmptyNotation::suffix,
-              L"空记号（empty）\n\n不进行任何展开，直接返回输入序列本身。" },
+              L"空记号（empty）\n\n返回输入序列" },
 
             { L"PPS",           "pps",    &notation::PPSNotation::expand,         &notation::PPSNotation::suffix,
-              L"PPS（Primitive Sequence System）\n\n基本序列记号。展开时对末项做标准基本列展开。" },
+              L"PPS🎄\n\n定义：PPS1\nParented Predecessor Sequence 1\n\n极限表达式：0,1,2,3,4,5,......\n记末项的值为 x，坏根为第 x 项，坏根的值为 b，末项是序列中的第 y 项，并令 L = y - x\n展开：\n1.如果末项是 0，则它是后继序数\n2.末项之前的部分保持不变\n3.替换末项：如果末项和坏根之间(两边都不含) 存在一项，它的值等于 b，那么将末项的值换成 b；否则\n将末项的值减 1\n4.递归生成其他项(第 i + L 项的值由第 i 项确定)：对任意的 i > x，如果第 i 项的值大于等于 x，那么第 i + L\n项的值等于第 i 项的值 + L，否则第 i + L 项的值等于第 i 项的值\n5.基本列[n] 为展开到第 y + n * L - 1 项。" },
 
             { L"PPS4",          "pps4",   &notation::PPS4Notation::expand,        &notation::PPS4Notation::suffix,
-              L"PPS4\n\nPPS 的四元扩展形式。" },
+              L"PPS4\n\nPPS 的第四版本\n定义：PPS 4\nParented Predecessor Sequence 4\n极限表达式：0,1,2,3,....\n坏根：列标是 (末项的值) 的项（首项的列标是 1）；如果末项是 0，则表示后继序数 \n记此时末项的列标减末项的值为 L，坏根的值为 b，末项的值为 x、列标为 y\n末项展开：\n> 如果末项和坏根之间 (两边都不含) 存在一项，它的值等于 b，那么是弱展开，否则是强展开；弱展开：将末项的值换成 b；\n> 强展开：在第 b 列和第 x 列 (都不含) 之间找到最右侧的值小于等于 b 的项，将末项的值换为这个项的列标；如果找不到，则等同弱展开\n其他项展开：对任意的 i>y-L，如果第 i 项的值大于等于 x，那么第 i+L 项的值等于第 i 项的值 +L，否则第 i+L 项的值等于第 i 项的值\n基本列 [n] 为展开到第 y+nL-1 项" },
 
             { L"Weak PPS4",     "wpps4",  &notation::WPPS4Notation::expand,       &notation::WPPS4Notation::suffix,
               L"Weak PPS4\n\nPPS4 的弱化版本。" },
@@ -102,6 +103,15 @@ namespace {
               L"支持嵌套写法，例如：\n"
               L"  1,(1,2),(1,2,3)",
               &notation::Mrss121Notation::expand_string },
+
+            // ↓↓↓ 新增：ω-Y sequence ↓↓↓
+            { L"ω-Y sequence",  "omega-y-sequence",
+              &notation::OmegaYNotation::expand,
+              &notation::OmegaYNotation::suffix,
+              L"ω-Y sequence\n\n"
+              L"ω-Y sequence 记号。Y 极限展开。\n\n"
+              L"kName = ω-Y sequence" },
+            // ↑↑↑ 新增：ω-Y sequence ↑↑↑
         };
         return table;
     }
@@ -560,8 +570,12 @@ namespace {
             switch (id) {
             case IDM_HELP:
                 ::MessageBoxW(hwnd,
-                    L"代码署名\nHypcos 部分记号的代码修改自notation-explorer\nSmileLee-lyx 部分记号的代码修改自 NER\n曹知秋 记号提供给AI的定义使用《大数理论》的原文\nMrSS的定义来自 AAA滚木批发 (QQ3682911373)"
-                    L"\n请注意 代码系利用人工智能技术生成，我（和所有贡献者）不保证展开结果正确",
+                    L"代码署名\n"
+                    L"Hypcos 部分记号的代码修改自notation-explorer\n"
+                    L"SmileLee-lyx 部分记号的代码修改自 NER\n"
+                    L"曹知秋 记号提供给AI的定义使用《大数理论》的原文\n"
+                    L"MrSS的定义来自 AAA滚木批发 (QQ3682911373)\n"
+                    L"请注意 代码系利用人工智能技术生成，我（和所有贡献者）不保证展开结果正确",
                     L"帮助", MB_OK | MB_ICONINFORMATION);
                 break;
 
