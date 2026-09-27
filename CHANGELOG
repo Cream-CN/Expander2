@@ -1,4 +1,6 @@
-﻿version 1.3.6.2
+﻿version 1.3.6.3
+添加了Epsilon-Y
+version 1.3.6.2
 修复了解决方案的问题
 修复了Omega-Y一个潜在的UB并重新上线
 version 1.3.6.1
