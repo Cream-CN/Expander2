@@ -48,6 +48,14 @@ namespace omegay
 				Suffix      = PrSSNotation.suffix,
 				ExpandText  = null, // PrSS 不支持文本展开
 			},
+			new NotationInfo
+			{
+				DisplayName = EpsilonYNotation.Name,
+				Definition  = EpsilonYNotation.definition,
+				Expand      = EpsilonYNotation.expand,
+				Suffix      = EpsilonYNotation.suffix,
+				ExpandText  = null, // ε-Y 不支持文本展开
+			},
 		};
 
 		public Form1()
@@ -80,6 +88,10 @@ namespace omegay
 				var menuDefPrSS = new ToolStripMenuItem("PrSS");
 				menuDefPrSS.Click += MenuDefinitionPrSS_Click;
 				menuDefinition.DropDownItems.Add(menuDefPrSS);
+
+				var menuDefEpsilonY = new ToolStripMenuItem("ε-Y");
+				menuDefEpsilonY.Click += MenuDefinitionEpsilonY_Click;
+				menuDefinition.DropDownItems.Add(menuDefEpsilonY);
 			}
 
 			menuHelp = new ToolStripMenuItem("帮助(&H)");
@@ -248,6 +260,11 @@ namespace omegay
 		private void MenuDefinitionPrSS_Click(object? sender, EventArgs e)
 		{
 			ShowDefinitionDialog("PrSS 定义", PrSSNotation.definition);
+		}
+
+		private void MenuDefinitionEpsilonY_Click(object? sender, EventArgs e)
+		{
+			ShowDefinitionDialog("ε-Y 定义", EpsilonYNotation.definition);
 		}
 
 		private void ShowDefinitionDialog(string title, string text)

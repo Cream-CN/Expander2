@@ -12,8 +12,8 @@
 		<Product>Googology Expander</Product>
 		<Copyright>Copyright © 2026 Cream-CN</Copyright>
 		<Description>Expander MainProgram</Description>
-		<AssemblyVersion>1.0.0.1</AssemblyVersion>
-		<FileVersion>1.0.0.1</FileVersion>
+		<AssemblyVersion>1.0.0.2</AssemblyVersion>
+		<FileVersion>1.0.0.2</FileVersion>
 		<InformationalVersion>1.0.0</InformationalVersion>
 		<SatelliteResourceLanguages>en;zh-Hans</SatelliteResourceLanguages>
 	</PropertyGroup>
