@@ -1,0 +1,1389 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MountainGridView 控件文档</title>
+    <style>
+        /* 基础重置，保持文档纯净 */
+        body {
+            font-family: Consolas, "Courier New", monospace, sans-serif;
+            line-height: 1.6;
+            color: #000;
+            background: #fff;
+            max-width: 960px;
+            margin: 20px auto;
+            padding: 0 20px;
+        }
+
+        /* 标题样式：保留粗体与层次 */
+        h1, h2, h3, h4 {
+            font-weight: bold;
+            margin-top: 1.5em;
+            margin-bottom: 0.5em;
+        }
+        h1 {
+            font-size: 1.8em;
+            border-bottom: 2px solid #000;
+            padding-bottom: 0.3em;
+        }
+        h2 {
+            font-size: 1.4em;
+            border-bottom: 1px solid #000;
+            padding-bottom: 0.2em;
+        }
+        h3 {
+            font-size: 1.2em;
+        }
+        h4 {
+            font-size: 1.1em;
+        }
+
+        /* 灰色代码块 */
+        pre {
+            background: #f0f0f0;
+            border: 1px solid #ccc;
+            padding: 10px;
+            overflow-x: auto;
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 0.9em;
+            line-height: 1.4;
+            margin: 1em 0;
+        }
+
+        /* 行内 code 也做浅灰处理，但不加边框，以免过于抢眼 */
+        code {
+            font-family: Consolas, "Courier New", monospace;
+            background: #f0f0f0;
+            padding: 0 3px;
+            font-size: 0.9em;
+            border: 1px solid #ddd;
+        }
+
+        /* 表格基本样式（无彩色，仅边框和间距） */
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 1em 0;
+        }
+        th, td {
+            border: 1px solid #000;
+            padding: 6px 10px;
+            text-align: left;
+            vertical-align: top;
+        }
+        th {
+            background: #e0e0e0;
+            font-weight: bold;
+        }
+
+        /* 列表间距 */
+        ul, ol {
+            margin: 0.5em 0 0.5em 1.5em;
+            padding-left: 0;
+        }
+        li {
+            margin-bottom: 0.3em;
+        }
+
+        /* 水平线 */
+        hr {
+            border: none;
+            border-top: 1px solid #000;
+            margin: 2em 0;
+        }
+
+        /* ---------- 提示框样式 ---------- */
+        /* 蓝色边框 NOTICE（一般提示） */
+        .notice {
+            background: #f0f8ff;
+            border: 1px solid #1e90ff;      /* 蓝色边框 */
+            border-left-width: 6px;          /* 左侧加粗，突出提示感 */
+            border-left-color: #1e90ff;
+            padding: 10px 14px;
+            margin: 1.5em 0;
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 0.95em;
+        }
+        /* 红色边框警告 WARNING */
+        .warning {
+            background: #fff0f0;
+            border: 1px solid #d32f2f;       /* 红色边框 */
+            border-left-width: 6px;
+            border-left-color: #d32f2f;
+            padding: 10px 14px;
+            margin: 1.5em 0;
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 0.95em;
+        }
+        /* 黄色边框 严重 NOTICE (SEVERE) */
+        .severe-notice {
+            background: #fffbe6;
+            border: 1px solid #e6b800;       /* 黄色/金色边框 */
+            border-left-width: 6px;
+            border-left-color: #e6b800;
+            padding: 10px 14px;
+            margin: 1.5em 0;
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 0.95em;
+        }
+
+        /* 提示框内部的段落/列表可沿用原有边距 */
+        .notice p, .warning p, .severe-notice p {
+            margin: 0.5em 0;
+        }
+        .notice ul, .warning ul, .severe-notice ul {
+            margin: 0.3em 0 0.3em 1.5em;
+        }
+        .notice li, .warning li, .severe-notice li {
+            margin-bottom: 0.2em;
+        }
+
+        /* 页脚保持简单居中 */
+        .doc-footer {
+            margin-top: 2em;
+            padding-top: 1em;
+            border-top: 1px solid #000;
+            font-size: 0.9em;
+            text-align: center;
+        }
+
+        /* 山脉示例表格的样式 */
+        .mountain-example {
+            border-collapse: collapse;
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 0.9em;
+            margin: 1.5em 0;
+            width: auto;
+            min-width: 600px;
+        }
+        .mountain-example th,
+        .mountain-example td {
+            border: 1px solid #999;
+            padding: 4px 10px;
+            text-align: center;
+            vertical-align: middle;
+            min-width: 50px;
+        }
+        .mountain-example th {
+            background: #f0f0f0;
+            font-weight: bold;
+        }
+        .mountain-example td.row-label {
+            background: #eee0e0;
+            text-align: left;
+            font-weight: normal;
+        }
+        .mountain-example td.data-cell {
+            background: #e0eee0;
+        }
+        .mountain-example td.empty-cell {
+            background: #e0eee0;
+        }
+        .mountain-example .caption {
+            font-size: 0.85em;
+            margin-top: 0.3em;
+            color: #333;
+        }
+
+        /* 其他辅助类 */
+        .center {
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+<h1>MountainGridView 控件文档</h1>
+<p><strong>山脉展示控件（虚拟模式）使用说明</strong></p>
+
+<hr>
+
+<h2>目录</h2>
+<ol>
+    <li>概述</li>
+    <li>文件位置与命名空间</li>
+    <li>后端：MountainDisplay 模块
+        <ul>
+            <li>3.1 MountainCell 类型</li>
+            <li>3.2 MountainTable 类型</li>
+            <li>3.3 构建函数</li>
+            <li>3.4 规模判断</li>
+            <li>3.5 单元格访问</li>
+            <li>3.6 转换函数</li>
+            <li>3.7 统计信息</li>
+        </ul>
+    </li>
+    <li>前端：MountainGridView 控件
+        <ul>
+            <li>4.1 类定义</li>
+            <li>4.2 构造函数行为</li>
+            <li>4.3 公开属性</li>
+            <li>4.4 公开方法</li>
+            <li>4.5 事件</li>
+            <li>4.6 内部实现说明</li>
+        </ul>
+    </li>
+    <li>使用示例
+        <ul>
+            <li>5.1 最小示例</li>
+            <li>5.2 在 Form1 中完整集成</li>
+            <li>5.3 CSV 导出</li>
+        </ul>
+    </li>
+    <li>虚拟模式原理与性能
+        <ul>
+            <li>6.1 为什么默认虚拟模式</li>
+            <li>6.2 性能特征</li>
+            <li>6.3 阈值配置建议</li>
+        </ul>
+    </li>
+    <li>限制与注意事项</li>
+    <li>扩展指南</li>
+    <li>常见问题</li>
+</ol>
+
+<hr>
+
+<h2>1. 概述</h2>
+<p>MountainGridView 是一个专用于展示序列山脉结构的 WinForms 控件。它包装了 DataGridView，默认启用虚拟模式（VirtualMode = true），使得即使面对十万乃至百万级别的单元格，也能保持流畅滚动与低内存占用。</p>
+<p>它由两部分组成：</p>
+<ul>
+    <li><strong>后端 F# 模块 MountainDisplay</strong>
+        <ul>
+            <li>位于 Expander_CS.Backend.Common 命名空间</li>
+            <li>负责将序列或 Entry 列构建为 MountainTable 表格模型</li>
+            <li>提供单元格文本访问、规模判断、CSV 导出等纯函数</li>
+        </ul>
+    </li>
+    <li><strong>前端 C# 控件 MountainGridView</strong>
+        <ul>
+            <li>位于 omegay 命名空间</li>
+            <li>负责将 MountainTable 渲染到 DataGridView</li>
+            <li>默认虚拟模式，按需提供单元格值</li>
+            <li>提供拒绝展示、CSV 导出等 UI 行为</li>
+        </ul>
+    </li>
+</ul>
+<p>设计原则：</p>
+<ul>
+    <li>后端只负责数据模型，不引用任何 UI 类型。</li>
+    <li>前端只负责渲染，不实现任何数学展开逻辑。</li>
+    <li>两侧通过 MountainTable 和纯函数接口通信。</li>
+    <li>跨边界集合统一用 int[]，返回值避免 F# option。</li>
+</ul>
+
+<div class="notice">
+    <strong>NOTICE：</strong> 该控件专为“展示”设计，不包含任何记号展开或序列生成逻辑。所有数据必须由外部模块（如记号模块）计算后传入。
+</div>
+
+<div class="notice">
+    <strong>NOTICE：</strong> 前后端通信仅通过 <code>MountainTable</code> 和静态纯函数，避免 UI 类型污染后端，也避免后端逻辑渗入 UI。若需要扩展，请保持这一边界。
+</div>
+
+<hr>
+
+<h2>2. 文件位置与命名空间</h2>
+<p>后端 F# 文件：</p>
+<pre>Expander_CS.Backend/Common/MountainDisplay.fs
+namespace Expander_CS.Backend.Common
+module MountainDisplay</pre>
+<p>前端 C# 文件：</p>
+<pre>Expander_CS/UI/MountainGridView.cs
+namespace omegay</pre>
+<p>项目引用：</p>
+<pre>Expander_CS (C# UI 项目)
+    └── 项目引用 ──> Expander_CS.Backend (F# 类库)
+
+C# 侧使用：
+    using Expander_CS.Backend.Common;
+    using omegay; // 如果 MountainGridView 与 Form1 不同命名空间</pre>
+
+<div class="notice">
+    <strong>NOTICE：</strong> 项目引用需确保 F# 类库正确生成并引用到 C# 项目中，否则命名空间不可见。若编译报错“类型或命名空间不存在”，请先检查 F# 项目的目标框架与 C# 项目是否兼容。
+</div>
+
+<div class="warning">
+    <strong>警告：</strong> 不要将 <code>MountainGridView.cs</code> 放入 <code>Expander_CS.Backend</code> 项目。UI 控件必须位于 C# 项目中，否则无法引用 <code>System.Windows.Forms</code>。
+</div>
+
+<hr>
+
+<h2>3. 后端：MountainDisplay 模块</h2>
+
+<h3>3.1 MountainCell 类型</h3>
+<p>F# 定义：</p>
+<pre>[&lt;AllowNullLiteral&gt;]
+type MountainCell() =
+    member val Value   : int       = 0   with get, set
+    member val Row     : int array = [||] with get, set
+    member val Cloumn  : int       = -1  with get, set
+    member val Idx     : int       = 0   with get, set
+    member val No      : int       = 0   with get, set
+    member val Id      : int       = 0   with get, set</pre>
+<p>C# 可见形态：</p>
+<pre>public sealed class MountainCell
+{
+    public int   Value   { get; set; }
+    public int[] Row     { get; set; }
+    public int   Cloumn  { get; set; }
+    public int   Idx     { get; set; }
+    public int   No      { get; set; }
+    public int   Id      { get; set; }
+}</pre>
+<p>字段说明：</p>
+<ul>
+    <li><strong>Value</strong> — 该单元格的值。</li>
+    <li><strong>Row</strong> — 该单元格所在的行标签（int 数组）。</li>
+    <li><strong>Cloumn</strong> — 该单元格所在的列索引（注意拼写为 Cloumn，沿用原代码）。</li>
+    <li><strong>Idx</strong> — 该单元格在列内的序号。</li>
+    <li><strong>No</strong> — 该单元格的编号（用于内部标识）。</li>
+    <li><strong>Id</strong> — 该单元格的唯一编号。</li>
+</ul>
+<p>注意：</p>
+<ul>
+    <li>MountainCell 仅保存展示所需的最小字段。</li>
+    <li>它不包含 Parent / Head / Foot / Ref 等引用，避免循环引用。</li>
+    <li>若需要完整 Entry 信息，请直接使用 Entry。</li>
+</ul>
+
+<div class="notice">
+    <strong>NOTICE：</strong> <code>Cloumn</code> 是原代码中的拼写错误（正确应为 Column），但为了保持 API 兼容性，文档与代码中均保留此拼写。若未来修复，需同时更新 F# 与 C# 两侧，并视为破坏性变更。
+</div>
+
+<div class="warning">
+    <strong>警告：</strong> <code>MountainCell</code> 被标记为 <code>[&lt;AllowNullLiteral&gt;]</code>，因此在 C# 中可以赋值为 <code>null</code>。在遍历 <code>Columns</code> 时务必进行 null 检查，否则会抛出 <code>NullReferenceException</code>。
+</div>
+
+<h3>3.2 MountainTable 类型</h3>
+<p>F# 定义：</p>
+<pre>type MountainTable() =
+    member val Rows       : ResizeArray&lt;int array&gt;            = ResizeArray() with get
+    member val Columns    : ResizeArray&lt;ResizeArray&lt;MountainCell&gt;&gt; = ResizeArray() with get
+    member val MaxRows    : int = 0 with get, set
+    member val MaxColumns : int = 0 with get, set
+    member this.TotalCells : int
+    member this.IsEmpty    : bool</pre>
+<p>C# 可见形态：</p>
+<pre>public sealed class MountainTable
+{
+    public List&lt;int[]&gt;           Rows       { get; }
+    public List&lt;List&lt;MountainCell&gt;&gt; Columns { get; }
+    public int  MaxRows    { get; set; }
+    public int  MaxColumns { get; set; }
+    public int  TotalCells { get; }
+    public bool IsEmpty    { get; }
+}</pre>
+<p>语义：</p>
+<ul>
+    <li>Rows[r] — 第 r 行的行标签。</li>
+    <li>Columns[r][c] — 第 r 行第 c 列的单元格；可能为 null，表示该位置无数据。</li>
+    <li>MaxRows — 总行数。</li>
+    <li>MaxColumns — 总列数。</li>
+    <li>TotalCells — MaxRows * MaxColumns。</li>
+    <li>IsEmpty — MaxRows = 0 或 MaxColumns = 0。</li>
+</ul>
+<p>重要约定：</p>
+<ul>
+    <li>MountainTable 一旦构建完成，就不应再修改。</li>
+    <li>它是只读视图；所有渲染都通过 MountainDisplay.getCellText 读取。</li>
+    <li>单元格为 null 表示该位置在原始山脉中不存在对应 Entry。</li>
+</ul>
+
+<div class="warning">
+    <strong>警告：</strong> MountainTable 构建后应视为不可变。若在展示过程中修改其内部集合，将导致虚拟模式下的数据不一致甚至崩溃。
+</div>
+
+<div class="notice">
+    <strong>NOTICE：</strong> <code>TotalCells</code> 和 <code>IsEmpty</code> 是计算属性，每次访问都会重新计算。若在循环中频繁使用，建议先取出局部变量，避免不必要的开销。
+</div>
+
+<div class="severe-notice">
+    <strong>严重 NOTICE：</strong> 不要手动设置 <code>MaxRows</code> 或 <code>MaxColumns</code> 为与 <code>Columns</code> 实际尺寸不一致的值。虚拟模式依赖这两个属性来分配行列，不一致会导致索引越界或空白行列。
+</div>
+
+<h3>3.3 构建函数</h3>
+<h4>3.3.1 buildTable</h4>
+<p>F# 签名：</p>
+<pre>let buildTable (entries: ResizeArray&lt;ResizeArray&lt;Entry&gt;&gt;) : MountainTable</pre>
+<p>C# 可见形态：</p>
+<pre>public static MountainTable buildTable(List&lt;List&lt;Entry&gt;&gt; entries)</pre>
+<p>功能：从 Entry 列构建完整山脉表格。</p>
+<p>参数：entries —— 每一列是一个 Entry 列表（从上到下）。列的顺序即山脉的从左到右顺序。</p>
+<p>行为：</p>
+<ul>
+    <li>收集所有出现过的 Row 标签，去重。</li>
+    <li>按 Row 从大到小排序，作为表格的行顺序（山脉从上往下画）。</li>
+    <li>对每个 (row, col) 位置，在对应列中查找 Row 匹配的 Entry。</li>
+    <li>找到则填入 MountainCell，否则填 null。</li>
+</ul>
+<p>使用场景：需要精确展示山脉结构（包括中间行）时。与记号模块配合，从 drawMountain 的输出构建表格。</p>
+
+<div class="notice">
+    <strong>NOTICE：</strong> 当多个 Entry 具有相同的 Row 标签但位于同一列时，只有最后一个会被保留（后者覆盖前者）。如果记号设计允许同列同标签重复，请确保 Entry 的唯一性或改用其他展示方式。
+</div>
+
+<div class="warning">
+    <strong>警告：</strong> 若 <code>entries</code> 为 <code>null</code> 或包含 <code>null</code> 的子列表，<code>buildTable</code> 的行为未定义（可能抛出 <code>NullReferenceException</code>）。调用前请确保所有输入非空。
+</div>
+
+<h4>3.3.2 buildFromSequence</h4>
+<p>F# 签名：</p>
+<pre>let buildFromSequence (seq: int[]) : MountainTable</pre>
+<p>C# 可见形态：</p>
+<pre>public static MountainTable buildFromSequence(int[] seq)</pre>
+<p>功能：从简单 int[] 序列构建山脉表格（简化版）。</p>
+<p>参数：seq —— 整数序列。</p>
+<p>行为：</p>
+<ul>
+    <li>行标签固定为 [| 1 |]。</li>
+    <li>每一列对应 seq 的一个元素。</li>
+    <li>每列只有一个单元格，值为 seq[i]。</li>
+    <li>MaxRows = 1，MaxColumns = seq.Length。</li>
+</ul>
+<p>使用场景：快速展示输入序列或输出序列。不需要完整山脉结构时的轻量展示。</p>
+
+<div class="notice">
+    <strong>NOTICE：</strong> <code>buildFromSequence</code> 生成的是单行表格，所有单元格的行标签都是 <code>[| 1 |]</code>。若序列元素需要区分行，请改用 <code>buildTable</code>。
+</div>
+
+<h4>3.3.3 两者的选择</h4>
+<ul>
+    <li>buildTable — 精确展示，适合输出山脉。</li>
+    <li>buildFromSequence — 简化展示，适合输入序列或快速预览。</li>
+</ul>
+
+<div class="notice">
+    <strong>NOTICE：</strong> 两个构建函数都是纯函数，不修改输入参数，也不产生副作用。可以在任意线程调用，但返回的 <code>MountainTable</code> 一旦交给 UI 线程，就只应在 UI 线程读取。
+</div>
+
+<h3>3.4 规模判断</h3>
+<h4>3.4.1 isTooLargeForDisplay</h4>
+<p>F# 签名：</p>
+<pre>let isTooLargeForDisplay
+    (table: MountainTable)
+    (maxCells: int)
+    (maxRows: int)
+    (maxCols: int) : bool</pre>
+<p>C# 可见形态：</p>
+<pre>public static bool isTooLargeForDisplay(
+    MountainTable table,
+    int maxCells,
+    int maxRows,
+    int maxCols)</pre>
+<p>功能：判断山脉是否超出展示上限。</p>
+<p>返回：</p>
+<ul>
+    <li>true — 超出上限，应拒绝展示。</li>
+    <li>false — 在上限内，可以展示。</li>
+</ul>
+<p>判断规则：table.TotalCells &gt; maxCells || table.MaxRows &gt; maxRows || table.MaxColumns &gt; maxCols，任一条件成立即返回 true。</p>
+
+<h4>3.4.2 isTooLarge</h4>
+<p>F# 签名：</p>
+<pre>let isTooLarge (table: MountainTable) : bool</pre>
+<p>使用默认阈值：</p>
+<pre>DefaultMaxDisplayCells   = 2_000_000
+DefaultMaxDisplayRows    = 2_000
+DefaultMaxDisplayColumns = 2_000</pre>
+
+<h4>3.4.3 默认阈值常量</h4>
+<pre>MountainDisplay.DefaultMaxDisplayCells   = 2000000
+MountainDisplay.DefaultMaxDisplayRows    = 2000
+MountainDisplay.DefaultMaxDisplayColumns = 2000</pre>
+<p>注意：</p>
+<ul>
+    <li>阈值只影响 UI 是否展示，不影响算法计算。</li>
+    <li>提高阈值不会加快渲染，虚拟模式下渲染只取决于可见区域。</li>
+    <li>阈值的意义是防止极端情况下构建表格本身消耗过多内存导致OOM。</li>
+</ul>
+
+<div class="severe-notice">
+    <strong>严重 NOTICE：</strong> 默认阈值基于内存安全考虑。若将 MaxDisplayCells 提升至 1000 万以上，请确保运行环境有足够内存（≥1 GB 可用），否则可能导致 OutOfMemoryException 或界面无响应。
+</div>
+
+<div class="notice">
+    <strong>NOTICE：</strong> 即使表格被判定为“过大”并拒绝展示，<code>MountainTable</code> 本身仍会保留在内存中，以便通过 <code>ExportToCsv</code> 导出。若不需要导出，请在调用 <code>ShowTable</code> 后手动将 <code>Table</code> 置空（但控件未提供公开 setter，需通过 <code>ResetToEmpty</code> 清空）。
+</div>
+
+<div class="warning">
+    <strong>警告：</strong> <code>isTooLargeForDisplay</code> 的参数 <code>maxCells</code>、<code>maxRows</code>、<code>maxCols</code> 若传入负数，判断逻辑将全部返回 <code>true</code>（因为任何正数都大于负数）。请确保传入合理阈值。
+</div>
+
+<h3>3.5 单元格访问</h3>
+<h4>3.5.1 getCellText</h4>
+<p>F# 签名：</p>
+<pre>let getCellText (table: MountainTable) (rowIdx: int) (colIdx: int) : string</pre>
+<p>C# 可见形态：</p>
+<pre>public static string getCellText(MountainTable table, int rowIdx, int colIdx)</pre>
+<p>功能：获取指定单元格的文本。</p>
+<p>参数：</p>
+<ul>
+    <li>rowIdx — 数据行索引（0 起）。</li>
+    <li>colIdx — 数据列索引（0 起）；-1 表示行标签列。</li>
+</ul>
+<p>返回：</p>
+<ul>
+    <li>越界或 null 单元格返回空字符串 ""。</li>
+    <li>colIdx = -1 返回行标签（逗号连接）。</li>
+    <li>其他情况返回单元格 Value 的字符串形式。</li>
+</ul>
+<p>这是虚拟模式的核心接口。CellValueNeeded 事件中直接调用它。</p>
+
+<div class="notice">
+    <strong>NOTICE：</strong> <code>getCellText</code> 是唯一被 UI 层调用的数据访问函数，它必须保持极低开销。内部使用简单的数组索引和字符串转换，没有任何复杂逻辑，因此能胜任虚拟模式下的高频调用。
+</div>
+
+<div class="warning">
+    <strong>警告：</strong> 如果 <code>table</code> 为 <code>null</code>，<code>getCellText</code> 会抛出 <code>ArgumentNullException</code>。UI 层的 <code>OnCellValueNeeded</code> 已做 null 检查，但若在其他地方直接调用，请自行确保 <code>table</code> 非空。
+</div>
+
+<h4>3.5.2 getColumnHeader</h4>
+<p>F# 签名：</p>
+<pre>let getColumnHeader (table: MountainTable) (colIdx: int) : string</pre>
+<p>C# 可见形态：</p>
+<pre>public static string getColumnHeader(MountainTable table, int colIdx)</pre>
+<p>功能：获取列标题。</p>
+<p>参数：colIdx — 数据列索引（0 起）；-1 表示行标签列。</p>
+<p>返回：</p>
+<ul>
+    <li>colIdx &lt; 0 — "Row"</li>
+    <li>其他 — "Col0"、"Col1"、...</li>
+</ul>
+<p>注意：列标题目前是占位符。若需要显示更友好的标题（如列号），可在 UI 层自行替换。</p>
+
+<div class="notice">
+    <strong>NOTICE：</strong> <code>getColumnHeader</code> 不检查 <code>table</code> 是否为 null，因为它不依赖表格内容。但为保持一致性，建议调用前仍确保 <code>table</code> 已正确初始化。
+</div>
+
+<h3>3.6 转换函数</h3>
+<h4>3.6.1 toDataTable</h4>
+<p>F# 签名：</p>
+<pre>let toDataTable (table: MountainTable) : System.Data.DataTable</pre>
+<p>功能：将山脉表格转换为 DataTable。</p>
+<p>注意：</p>
+<ul>
+    <li>对超大表格会消耗大量内存，不推荐。</li>
+    <li>默认虚拟模式下不需要此函数。</li>
+    <li>仅用于非虚拟模式的备用展示或数据导出。</li>
+</ul>
+
+<div class="severe-notice">
+    <strong>严重 NOTICE：</strong> <code>toDataTable</code> 会为每个单元格创建一个 <code>DataRow</code>，内存占用与单元格数成正比。对于 100 万单元格的表格，可能占用数百 MB 内存并导致长时间卡顿。除非确实需要 <code>DataTable</code>，否则请使用 <code>toCsv</code>。
+</div>
+
+<h4>3.6.2 toStringMatrix</h4>
+<p>F# 签名：</p>
+<pre>let toStringMatrix (table: MountainTable) : string[,]</pre>
+<p>功能：将山脉表格转换为二维字符串数组。</p>
+<p>返回：矩阵尺寸为 [MaxRows + 1, MaxColumns + 1]。第 0 行是列标题，第 0 列是行标签。</p>
+
+<div class="notice">
+    <strong>NOTICE：</strong> <code>toStringMatrix</code> 返回的矩阵包含标题行和行标签列，因此维度比数据区域大 1。遍历时请注意索引偏移：数据从 <code>[1,1]</code> 开始。
+</div>
+
+<h4>3.6.3 toCsv</h4>
+<p>F# 签名：</p>
+<pre>let toCsv (table: MountainTable) : string</pre>
+<p>C# 可见形态：</p>
+<pre>public static string toCsv(MountainTable table)</pre>
+<p>功能：将山脉表格转换为 CSV 文本。</p>
+<p>格式：</p>
+<pre>第一行:  Row,Col0,Col1,Col2,...
+后续行:  行标签,值,值,值,...</pre>
+<p>特点：</p>
+<ul>
+    <li>使用半角逗号分隔。</li>
+    <li>行标签内部若含逗号，不会被转义（这是已知限制）。</li>
+    <li>输出使用 UTF-8 编码保存时应无 BOM 问题（由调用方决定）。</li>
+</ul>
+<p>使用场景：山脉过大被拒绝展示时，作为降级导出方案。用户手动导出完整数据。</p>
+
+<div class="notice">
+    <strong>NOTICE：</strong> 若行标签中包含逗号（例如 <code>[1,2,3]</code>），导出的 CSV 在 Excel 中可能错列。如需严格 CSV，建议在 <code>toCsv</code> 中增加转义逻辑。
+</div>
+
+<div class="warning">
+    <strong>警告：</strong> <code>toCsv</code> 不检查 <code>table</code> 是否为 null。若传入 null，将抛出 <code>ArgumentNullException</code>。调用前请确保表格有效。
+</div>
+
+<h3>3.7 统计信息</h3>
+<p>F# 签名：</p>
+<pre>let getStatistics (table: MountainTable) : string</pre>
+<p>C# 可见形态：</p>
+<pre>public static string getStatistics(MountainTable table)</pre>
+<p>功能：获取山脉表格的统计信息字符串。</p>
+<p>返回格式："行数: R, 列数: C, 总单元格: T"</p>
+<p>使用场景：拒绝展示时显示提示。调试或日志输出。</p>
+
+<div class="notice">
+    <strong>NOTICE：</strong> 统计信息中的“总单元格”是 <code>MaxRows * MaxColumns</code>，包含所有 null 单元格。若需要实际非空单元格数量，需自行遍历统计。
+</div>
+
+<hr>
+
+<h2>4. 前端：MountainGridView 控件</h2>
+
+<h3>4.1 类定义</h3>
+<pre>namespace omegay
+{
+    public class MountainGridView : DataGridView
+    {
+        // ...
+    }
+}</pre>
+<p>继承自 DataGridView，直接可用作 WinForms 控件。所有 DataGridView 原有属性、方法、事件仍然可用。</p>
+
+<div class="notice">
+    <strong>NOTICE：</strong> 虽然继承自 <code>DataGridView</code>，但 <code>MountainGridView</code> 重写了部分默认行为（如虚拟模式、行列管理）。不建议将 <code>MountainGridView</code> 与普通 <code>DataGridView</code> 混用同一套数据绑定逻辑。
+</div>
+
+<h3>4.2 构造函数行为</h3>
+<p>构造函数中设置的默认值：</p>
+<pre>VirtualMode                = true
+ReadOnly                   = true
+AllowUserToAddRows         = false
+AllowUserToDeleteRows      = false
+RowHeadersVisible          = false
+ColumnHeadersVisible       = true
+AutoSizeColumnsMode        = None
+ScrollBars                 = Both
+Font                       = Consolas, 9pt
+AllowUserToResizeRows      = false
+AllowUserToResizeColumns   = false
+SelectionMode              = CellSelect
+MultiSelect                = false
+ColumnHeadersHeightSizeMode = DisableResizing
+ColumnHeadersHeight        = 22</pre>
+<p>并注册事件：</p>
+<pre>CellValueNeeded += OnCellValueNeeded;</pre>
+<p>注意：</p>
+<ul>
+    <li>VirtualMode = true 是默认值。</li>
+    <li>在调用 ShowTable 内部会临时关闭 VirtualMode 以调整行列，设置完成后再重新开启。</li>
+    <li>用户不应手动修改 VirtualMode 属性。</li>
+</ul>
+
+<div class="warning">
+    <strong>警告：</strong> 不要将 DataSource 赋值给 MountainGridView，因为虚拟模式与数据绑定互斥，强行设置会导致 InvalidOperationException。
+</div>
+
+<div class="notice">
+    <strong>NOTICE：</strong> 构造函数中 <code>RowHeadersVisible = false</code> 是为了节省横向空间。若需要显示行号，请在创建后手动设置 <code>RowHeadersVisible = true</code> 并调整 <code>RowHeadersWidth</code>。
+</div>
+
+<div class="severe-notice">
+    <strong>严重 NOTICE：</strong> 绝对不要手动将 <code>VirtualMode</code> 设置为 <code>false</code> 并同时保留 <code>CellValueNeeded</code> 订阅。这会导致事件不再触发，单元格全部为空，且可能引发不可预知的行为。
+</div>
+
+<h3>4.3 公开属性</h3>
+<h4>4.3.1 MaxDisplayCells</h4>
+<ul>
+    <li>类型：int</li>
+    <li>默认值：MountainDisplay.DefaultMaxDisplayCells (2000000)</li>
+    <li>含义：最大展示单元格数。若 table.TotalCells 超过此值，拒绝展示。</li>
+</ul>
+<h4>4.3.2 MaxDisplayRows</h4>
+<ul>
+    <li>类型：int</li>
+    <li>默认值：MountainDisplay.DefaultMaxDisplayRows (2000)</li>
+    <li>含义：最大展示行数。</li>
+</ul>
+<h4>4.3.3 MaxDisplayColumns</h4>
+<ul>
+    <li>类型：int</li>
+    <li>默认值：MountainDisplay.DefaultMaxDisplayColumns (2000)</li>
+    <li>含义：最大展示列数。</li>
+</ul>
+<h4>4.3.4 Table</h4>
+<ul>
+    <li>类型：MountainTable</li>
+    <li>只读：是</li>
+    <li>含义：当前展示的山脉表格。未展示或已清空时为 null。</li>
+</ul>
+<h4>4.3.5 IsRejected</h4>
+<ul>
+    <li>类型：bool</li>
+    <li>只读：是</li>
+    <li>含义：当前山脉是否因超出上限被拒绝展示。true 表示表格中显示的是拒绝提示，而非山脉数据。</li>
+</ul>
+
+<div class="notice">
+    <strong>NOTICE：</strong> <code>MaxDisplayCells</code>、<code>MaxDisplayRows</code>、<code>MaxDisplayColumns</code> 可以在运行时修改。修改后需要重新调用 <code>ShowTable</code> 才能生效。
+</div>
+
+<div class="warning">
+    <strong>警告：</strong> 这三个属性仅影响 <code>ShowTable</code> 时的判断，不影响已经展示的表格。若展示后调低阈值，当前表格不会被自动隐藏。
+</div>
+
+<h3>4.4 公开方法</h3>
+<h4>4.4.1 ShowTable</h4>
+<p>签名：public void ShowTable(MountainTable table)</p>
+<p>功能：展示一个 MountainTable。</p>
+<p>参数：table — 要展示的山脉表格；null 或空表则清空。</p>
+<p>行为：</p>
+<ul>
+    <li>若 table 为 null 或 IsEmpty，调用 ResetToEmpty()。</li>
+    <li>若超出 MaxDisplayCells / MaxDisplayRows / MaxDisplayColumns，调用 ShowRejectedMessage()，显示统计信息和上限提示。</li>
+    <li>否则正常展示：第一列为行标签列，冻结（Frozen = true）。后续每列对应 table 的一列。行数为 table.MaxRows。开启虚拟模式。</li>
+</ul>
+
+<div class="notice">
+    <strong>NOTICE：</strong> <code>ShowTable</code> 是幂等的。多次调用会完全替换当前内容，不会叠加。若传入相同的表格引用，也会重新设置行列并刷新。
+</div>
+
+<div class="warning">
+    <strong>警告：</strong> <code>ShowTable</code> 必须在 UI 线程调用。若在后台线程调用，会抛出 <code>InvalidOperationException</code>。若需要从后台线程更新，请使用 <code>Invoke</code> 或 <code>BeginInvoke</code>。
+</div>
+
+<h4>4.4.2 ShowSequence</h4>
+<p>签名：public void ShowSequence(int[] seq)</p>
+<p>功能：直接从 int[] 序列展示山脉。</p>
+<p>参数：seq — 整数序列。</p>
+<p>等价于：ShowTable(MountainDisplay.buildFromSequence(seq));</p>
+<p>适用场景：输入序列展示。输出序列展示（简化版山脉）。</p>
+
+<div class="notice">
+    <strong>NOTICE：</strong> <code>ShowSequence</code> 内部调用 <code>buildFromSequence</code>，生成的是单行表格。若序列很长（超过 <code>MaxDisplayColumns</code>），依然会被拒绝展示。
+</div>
+
+<h4>4.4.3 ResetToEmpty</h4>
+<p>签名：public void ResetToEmpty()</p>
+<p>功能：清空展示，显示"（空）"。</p>
+<p>行为：</p>
+<ul>
+    <li>关闭虚拟模式。</li>
+    <li>清空行列。</li>
+    <li>添加一行"（空）"。</li>
+    <li>重新开启虚拟模式。</li>
+    <li>IsRejected = false，Table = null。</li>
+</ul>
+
+<div class="notice">
+    <strong>NOTICE：</strong> <code>ResetToEmpty</code> 会将 <code>Table</code> 置为 <code>null</code>，因此之后调用 <code>ExportToCsv</code> 将返回空字符串。若需要保留导出能力，请先导出再重置。
+</div>
+
+<h4>4.4.4 ExportToCsv</h4>
+<p>签名：public string ExportToCsv()</p>
+<p>功能：导出当前山脉为 CSV 文本。</p>
+<p>返回：CSV 字符串；若 Table 为 null 返回空字符串。</p>
+<p>内部调用：MountainDisplay.toCsv(_table)</p>
+<p>注意：</p>
+<ul>
+    <li>即使 IsRejected = true，只要 Table 不为 null，仍可导出完整数据。</li>
+    <li>拒绝展示时 Table 仍被保留，就是为了支持导出。</li>
+</ul>
+
+<div class="notice">
+    <strong>NOTICE：</strong> <code>ExportToCsv</code> 不会修改控件状态，也不会弹出保存对话框。它只返回字符串，由调用方决定如何保存。
+</div>
+
+<div class="warning">
+    <strong>警告：</strong> 导出的 CSV 字符串可能非常大（例如 100 万单元格约几十 MB）。在 UI 线程拼接如此大的字符串可能导致界面短暂卡顿，建议在后台线程调用 <code>MountainDisplay.toCsv</code> 并自行处理保存。
+</div>
+
+<h3>4.5 事件</h3>
+<h4>4.5.1 CellValueNeeded（内部处理）</h4>
+<p>签名：private void OnCellValueNeeded(object sender, DataGridViewCellValueEventArgs e)</p>
+<p>功能：虚拟模式核心。按需提供单元格值。</p>
+<p>行为：</p>
+<pre>if (_table == null || IsRejected)
+{
+    e.Value = "";
+    return;
+}
+
+int r = e.RowIndex;
+int c = e.ColumnIndex;
+
+if (c == 0)
+    e.Value = MountainDisplay.getCellText(_table, r, -1);
+else
+    e.Value = MountainDisplay.getCellText(_table, r, c - 1);</pre>
+<p>注意：</p>
+<ul>
+    <li>此事件由控件内部处理，用户不应覆盖。</li>
+    <li>如需自定义单元格显示，可继承 MountainGridView 并重写。</li>
+</ul>
+
+<div class="severe-notice">
+    <strong>严重 NOTICE：</strong> 千万不要在外部订阅 <code>CellValueNeeded</code> 事件并覆盖内部处理逻辑。若必须自定义，请继承并确保调用基类实现，否则会导致单元格内容全部为空。
+</div>
+
+<div class="notice">
+    <strong>NOTICE：</strong> <code>OnCellValueNeeded</code> 在每次需要显示新单元格时被调用，频率很高。它内部只做简单判断和字符串转换，不执行任何耗时操作，这是虚拟模式流畅的关键。
+</div>
+
+<h3>4.6 内部实现说明</h3>
+<h4>4.6.1 切换 VirtualMode 的时机</h4>
+<p>ShowTable 中需要先设置列和行数，此时必须临时关闭 VirtualMode。设置完成后再开启。这是 DataGridView 的常规做法。</p>
+<h4>4.6.2 行标签列冻结</h4>
+<p>Columns[0].Frozen = true，使行标签在横向滚动时保持可见。</p>
+<h4>4.6.3 拒绝展示时的表格布局</h4>
+<ul>
+    <li>只有一列 "Message"。</li>
+    <li>宽度 400。</li>
+    <li>显示 4 行提示。</li>
+    <li>仍然保留 _table 引用以支持导出。</li>
+</ul>
+<h4>4.6.4 颜色方案</h4>
+<ul>
+    <li>行标签列：#EEE0E0 (浅红)</li>
+    <li>数据列：#E0EEE0 (浅绿)</li>
+</ul>
+
+<div class="notice">
+    <strong>NOTICE：</strong> 颜色方案通过 <code>DefaultCellStyle.BackColor</code> 设置。若需要自定义颜色，请在 <code>ShowTable</code> 之后修改对应列的 <code>DefaultCellStyle</code>，不会影响虚拟模式的值获取。
+</div>
+
+<div class="warning">
+    <strong>警告：</strong> 在 <code>ShowTable</code> 内部临时关闭 <code>VirtualMode</code> 时，会触发 <code>RowsAdded</code> / <code>ColumnsAdded</code> 等事件。若外部订阅了这些事件，请确保处理逻辑不会在此时访问 <code>CellValueNeeded</code> 依赖的数据。
+</div>
+
+<hr>
+
+<h2>5. 使用示例</h2>
+
+<h3>5.1 最小示例</h3>
+<pre>var grid = new MountainGridView();
+grid.Size = new Size(400, 200);
+grid.Location = new Point(10, 10);
+this.Controls.Add(grid);
+
+// 展示一个序列
+grid.ShowSequence(new[] { 1, 3, 12, 69, 12 });
+
+// 导出 CSV
+string csv = grid.ExportToCsv();</pre>
+
+<div class="notice">
+    <strong>NOTICE：</strong> 最小示例中 <code>grid</code> 被直接添加到窗体。若窗体尚未创建句柄，<code>ShowSequence</code> 仍可正常调用，但实际渲染会延迟到句柄创建后。
+</div>
+
+<h3>5.2 在 Form1 中完整集成</h3>
+<pre>// 字段
+private MountainGridView dgvInputMountain;
+private MountainGridView dgvOutputMountain;
+private Label lblInputMountain;
+private Label lblOutputMountain;
+private Button btnExportInputCsv;
+private Button btnExportOutputCsv;
+
+// 在 BuildUi 中
+lblInputMountain = new Label
+{
+    Text = "输入序列山脉:",
+    Location = new Point(10, 270),
+    Size = new Size(120, 20),
+};
+
+dgvInputMountain = new MountainGridView
+{
+    Location = new Point(10, 290),
+    Size = new Size(430, 180),
+};
+
+btnExportInputCsv = new Button
+{
+    Text = "导出 CSV",
+    Location = new Point(10, 475),
+    Size = new Size(90, 25),
+};
+btnExportInputCsv.Click += (s, e) => ExportCsv(dgvInputMountain, "输入山脉");
+
+// 输出山脉类似
+lblOutputMountain = new Label
+{
+    Text = "输出序列山脉:",
+    Location = new Point(455, 270),
+    Size = new Size(120, 20),
+};
+
+dgvOutputMountain = new MountainGridView
+{
+    Location = new Point(455, 290),
+    Size = new Size(430, 180),
+};
+
+btnExportOutputCsv = new Button
+{
+    Text = "导出 CSV",
+    Location = new Point(455, 475),
+    Size = new Size(90, 25),
+};
+btnExportOutputCsv.Click += (s, e) => ExportCsv(dgvOutputMountain, "输出山脉");
+
+// 在 RunExpand 中
+dgvInputMountain.ShowSequence(seq);
+dgvOutputMountain.ShowSequence(result);</pre>
+
+<div class="notice">
+    <strong>NOTICE：</strong> 若 <code>RunExpand</code> 在后台线程执行，调用 <code>ShowSequence</code> 前必须切换到 UI 线程（例如 <code>Invoke</code>）。否则会抛出跨线程异常。
+</div>
+
+<h3>5.3 CSV 导出</h3>
+<pre>private void ExportCsv(MountainGridView dgv, string title)
+{
+    if (dgv.Table == null)
+    {
+        MessageBox.Show(this, "没有可导出的山脉数据", "提示",
+            MessageBoxButtons.OK, MessageBoxIcon.Information);
+        return;
+    }
+
+    using var sfd = new SaveFileDialog
+    {
+        Filter = "CSV 文件|*.csv|所有文件|*.*",
+        FileName = $"{title}_{DateTime.Now:yyyyMMdd_HHmmss}.csv",
+    };
+
+    if (sfd.ShowDialog(this) == DialogResult.OK)
+    {
+        try
+        {
+            File.WriteAllText(sfd.FileName, dgv.ExportToCsv(),
+                Encoding.UTF8);
+            MessageBox.Show(this, "导出成功", "提示",
+                MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, $"导出失败: {ex.Message}", "错误",
+                MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+    }
+}</pre>
+<p>注意：</p>
+<ul>
+    <li>即使 IsRejected = true，只要 Table 不为 null，导出仍然可用。</li>
+    <li>这正是保留 _table 引用的原因。</li>
+</ul>
+
+<div class="warning">
+    <strong>警告：</strong> <code>ExportToCsv</code> 返回的字符串可能包含非常大的数据。若在 UI 线程直接调用并写入文件，可能导致界面冻结数秒。建议将导出逻辑放入 <code>Task.Run</code>，并在完成后通过 <code>Invoke</code> 显示提示。
+</div>
+
+<div class="notice">
+    <strong>NOTICE：</strong> 保存对话框中的文件名使用了时间戳，避免覆盖。若需要固定名称，请自行修改 <code>FileName</code> 属性。
+</div>
+
+<hr>
+
+<h2>6. 虚拟模式原理与性能</h2>
+
+<h3>6.1 为什么默认虚拟模式</h3>
+<p>传统的 DataGridView 绑定模式：</p>
+<pre>dgv.DataSource = dataTable;</pre>
+<p>会为每个单元格创建一个 DataGridViewCell 对象。对于 100000 个单元格，这意味着 100000 个对象，内存占用可达数十 MB，且初始化时间可能达到秒级。</p>
+<p>虚拟模式：</p>
+<pre>dgv.VirtualMode = true;
+dgv.CellValueNeeded += ...;</pre>
+<p>只创建可见区域内的单元格对象（通常几十到几百个），滚动时按需请求新值。内存占用恒定，初始化时间与单元格总数无关。</p>
+
+<div class="notice">
+    <strong>NOTICE：</strong> 虚拟模式的核心是“按需提供值”，因此 <code>CellValueNeeded</code> 必须尽可能快。任何耗时操作（如数据库查询、复杂计算）都不应放在该事件中，否则滚动会卡顿。
+</div>
+
+<h3>6.2 性能特征</h3>
+<table>
+    <tr>
+        <th>操作</th>
+        <th>传统绑定模式</th>
+        <th>虚拟模式</th>
+    </tr>
+    <tr>
+        <td>1 万单元格</td>
+        <td>流畅</td>
+        <td>流畅</td>
+    </tr>
+    <tr>
+        <td>10 万单元格</td>
+        <td>明显卡顿</td>
+        <td>流畅</td>
+    </tr>
+    <tr>
+        <td>100 万单元格</td>
+        <td>可能无响应</td>
+        <td>流畅</td>
+    </tr>
+    <tr>
+        <td>内存占用</td>
+        <td>与单元格数成正比</td>
+        <td>与可见区域成正比</td>
+    </tr>
+    <tr>
+        <td>初始加载时间</td>
+        <td>与单元格数成正比</td>
+        <td>常数</td>
+    </tr>
+    <tr>
+        <td>滚动性能</td>
+        <td>受总单元格数影响</td>
+        <td>只受可见区域影响</td>
+    </tr>
+</table>
+
+<div class="notice">
+    <strong>NOTICE：</strong> 虚拟模式下，滚动性能只取决于可见区域和 <code>CellValueNeeded</code> 的执行速度，与总单元格数无关。因此，即使 100 万单元格，只要 <code>getCellText</code> 足够快，滚动依然流畅。
+</div>
+
+<h3>6.3 阈值配置建议</h3>
+<p>默认值已经足够宽松，适用于绝大多数用例：</p>
+<pre>MaxDisplayCells   = 2000000
+MaxDisplayRows    = 2000
+MaxDisplayColumns = 2000</pre>
+<p>如果确实需要展示更大山脉，可以按需调整：</p>
+<pre>dgvOutputMountain.MaxDisplayCells   = 10000000;
+dgvOutputMountain.MaxDisplayRows    = 5000;
+dgvOutputMountain.MaxDisplayColumns = 5000;</pre>
+<p>但不建议设得过大，因为构建 MountainTable 本身会消耗内存。一般来说，MountainTable 的内存占用约为：单元格数 × (MountainCell 对象头 + 字段)。每个 MountainCell 大约 50-80 字节（取决于 .NET 版本与对齐）。200 万单元格约 100-160 MB，这是可接受的。1000 万单元格约 500-800 MB，可能导致内存压力。</p>
+<p>注意：阈值限制的是 MountainTable 的规模，不是 DataGridView 的渲染规模。DataGridView 在虚拟模式下渲染规模恒定。</p>
+
+<div class="severe-notice">
+    <strong>严重 NOTICE：</strong> 调整阈值前请评估目标机器的内存。若 MountainTable 本身占用超过 800 MB，即使虚拟模式也无法避免构建阶段的内存峰值，可能导致进程崩溃。
+</div>
+
+<div class="notice">
+    <strong>NOTICE：</strong> 阈值判断在 <code>ShowTable</code> 中执行，若表格被拒绝展示，<code>Table</code> 属性仍然保留原始引用，以便导出。因此，即使不展示，内存占用依然存在。
+</div>
+
+<hr>
+
+<h2>山脉单元格示例</h2>
+<p>下图展示了一个典型的 MountainTable 在界面上的呈现效果。行标签列使用浅红色（#EEE0E0），数据列使用浅绿色（#E0EEE0）。空白单元格表示该位置在原始山脉中不存在对应 Entry（即 <code>null</code> 单元格）。</p>
+
+<table class="mountain-example">
+    <thead>
+        <tr>
+            <th>Row</th>
+            <th>Col0</th>
+            <th>Col1</th>
+            <th>Col2</th>
+            <th>Col3</th>
+            <th>Col4</th>
+            <th>Col5</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td class="row-label">1</td>
+            <td class="data-cell">1</td>
+            <td class="data-cell">3</td>
+            <td class="data-cell">12</td>
+            <td class="data-cell">69</td>
+            <td class="data-cell">12</td>
+            <td class="empty-cell"></td>
+        </tr>
+        <tr>
+            <td class="row-label">1,1</td>
+            <td class="data-cell">2</td>
+            <td class="data-cell">9</td>
+            <td class="data-cell">57</td>
+            <td class="data-cell">9</td>
+            <td class="empty-cell"></td>
+            <td class="empty-cell"></td>
+        </tr>
+        <tr>
+            <td class="row-label">1,1,1</td>
+            <td class="data-cell">7</td>
+            <td class="data-cell">48</td>
+            <td class="data-cell">7</td>
+            <td class="empty-cell"></td>
+            <td class="empty-cell"></td>
+            <td class="empty-cell"></td>
+        </tr>
+        <tr>
+            <td class="row-label">1,1,1,1</td>
+            <td class="data-cell">41</td>
+            <td class="empty-cell"></td>
+            <td class="empty-cell"></td>
+            <td class="empty-cell"></td>
+            <td class="empty-cell"></td>
+            <td class="empty-cell"></td>
+        </tr>
+        <tr>
+            <td class="row-label">1,2</td>
+            <td class="data-cell">1</td>
+            <td class="data-cell">5</td>
+            <td class="data-cell">34</td>
+            <td class="data-cell">5</td>
+            <td class="empty-cell"></td>
+            <td class="empty-cell"></td>
+        </tr>
+        <tr>
+            <td class="row-label">1,2,1</td>
+            <td class="data-cell">4</td>
+            <td class="data-cell">29</td>
+            <td class="data-cell">4</td>
+            <td class="empty-cell"></td>
+            <td class="empty-cell"></td>
+            <td class="empty-cell"></td>
+        </tr>
+        <tr>
+            <td class="row-label">1,2,1,1</td>
+            <td class="data-cell">25</td>
+            <td class="empty-cell"></td>
+            <td class="empty-cell"></td>
+            <td class="empty-cell"></td>
+            <td class="empty-cell"></td>
+            <td class="empty-cell"></td>
+        </tr>
+        <tr>
+            <td class="row-label">1,2,2</td>
+            <td class="data-cell">3</td>
+            <td class="data-cell">21</td>
+            <td class="data-cell">3</td>
+            <td class="empty-cell"></td>
+            <td class="empty-cell"></td>
+            <td class="empty-cell"></td>
+        </tr>
+        <tr>
+            <td class="row-label">1,2,2,1</td>
+            <td class="data-cell">18</td>
+            <td class="empty-cell"></td>
+            <td class="empty-cell"></td>
+            <td class="empty-cell"></td>
+            <td class="empty-cell"></td>
+            <td class="empty-cell"></td>
+        </tr>
+        <tr>
+            <td class="row-label">1,2,2,2</td>
+            <td class="data-cell">15</td>
+            <td class="empty-cell"></td>
+            <td class="empty-cell"></td>
+            <td class="empty-cell"></td>
+            <td class="empty-cell"></td>
+            <td class="empty-cell"></td>
+        </tr>
+        <tr>
+            <td class="row-label">1,3</td>
+            <td class="data-cell">2</td>
+            <td class="data-cell">12</td>
+            <td class="data-cell">2</td>
+            <td class="empty-cell"></td>
+            <td class="empty-cell"></td>
+            <td class="empty-cell"></td>
+        </tr>
+        <tr>
+            <td class="row-label">1,3,1</td>
+            <td class="data-cell">10</td>
+            <td class="empty-cell"></td>
+            <td class="empty-cell"></td>
+            <td class="empty-cell"></td>
+            <td class="empty-cell"></td>
+            <td class="empty-cell"></td>
+        </tr>
+        <tr>
+            <td class="row-label">1,3,2</td>
+            <td class="data-cell">8</td>
+            <td class="empty-cell"></td>
+            <td class="empty-cell"></td>
+            <td class="empty-cell"></td>
+            <td class="empty-cell"></td>
+            <td class="empty-cell"></td>
+        </tr>
+        <tr>
+            <td class="row-label">1,3,3</td>
+            <td class="data-cell">6</td>
+            <td class="empty-cell"></td>
+            <td class="empty-cell"></td>
+            <td class="empty-cell"></td>
+            <td class="empty-cell"></td>
+            <td class="empty-cell"></td>
+        </tr>
+        <tr>
+            <td class="row-label">1,4</td>
+            <td class="data-cell">1</td>
+            <td class="data-cell">4</td>
+            <td class="data-cell">1</td>
+            <td class="empty-cell"></td>
+            <td class="empty-cell"></td>
+            <td class="empty-cell"></td>
+        </tr>
+        <tr>
+            <td class="row-label">1,4,1</td>
+            <td class="data-cell">3</td>
+            <td class="empty-cell"></td>
+            <td class="empty-cell"></td>
+            <td class="empty-cell"></td>
+            <td class="empty-cell"></td>
+            <td class="empty-cell"></td>
+        </tr>
+        <tr>
+            <td class="row-label">1,4,2</td>
+            <td class="data-cell">2</td>
+            <td class="empty-cell"></td>
+            <td class="empty-cell"></td>
+            <td class="empty-cell"></td>
+            <td class="empty-cell"></td>
+            <td class="empty-cell"></td>
+        </tr>
+        <tr>
+            <td class="row-label">1,4,3</td>
+            <td class="data-cell">1</td>
+            <td class="empty-cell"></td>
+            <td class="empty-cell"></td>
+            <td class="empty-cell"></td>
+            <td class="empty-cell"></td>
+            <td class="empty-cell"></td>
+        </tr>
+    </tbody>
+</table>
+<p class="caption">▲ 山脉单元格示例。行标签列显示 Row 字段（逗号连接），数据列显示 MountainCell.Value。空白（浅绿色）表示该位置无数据（<code>null</code>）。</p>
+
+<div class="notice">
+    <strong>NOTICE：</strong> 示例中的空白单元格在 <code>MountainTable</code> 中对应 <code>null</code>。渲染时 <code>getCellText</code> 会将其转为空字符串，因此界面上显示为空白。
+</div>
+
+<hr>
+
+<h2>7. 限制与注意事项</h2>
+
+<h3>7.1 MountainCell 是简化模型</h3>
+<p>MountainCell 只保存 Value、Row、Cloumn、Idx、No、Id 六个字段。它不包含 Parent、Head、Foot、Ref 等引用。若需要在 UI 中显示这些信息，请直接使用 Entry，而不是 MountainTable。</p>
+
+<h3>7.2 列标题是占位符</h3>
+<p>getColumnHeader 返回 "Col0"、"Col1" 等。若需要显示更友好的标题，需要在 UI 层自行替换：</p>
+<pre>for (int i = 1; i &lt; dgv.Columns.Count; i++)
+    dgv.Columns[i].HeaderText = $"第 {i} 列";</pre>
+
+<h3>7.3 CSV 不转义逗号</h3>
+<p>行标签内部若含逗号（例如 [1,2,3]），在 CSV 中不会被转义。这是已知限制。若需要严格 CSV，应在后端 toCsv 中增加转义逻辑。</p>
+
+<h3>7.4 不支持编辑</h3>
+<p>MountainGridView 是只读的。ReadOnly = true，且虚拟模式不支持编辑。若需要编辑功能，请另行实现。</p>
+
+<h3>7.5 虚拟模式与数据绑定互斥</h3>
+<p>DataGridView 的 VirtualMode 与 DataSource 互斥。MountainGridView 使用虚拟模式，因此不应设置 DataSource。若需要绑定模式，请直接使用 DataGridView 并调用 MountainDisplay.toDataTable。</p>
+
+<h3>7.6 行高固定</h3>
+<p>AllowUserToResizeRows = false，行高固定。若需要动态行高，需要重写 RowTemplate.Height 并处理 Resize 事件。</p>
+
+<h3>7.7 线程安全</h3>
+<p>MountainGridView 是 UI 控件，只能在 UI 线程创建和操作。MountainDisplay 是纯函数模块，无状态，可在任意线程调用。</p>
+
+<div class="warning">
+    <strong>警告：</strong> 虽然 <code>MountainDisplay</code> 可在任意线程调用，但返回的 <code>MountainTable</code> 一旦被 UI 线程引用，就不应在后台线程修改其内容。跨线程共享可变状态是未定义行为。
+</div>
+
+<div class="notice">
+    <strong>NOTICE：</strong> 若需要在后台线程构建 <code>MountainTable</code>，请确保构建完成后不再修改，然后通过 <code>Invoke</code> 将其传给 UI 线程的 <code>ShowTable</code>。
+</div>
+
+<hr>
+
+<h2>8. 扩展指南</h2>
+
+<h3>8.1 自定义单元格显示</h3>
+<p>继承 MountainGridView 并重写 OnCellValueNeeded：</p>
+<pre>public class MyMountainGridView : MountainGridView
+{
+    protected override void OnCellValueNeeded(DataGridViewCellValueEventArgs e)
+    {
+        base.OnCellValueNeeded(e);
+        // 自定义逻辑
+    }
+}</pre>
+<p>注意：基类的 OnCellValueNeeded 是 private，无法直接重写。若需要自定义，应在基类中将其改为 protected virtual。</p>
+
+<div class="notice">
+    <strong>NOTICE：</strong> 若将 <code>OnCellValueNeeded</code> 改为 <code>protected virtual</code>，请确保子类调用 <code>base.OnCellValueNeeded(e)</code>，否则内部数据绑定会失效。
+</div>
+
+<h3>8.2 添加列标题定制</h3>
+<p>可以在 ShowTable 之后手动修改列标题：</p>
+<pre>dgvOutputMountain.ShowTable(table);
+for (int i = 1; i &lt; dgvOutputMountain.Columns.Count; i++)
+{
+    dgvOutputMountain.Columns[i].HeaderText = $"第 {i} 列";
+}</pre>
+
+<div class="notice">
+    <strong>NOTICE：</strong> 列标题的修改不会影响 <code>MountainTable</code> 本身，只在 UI 层生效。每次调用 <code>ShowTable</code> 后都需要重新设置。
+</div>
+
+<h3>8.3 添加行号显示</h3>
+<pre>dgvOutputMountain.RowHeadersVisible = true;
+dgvOutputMountain.RowHeadersWidth = 40;</pre>
+
+<div class="notice">
+    <strong>NOTICE：</strong> 行号由 <code>DataGridView</code> 自动生成，显示的是行索引（从 0 或 1 开始，取决于 <code>RowHeadersWidth</code> 和默认行为）。若需要显示自定义行号，请处理 <code>RowPostPaint</code> 事件。
+</div>
+
+<h3>8.4 添加单元格颜色定制</h3>
+<p>可以在 ShowTable 之后遍历列并设置样式：</p>
+<pre>dgvOutputMountain.Columns[0].DefaultCellStyle.BackColor = Color.LightPink;
+for (int i = 1; i &lt; dgvOutputMountain.Columns.Count; i++)
+    dgvOutputMountain.Columns[i].DefaultCellStyle.BackColor = Color.LightGreen;</pre>
+
+<div class="warning">
+    <strong>警告：</strong> 直接修改 <code>DefaultCellStyle</code> 会影响整列的所有单元格。若需要按单元格设置颜色，请在 <code>CellFormatting</code> 事件中处理，但注意该事件在虚拟模式下也会被频繁调用，需保持高效。
+</div>
+
+<h3>8.5 添加导出其他格式</h3>
+<p>在 MountainGridView 中添加方法：</p>
+<pre>public string ExportToTsv()
+{
+    if (_table == null) return "";
+    var sb = new StringBuilder();
+    // 类似 toCsv，但用 \t 分隔
+    // ...
+    return sb.ToString();
+}</pre>
+
+<div class="notice">
+    <strong>NOTICE：</strong> 若要在 <code>MountainGridView</code> 中直接访问 <code>_table</code>，需要将字段改为 <code>protected</code> 或添加 <code>protected</code> 属性。当前 <code>_table</code> 是 <code>private</code>，子类无法直接访问。
+</div>
+
+<hr>
+
+<h2>9. 常见问题</h2>
+
+<p><strong>Q1: 为什么列标题是 Col0、Col1？</strong><br>
+A1: 这是占位符。真实列号语义由具体记号决定，MountainDisplay 不假设列的含义。若需要自定义，在 UI 层修改 Columns[i].HeaderText。</p>
+
+<p><strong>Q2: 为什么单元格为空？</strong><br>
+A2: 表示该 (行, 列) 位置在原始山脉中不存在对应 Entry。这是正常现象，山脉通常是稀疏的。</p>
+
+<p><strong>Q3: 为什么山脉被拒绝展示？</strong><br>
+A3: 超出了 MaxDisplayCells / MaxDisplayRows / MaxDisplayColumns。可以调整这些属性，或使用 ExportToCsv 导出完整数据。</p>
+
+<p><strong>Q4: 导出 CSV 时中文乱码怎么办？</strong><br>
+A4: 确保使用 UTF-8 编码写入。若用 Excel 打开，可能需要 UTF-8 BOM。可以将 Encoding.UTF8 改为 new UTF8Encoding(true)。</p>
+
+<p><strong>Q5: 可以同时展示多个山脉吗？</strong><br>
+A5: 可以，创建多个 MountainGridView 实例即可。</p>
+
+<p><strong>Q6: 虚拟模式下可以编辑单元格吗？</strong><br>
+A6: 不可以。虚拟模式不支持编辑。MountainGridView 是只读的。</p>
+
+<p><strong>Q7: 如何清空展示？</strong><br>
+A7: 调用 ResetToEmpty()。</p>
+
+<p><strong>Q8: Table 属性有什么用？</strong><br>
+A8: 用于导出 CSV 或检查当前展示的数据。即使 IsRejected = true，Table 仍然保留，以便导出。</p>
+
+<p><strong>Q9: 为什么 MountainCell 没有 Parent / Head / Foot / Ref？</strong><br>
+A9: 为了避免循环引用和简化模型。展示只需要 Value 和 Row。若需要完整信息，请直接使用 Entry。</p>
+
+<p><strong>Q10: 支持哪些记号？</strong><br>
+A10: MountainGridView 与记号无关。任何能产生 int[] 或 Entry 列的记号都可以使用它展示。</p>
+
+<div class="notice">
+    <strong>NOTICE：</strong> 若问题未在此列出，请先检查 <code>MountainTable</code> 是否正确构建，以及 <code>ShowTable</code> 是否在 UI 线程调用。多数异常源于跨线程操作或表格尺寸与行列数不一致。
+</div>
+
+<div class="warning">
+    <strong>警告：</strong> 不要尝试在 <code>CellValueNeeded</code> 事件中调用 <code>ShowTable</code> 或 <code>ResetToEmpty</code>，这会导致递归刷新和堆栈溢出。所有对控件的修改都应在事件外部进行。
+</div>
+
+<hr>
+
+<div class="doc-footer">
+    <p><strong>文档结束</strong></p>
+    <p>署名：Cream-CN，文档系使用AI技术修改</p>
+    <p>说明：其实各位看完都知道这个接口是给X-Y和ε-Y用的</p>
+</div>
+
+</body>
+</html>

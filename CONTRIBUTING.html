@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>贡献说明与接口规范（C# + F# 版）</title>
+    <style>
+        /* 基础重置，保持文档纯净 */
+        body {
+            font-family: Consolas, "Courier New", monospace, sans-serif;
+            line-height: 1.6;
+            color: #000;
+            background: #fff;
+            max-width: 960px;
+            margin: 20px auto;
+            padding: 0 20px;
+        }
+
+        /* 标题样式：保留粗体与层次 */
+        h1, h2, h3, h4 {
+            font-weight: bold;
+            margin-top: 1.5em;
+            margin-bottom: 0.5em;
+        }
+        h1 {
+            font-size: 1.8em;
+            border-bottom: 2px solid #000;
+            padding-bottom: 0.3em;
+        }
+        h2 {
+            font-size: 1.4em;
+            border-bottom: 1px solid #000;
+            padding-bottom: 0.2em;
+        }
+        h3 {
+            font-size: 1.2em;
+        }
+        h4 {
+            font-size: 1.1em;
+        }
+
+        /* 灰色代码块 */
+        pre {
+            background: #f0f0f0;
+            border: 1px solid #ccc;
+            padding: 10px;
+            overflow-x: auto;
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 0.9em;
+            line-height: 1.4;
+            margin: 1em 0;
+        }
+
+        /* 行内 code 也做浅灰处理，但不加边框，以免过于抢眼 */
+        code {
+            font-family: Consolas, "Courier New", monospace;
+            background: #f0f0f0;
+            padding: 0 3px;
+            font-size: 0.9em;
+            border: 1px solid #ddd;
+        }
+
+        /* 表格基本样式（无彩色，仅边框和间距） */
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 1em 0;
+        }
+        th, td {
+            border: 1px solid #000;
+            padding: 6px 10px;
+            text-align: left;
+            vertical-align: top;
+        }
+        th {
+            background: #e0e0e0;
+            font-weight: bold;
+        }
+
+        /* 列表间距 */
+        ul, ol {
+            margin: 0.5em 0 0.5em 1.5em;
+            padding-left: 0;
+        }
+        li {
+            margin-bottom: 0.3em;
+        }
+
+        /* 水平线 */
+        hr {
+            border: none;
+            border-top: 1px solid #000;
+            margin: 2em 0;
+        }
+
+        /* ---------- 提示框样式 ---------- */
+        /* 蓝色边框 NOTICE（一般提示） */
+        .notice {
+            background: #f0f8ff;
+            border: 1px solid #1e90ff;      /* 蓝色边框 */
+            border-left-width: 6px;          /* 左侧加粗，突出提示感 */
+            border-left-color: #1e90ff;
+            padding: 10px 14px;
+            margin: 1.5em 0;
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 0.95em;
+        }
+        /* 红色边框警告 WARNING */
+        .warning {
+            background: #fff0f0;
+            border: 1px solid #d32f2f;       /* 红色边框 */
+            border-left-width: 6px;
+            border-left-color: #d32f2f;
+            padding: 10px 14px;
+            margin: 1.5em 0;
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 0.95em;
+        }
+        /* 黄色边框 严重 NOTICE (SEVERE) */
+        .severe-notice {
+            background: #fffbe6;
+            border: 1px solid #e6b800;       /* 黄色/金色边框 */
+            border-left-width: 6px;
+            border-left-color: #e6b800;
+            padding: 10px 14px;
+            margin: 1.5em 0;
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 0.95em;
+        }
+
+        /* 提示框内部的段落/列表可沿用原有边距 */
+        .notice p, .warning p, .severe-notice p {
+            margin: 0.5em 0;
+        }
+        .notice ul, .warning ul, .severe-notice ul {
+            margin: 0.3em 0 0.3em 1.5em;
+        }
+        .notice li, .warning li, .severe-notice li {
+            margin-bottom: 0.2em;
+        }
+
+        /* 页脚保持简单居中 */
+        .doc-footer {
+            margin-top: 2em;
+            padding-top: 1em;
+            border-top: 1px solid #000;
+            font-size: 0.9em;
+            text-align: center;
+        }
+
+        /* 其他辅助类 */
+        .center {
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+<h1>贡献说明与接口规范（C# + F# 版）</h1>
+<p><strong>前排提示与接口契约</strong></p>
+
+<hr>
+
+<h2>目录</h2>
+<ol>
+    <li>前排提示</li>
+    <li>工具链和依赖</li>
+    <li>命名空间分层</li>
+    <li>C# / F# 对接约定</li>
+    <li>Expander_CS.Backend.Common 接口
+        <ul>
+            <li>5.1 序列解析与格式化 — Sequence.fs</li>
+            <li>5.2 UTF-8 与宽字符转换</li>
+        </ul>
+    </li>
+    <li>Expander_CS.Backend.Core 接口
+        <ul>
+            <li>6.1 Entry — Entry.fs</li>
+            <li>6.2 EntryArena — EntryArena.fs</li>
+        </ul>
+    </li>
+    <li>Expander_CS.Backend.Notation 接口
+        <ul>
+            <li>7.1 记号模块的标准形态</li>
+            <li>7.2 C# 侧记号注册表建议</li>
+            <li>7.3 FS / FSalter 语义</li>
+        </ul>
+    </li>
+    <li>UI 层与记号层的边界</li>
+    <li>版本与兼容性</li>
+    <li>贡献者检查清单</li>
+    <li>附：当前唯一记号的实现位置</li>
+</ol>
+
+<hr>
+
+<h2>1. 前排提示</h2>
+<ol>
+    <li>代码的来源能且只能是与 Unlicense 相兼容的，且必须署名，无论要求与否。</li>
+    <li>对于没有许可证的仓库，原则上必须与仓库控制者联系。</li>
+    <li>如果你能够自己写代码，可以给写入权限。</li>
+    <li>请不要在未阅读完毕文档的情况下贡献。</li>
+</ol>
+
+<div class="warning">
+    <strong>警告：</strong> 不得引入非宽松许可证的库，不得引入链接时依赖。只得使用 .NET 自带类库。不得引入 NuGet 包。
+</div>
+
+<hr>
+
+<h2>2. 工具链和依赖</h2>
+<ul>
+    <li>使用 Microsoft Visual Studio 2026。</li>
+    <li>C# 项目：<code>Expander_CS</code>，WinForms，输出类型 Windows 应用。</li>
+    <li>F# 项目：<code>Expander_CS.Backend</code>，类库，输出类型 Library。</li>
+    <li>目标框架以解决方案当前设置为准。</li>
+    <li>没有额外依赖。</li>
+    <li>F# 项目通过项目引用由 SDK 自动带入 <code>Microsoft.FSharp.Core</code>。</li>
+    <li>两项目目前引用接口。</li>
+</ul>
+
+<hr>
+
+<h2>3. 命名空间分层</h2>
+<pre>omegay
+// C# WinForms UI 层，窗体、菜单、输入、显示、事件分发
+
+Expander_CS.Backend
+// F# 类库，算法层
+├── Common
+// 通用工具：序列解析与格式化
+├── Core
+// Entry / EntryArena / makeYKey
+└── Notation
+// 数学记号：每种记号一个独立模块</pre>
+<p>规则：</p>
+<ul>
+    <li><code>Common</code> 下只放与具体记号无关的纯工具函数，不得引入 <code>Notation</code> 的依赖。</li>
+    <li><code>Core</code> 放 <code>Entry</code>、<code>EntryArena</code>、<code>makeYKey</code> 等基础结构，可依赖 <code>Common</code>。</li>
+    <li><code>Notation</code> 可以依赖 <code>Common</code> / <code>Core</code>，但不得反向依赖。</li>
+    <li>记号与记号之间不得互相引用，避免耦合。</li>
+    <li>C# UI 层不得直接实现数学展开逻辑，只通过 Backend 模块调用。</li>
+    <li>F# Backend 不得引用 <code>System.Windows.Forms</code> 或 C# UI 项目。</li>
+</ul>
+
+<div class="notice">
+    <strong>NOTICE：</strong> <code>Common</code> 下只放与具体记号无关的纯工具函数，不得引入 <code>Notation</code> 的依赖。<code>Notation</code> 可以依赖 <code>Common</code> / <code>Core</code>，但不得反向依赖。
+</div>
+
+<hr>
+
+<h2>4. C# / F# 对接约定</h2>
+<ul>
+    <li>F# 侧导出的函数使用元组参数，不用柯里化。例如：
+        <pre>let expand (seq: int[], term: int) : int[] = ...</pre>
+        这样在 C# 里调用形式是：<code>XxxNotation.expand(seq, term);</code>
+    </li>
+    <li>跨边界集合统一用 <code>int[]</code>，避免 <code>FSharpList</code> 在 C# 侧处理繁琐。</li>
+    <li>返回值避免使用 F# option。跨边界要么返回 <code>null</code>，要么用 <code>bool + out</code>，或者用空数组 / 空字符串表达“无结果”。</li>
+    <li>F# 的 <code>module Foo + let bar</code> 会编译为 C# 的 <code>static class Foo + static method bar</code>。调用形式是 <code>Foo.bar(...)</code>。</li>
+    <li>项目引用：等 F# 侧接口稳定后，在 <code>Expander_CS</code> 项目上右键 -> 添加 -> 项目引用 -> 勾选 <code>Expander_CS.Backend</code>。然后 C# 里用 <code>using Expander_CS.Backend;</code> 引用。</li>
+</ul>
+
+<div class="notice">
+    <strong>NOTICE：</strong> F# 侧导出的函数使用元组参数，不用柯里化。跨边界集合统一用 <code>int[]</code>。返回值不得使用 F# option。
+</div>
+
+<hr>
+
+<h2>5. Expander_CS.Backend.Common 接口</h2>
+
+<h3>5.1 序列解析与格式化 — Sequence.fs</h3>
+<pre>namespace Expander_CS.Backend.Common
+
+module Sequence =
+    let parseSequence (text: string) : int[] = ...
+    let seqToString (seq: int[]) : string = ...</pre>
+<p>C# 可见形态：</p>
+<pre>public static class Sequence
+{
+    public static int[] parseSequence(string text);
+    public static string seqToString(int[] seq);
+}</pre>
+<p><strong>parseSequence 契约：</strong></p>
+<table>
+    <tr>
+        <th>输入</th>
+        <th>行为</th>
+    </tr>
+    <tr>
+        <td><code>""</code></td>
+        <td>返回空数组 <code>Array.Empty&lt;int&gt;()</code></td>
+    </tr>
+    <tr>
+        <td><code>"1,2,3"</code></td>
+        <td>返回 <code>{ 1, 2, 3 }</code></td>
+    </tr>
+    <tr>
+        <td><code>"1, ,3"</code></td>
+        <td>跳过空 token，返回 <code>{ 1, 3 }</code></td>
+    </tr>
+    <tr>
+        <td><code>" 1 , 2 "</code></td>
+        <td>忽略所有空白字符，返回 <code>{ 1, 2 }</code></td>
+    </tr>
+    <tr>
+        <td><code>"abc"</code></td>
+        <td><code>int.TryParse</code> 失败被捕获，静默跳过该 token</td>
+    </tr>
+    <tr>
+        <td><code>"1,999999999999"</code></td>
+        <td>溢出被捕获，静默跳过</td>
+    </tr>
+</table>
+<p>关键约定：</p>
+<ul>
+    <li>永不抛出异常。所有解析失败均以“跳过该项”处理。</li>
+    <li>允许前导/尾随逗号，行为等同于空 token。</li>
+    <li>返回 <code>int[]</code>，F# 中空数组为 <code>[||]</code>，C# 中为 <code>Array.Empty&lt;int&gt;()</code>。</li>
+    <li>待改进项：当前实现静默丢弃非法输入，UI 层无法向用户报告“第 N 项解析失败”。如需改进，建议新增 <code>parseSequenceEx</code> 返回 <code>(int[], errorList)</code>，保留现有函数作为薄封装。</li>
+</ul>
+<p><strong>seqToString 契约：</strong></p>
+<table>
+    <tr>
+        <th>输入</th>
+        <th>输出</th>
+    </tr>
+    <tr>
+        <td>null 或空数组</td>
+        <td><code>"[]"</code></td>
+    </tr>
+    <tr>
+        <td><code>{ 1 }</code></td>
+        <td><code>"1"</code></td>
+    </tr>
+    <tr>
+        <td><code>{ 1, 2, 3 }</code></td>
+        <td><code>"1,2,3"</code></td>
+    </tr>
+</table>
+<ul>
+    <li>分隔符固定为半角逗号 <code>,</code>，无空格。</li>
+    <li>空序列固定输出 <code>"[]"</code>，而非空字符串，便于 UI 区分“未解析”与“结果为空”。</li>
+</ul>
+
+<div class="notice">
+    <strong>NOTICE：</strong> <code>parseSequence</code> 永不抛出异常。所有解析失败均以“跳过该项”处理。空序列固定输出 <code>"[]"</code>。
+</div>
+
+<div class="warning">
+    <strong>警告：</strong> 当前实现静默丢弃非法输入，UI 层无法向用户报告“第 N 项解析失败”。如需改进，建议新增 <code>parseSequenceEx</code> 返回 <code>(int[], errorList)</code>，保留现有函数作为薄封装。
+</div>
+
+<h3>5.2 UTF-8 与宽字符转换</h3>
+<p>原 C++ <code>utf8.hpp</code> 在 C# + F# 项目中不再需要独立接口。</p>
+<p>原因：</p>
+<ul>
+    <li>.NET <code>string</code> 本身是 UTF-16。</li>
+    <li>WinForms 控件文本直接使用 <code>string</code>。</li>
+    <li>C# 与 F# 之间传递字符串直接使用 <code>string</code>。</li>
+    <li>若需要与 UTF-8 字节流交互，使用 <code>System.Text.Encoding.UTF8</code>。</li>
+</ul>
+<p>约定：</p>
+<ul>
+    <li>不新增 CP_ACP 版本。</li>
+    <li>不在 <code>Expander_CS.Backend</code> 中新增专用 <code>Utf8</code> 模块，除非将来出现明确的字节协议需求。</li>
+    <li>非法 UTF-8 字节序列行为由 <code>System.Text.Encoding.UTF8</code> 决定。</li>
+</ul>
+
+<hr>
+
+<h2>6. Expander_CS.Backend.Core 接口</h2>
+
+<h3>6.1 Entry — Entry.fs</h3>
+<p>C# 可见形态：</p>
+<pre>public sealed class Entry
+{
+    public Entry();
+    public Entry(int v, int x, int[] y);
+
+    public int Value { get; set; }
+    public int X { get; set; }
+    public int[] Y { get; set; }
+    public ulong YKey { get; }
+
+    public List&lt;Entry&gt; LeftLegUp { get; }
+    public Entry? RightLegUp { get; set; }
+    public Entry? RightLegDown { get; set; }
+    public Entry? LeftLegDown { get; set; }
+
+    public void RefreshKey();
+
+    public static ulong MakeYKey(int[] y);
+}</pre>
+<p>约定：</p>
+<ul>
+    <li>跨 C# 边界避免 F# option，引用字段用 <code>null</code>。</li>
+    <li>F# 侧类型可加 <code>[&lt;AllowNullLiteral&gt;]</code>。</li>
+    <li><code>LeftLegUp</code> 在 F# 侧用 <code>ResizeArray&lt;Entry&gt;</code>，C# 侧看到 <code>List&lt;Entry&gt;</code>。</li>
+    <li>修改 <code>Y</code> 后必须手动调用 <code>RefreshKey()</code>，<code>YKey</code> 不自动刷新。</li>
+    <li><code>MakeYKey</code> 计算规则与原 C++ 一致，存在碰撞可能。</li>
+</ul>
+
+<div class="warning">
+    <strong>警告：</strong> 修改 <code>Y</code> 后必须手动调用 <code>RefreshKey()</code>，<code>YKey</code> 不自动刷新。跨 C# 边界避免 F# option，引用字段用 <code>null</code>。
+</div>
+
+<h3>6.2 EntryArena — EntryArena.fs</h3>
+<p>C# 可见形态：</p>
+<pre>public sealed class EntryArena
+{
+    public EntryArena();
+
+    public Entry Make();
+    public Entry Make(int v, int x, int[] y);
+    public Entry MakeEmpty();
+
+    public void Clear();
+    public int Size { get; }
+}</pre>
+<p>约定：</p>
+<ul>
+    <li>原 C++ <code>make(int v = 0, int x = 0, std::vector&lt;int&gt; y = {})</code> 的默认参数，改为重载，避免 F# option / 可选参数跨 C# 复杂化。</li>
+    <li><code>EntryArena</code> 统一持有 <code>Entry</code> 生命周期。</li>
+    <li><code>Clear()</code> 后，之前返回的 <code>Entry</code> 引用全部失效。</li>
+    <li>leg 引用不参与生命周期管理，需自行保证不悬空。</li>
+</ul>
+
+<div class="notice">
+    <strong>NOTICE：</strong> 原 C++ <code>make(int v = 0, int x = 0, std::vector&lt;int&gt; y = {})</code> 的默认参数，改为重载，避免 F# option / 可选参数跨 C# 复杂化。
+</div>
+
+<hr>
+
+<h2>7. Expander_CS.Backend.Notation 接口</h2>
+
+<h3>7.1 记号模块的标准形态</h3>
+<p>每个记号应位于独立 F# 文件 / 模块中，并在命名空间 <code>Expander_CS.Backend.Notation</code> 下提供统一成员。</p>
+<p>F# 侧建议形态：</p>
+<pre>namespace Expander_CS.Backend.Notation
+
+module XxxNotation =
+    [&lt;Literal&gt;]
+    let Name = "显示名"
+
+    let definition : string = "定义文本"
+
+    let expand (seq: int[], term: int) : int[] = ...
+
+    let suffix () : string = ...
+
+    // 可选：支持文本展开的记号才提供；不支持时 C# 注册表中留 null。
+    let expandText (text: string, term: int) : string = null</pre>
+<p>C# 可见形态：</p>
+<pre>public static class XxxNotation
+{
+    public const string Name = "显示名";
+    public static string definition { get; }
+    public static int[] expand(int[] seq, int term);
+    public static string suffix();
+    public static string expandText(string text, int term);
+}</pre>
+<p>成员含义：</p>
+<table>
+    <tr>
+        <th>成员</th>
+        <th>类型</th>
+        <th>含义</th>
+    </tr>
+    <tr>
+        <td><code>Name</code></td>
+        <td>const string</td>
+        <td>记号显示名，UTF-8 / .NET string，供 UI 显示</td>
+    </tr>
+    <tr>
+        <td><code>definition</code></td>
+        <td>string</td>
+        <td>定义文本，用于下拉框联动显示和独立弹窗</td>
+    </tr>
+    <tr>
+        <td><code>expand(seq, term)</code></td>
+        <td>int[] -> int -> int[]</td>
+        <td>对序列 seq 执行 term 项展开，返回结果序列</td>
+    </tr>
+    <tr>
+        <td><code>suffix()</code></td>
+        <td>unit -> string</td>
+        <td>追加在结果文本末尾的标记</td>
+    </tr>
+    <tr>
+        <td><code>expandText(text, term)</code></td>
+        <td>string -> int -> string</td>
+        <td>可选。文本展开入口，支持 MrSS 这类嵌套表达式</td>
+    </tr>
+</table>
+<p><strong>expand 通用约定，所有记号必须遵守：</strong></p>
+<ul>
+    <li>纯函数：不得修改入参 <code>seq</code>，不得读写全局状态。</li>
+    <li><code>seq</code> 为空：返回值由具体记号定义；调用方 UI 层有责任先行校验空序列。</li>
+    <li><code>term &lt; 1</code>：调用方 UI 层有责任先行校验；<code>expand</code> 本身不保证对非法 term 的行为。</li>
+    <li>异常：<code>expand</code> 不应抛出异常。若记号内部逻辑可能失败，应返回空数组或保持输入不变。</li>
+    <li>性能：对微型项目不设硬性要求，但应避免 O(n²) 以上的无谓拷贝。</li>
+</ul>
+<p><strong>当前 EmptyNotation 的实际契约：</strong></p>
+<table>
+    <tr>
+        <th>成员</th>
+        <th>类型</th>
+        <th>含义</th>
+    </tr>
+    <tr>
+        <td><code>Name</code></td>
+        <td>const string</td>
+        <td>记号显示名</td>
+    </tr>
+    <tr>
+        <td><code>definition</code></td>
+        <td>string</td>
+        <td>定义文本，暂为占位</td>
+    </tr>
+    <tr>
+        <td><code>expand(seq, term)</code></td>
+        <td>int[] -> int -> int[]</td>
+        <td>当前原样返回 seq，忽略 term</td>
+    </tr>
+    <tr>
+        <td><code>suffix()</code></td>
+        <td>unit -> string</td>
+        <td>当前返回空串</td>
+    </tr>
+</table>
+<p>当前 EmptyNotation 行为：<code>expand</code> 原样返回 <code>seq</code>，<code>suffix()</code> 返回空串。这是占位实现，后续版本将替换。</p>
+
+<div class="notice">
+    <strong>NOTICE：</strong> <code>expand</code> 必须为纯函数，不得修改入参 <code>seq</code>，不得读写全局状态，不应抛出异常。
+</div>
+
+<h3>7.2 C# 侧记号注册表建议</h3>
+<p>在 <code>Form1.cs</code> 内部定义 <code>NotationInfo</code>：</p>
+<pre>public sealed class NotationInfo
+{
+    public string DisplayName { get; init; } = "";
+    public string Definition { get; init; } = "";
+    public Func&lt;int[], int, int[]&gt;? Expand { get; init; }
+    public Func&lt;string&gt;? Suffix { get; init; }
+    public Func&lt;string, int, string&gt;? ExpandText { get; init; }
+}</pre>
+<p>注册 <code>EmptyNotation</code> 示例：</p>
+<pre>new NotationInfo
+{
+    DisplayName = EmptyNotation.Name,
+    Definition = EmptyNotation.definition,
+    Expand = EmptyNotation.expand,
+    Suffix = EmptyNotation.suffix,
+    ExpandText = null // 不支持文本展开
+}</pre>
+
+<h3>7.3 FS / FSalter 语义</h3>
+<p>UI 层的“移除末项 / 保留末项”按钮，不属于记号接口，而是调用方对展开结果的后处理：</p>
+<pre>int[] result = EmptyNotation.expand(seq, term);
+if (removeLast &amp;&amp; result.Length &gt; 1)
+{
+    Array.Resize(ref result, result.Length - 1);
+}</pre>
+<p>约定：</p>
+<ul>
+    <li>当 <code>result.Length &lt;= 1</code> 时，FS 操作不执行移除，避免产生空序列歧义。</li>
+    <li>此策略在 UI 层实现，记号模块不应感知 FS / FSalter 概念。</li>
+</ul>
+
+<div class="notice">
+    <strong>NOTICE：</strong> 当 <code>result.Length &lt;= 1</code> 时，FS 操作不执行移除，避免产生空序列歧义。此策略在 UI 层实现，记号模块不应感知 FS / FSalter 概念。
+</div>
+
+<hr>
+
+<h2>8. UI 层与记号层的边界</h2>
+<pre>┌─────────────────────────────────────────┐
+│ C# WinForms Expander_CS                 │
+│ - 读取控件文本                           │
+│ - 校验 term &gt;= 1、seq 非空               │
+│ - 调用 Sequence.parseSequence            │
+│ - 调用 Notation.Xxx.expand / expandText  │
+│ - 后处理 FS / FSalter                    │
+│ - 追加 suffix                            │
+│ - 显示 MessageBox / RichTextBox          │
+└──────────────┬──────────────────────────┘
+               │ 只通过下列接口通信
+               ▼
+┌─────────────────────────────────────────┐
+│ F# Backend Expander_CS.Backend          │
+│ Common: Sequence.parseSequence           │
+│         Sequence.seqToString             │
+│ Core:   Entry / EntryArena / MakeYKey    │
+│ Notation: Xxx.Name / definition /        │
+│           expand / suffix / expandText   │
+└─────────────────────────────────────────┘</pre>
+<p>硬性规则：</p>
+<ul>
+    <li>UI 层不得直接操作 <code>int[]</code> 的数学含义，例如自行实现“移除末项”以外的记号逻辑。</li>
+    <li>记号层不得包含 <code>System.Windows.Forms</code> 或任何 UI 相关引用。</li>
+    <li>新增记号时，只需在 F# <code>Notation</code> 下增加模块，并在 C# 注册表中增加调用项，不应改动 <code>Common</code>。</li>
+</ul>
+
+<div class="warning">
+    <strong>警告：</strong> UI 层不得直接操作 <code>int[]</code> 的数学含义，例如自行实现“移除末项”以外的记号逻辑。记号层不得包含 <code>System.Windows.Forms</code> 或任何 UI 相关引用。
+</div>
+
+<hr>
+
+<h2>9. 版本与兼容性</h2>
+<table>
+    <tr>
+        <th>变更类型</th>
+        <th>要求</th>
+    </tr>
+    <tr>
+        <td>新增记号</td>
+        <td>只增 F# 模块、只增 C# 注册表项，不动现有接口</td>
+    </tr>
+    <tr>
+        <td>修改 Common 函数签名</td>
+        <td>破坏性变更，需同步更新所有调用点与本文档</td>
+    </tr>
+    <tr>
+        <td>修改 expand 语义</td>
+        <td>需在 CONTRIBUTING.md 或 CHANGELOG 中注明</td>
+    </tr>
+    <tr>
+        <td>删除任何公开 Notation 成员</td>
+        <td>不允许，除非同步更新所有调用点与文档</td>
+    </tr>
+</table>
+
+<hr>
+
+<h2>10. 贡献者检查清单</h2>
+<p>提交涉及接口的 PR 前，请确认：</p>
+<ul>
+    <li>[ ] 新 F# 函数是否使用元组参数，避免 C# 侧拿到柯里化函数？</li>
+    <li>[ ] 跨边界集合是否统一用 <code>int[]</code>？</li>
+    <li>[ ] 返回值是否避免 F# option？</li>
+    <li>[ ] 新函数/成员是否加了必要的文档说明？</li>
+    <li>[ ] <code>Common</code> 是否仍不依赖 <code>Notation</code>？</li>
+    <li>[ ] <code>expand</code> 是否仍为纯函数、不抛异常？</li>
+    <li>[ ] 空序列、<code>term &lt; 1</code>、非法 token 的行为是否与本文档一致？</li>
+    <li>[ ] 若修改了任何签名，是否同步更新了本文档与 C# 调用点？</li>
+</ul>
+
+<div class="severe-notice">
+    <strong>严重 NOTICE：</strong> 提交涉及接口的 PR 前，请确认以上检查清单全部通过。若修改了任何签名，必须同步更新本文档与 C# 调用点。
+</div>
+
+<hr>
+
+<h2>11. 附：当前唯一记号的实现位置</h2>
+<p>F# 侧：</p>
+<pre>Expander_CS.Backend/Notation/Empty.fs — EmptyNotation 定义</pre>
+<p>C# 侧：</p>
+<pre>Form1.cs — 展开按钮事件中的调用点</pre>
+<p>新增记号时，请模仿 <code>EmptyNotation</code> 的模块结构与接口形态，并在本文档 7.1 表格中追加一行。</p>
+
+<hr>
+
+<div class="doc-footer">
+    <p><strong>文档结束</strong></p>
+    <p>署名：Cream-CN，文档系使用AI技术修改</p>
+    <p>2026/09/27</p>
+</div>
+
+</body>
+</html>
