@@ -1,4 +1,5 @@
-﻿namespace Expander_CS.Backend.Core
+﻿//Entry
+namespace Expander_CS.Backend.Core
 
 open System.Collections.Generic
 
@@ -23,7 +24,7 @@ type Entry() =
         with get () = x
         and set v = x <- v
 
-    /// 注意：直接赋值不会自动刷新 YKey，需手动调用 RefreshKey()。
+    ///NOTICE 直接赋值不会自动刷新 YKey，需手动调用 RefreshKey()。
     member _.Y
         with get () = y
         and set v = y <- v
@@ -61,6 +62,7 @@ type Entry() =
     /// - 最高字节：y.Length 的低 8 位
     /// - 前 7 个元素：第 i 个取低 16 位，左移 (i*8) 位后按位或
     /// - 存在碰撞可能，长度 256 的倍数与 0 碰撞
+    ///准备重构
     static member MakeYKey(y: int[]) : uint64 =
         if isNull y then
             0UL

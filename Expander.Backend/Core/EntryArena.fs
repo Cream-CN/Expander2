@@ -1,4 +1,5 @@
-﻿namespace Expander_CS.Backend.Core
+﻿//Entry Arena
+namespace Expander_CS.Backend.Core
 
 type EntryArena() =
 

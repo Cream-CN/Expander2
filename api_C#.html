@@ -1,265 +1,12 @@
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Expander_CS 后端接口文档（C# + F#）</title>
-    <style>
-        /* 基础重置，保持文档纯净 */
-        body {
-            font-family: Consolas, "Courier New", monospace, sans-serif;
-            line-height: 1.6;
-            color: #000;
-            background: #fff;
-            max-width: 960px;
-            margin: 20px auto;
-            padding: 0 20px;
-        }
-
-        /* 标题样式：保留粗体与层次 */
-        h1, h2, h3, h4 {
-            font-weight: bold;
-            margin-top: 1.5em;
-            margin-bottom: 0.5em;
-        }
-        h1 {
-            font-size: 1.8em;
-            border-bottom: 2px solid #000;
-            padding-bottom: 0.3em;
-        }
-        h2 {
-            font-size: 1.4em;
-            border-bottom: 1px solid #000;
-            padding-bottom: 0.2em;
-        }
-        h3 {
-            font-size: 1.2em;
-        }
-        h4 {
-            font-size: 1.1em;
-        }
-
-        /* 灰色代码块 */
-        pre {
-            background: #f0f0f0;
-            border: 1px solid #ccc;
-            padding: 10px;
-            overflow-x: auto;
-            font-family: Consolas, "Courier New", monospace;
-            font-size: 0.9em;
-            line-height: 1.4;
-            margin: 1em 0;
-        }
-
-        /* 行内 code 也做浅灰处理，但不加边框，以免过于抢眼 */
-        code {
-            font-family: Consolas, "Courier New", monospace;
-            background: #f0f0f0;
-            padding: 0 3px;
-            font-size: 0.9em;
-            border: 1px solid #ddd;
-        }
-
-        /* 表格基本样式（无彩色，仅边框和间距） */
-        table {
-            border-collapse: collapse;
-            width: 100%;
-            margin: 1em 0;
-        }
-        th, td {
-            border: 1px solid #000;
-            padding: 6px 10px;
-            text-align: left;
-            vertical-align: top;
-        }
-        th {
-            background: #e0e0e0;
-            font-weight: bold;
-        }
-
-        /* 列表间距 */
-        ul, ol {
-            margin: 0.5em 0 0.5em 1.5em;
-            padding-left: 0;
-        }
-        li {
-            margin-bottom: 0.3em;
-        }
-
-        /* 水平线 */
-        hr {
-            border: none;
-            border-top: 1px solid #000;
-            margin: 2em 0;
-        }
-
-        /* ---------- 提示框样式 ---------- */
-        /* 蓝色边框 NOTICE（一般提示） */
-        .notice {
-            background: #f0f8ff;
-            border: 1px solid #1e90ff;      /* 蓝色边框 */
-            border-left-width: 6px;          /* 左侧加粗，突出提示感 */
-            border-left-color: #1e90ff;
-            padding: 10px 14px;
-            margin: 1.5em 0;
-            font-family: Consolas, "Courier New", monospace;
-            font-size: 0.95em;
-        }
-        /* 红色边框警告 WARNING */
-        .warning {
-            background: #fff0f0;
-            border: 1px solid #d32f2f;       /* 红色边框 */
-            border-left-width: 6px;
-            border-left-color: #d32f2f;
-            padding: 10px 14px;
-            margin: 1.5em 0;
-            font-family: Consolas, "Courier New", monospace;
-            font-size: 0.95em;
-        }
-        /* 黄色边框 严重 NOTICE (SEVERE) */
-        .severe-notice {
-            background: #fffbe6;
-            border: 1px solid #e6b800;       /* 黄色/金色边框 */
-            border-left-width: 6px;
-            border-left-color: #e6b800;
-            padding: 10px 14px;
-            margin: 1.5em 0;
-            font-family: Consolas, "Courier New", monospace;
-            font-size: 0.95em;
-        }
-
-        /* 提示框内部的段落/列表可沿用原有边距 */
-        .notice p, .warning p, .severe-notice p {
-            margin: 0.5em 0;
-        }
-        .notice ul, .warning ul, .severe-notice ul {
-            margin: 0.3em 0 0.3em 1.5em;
-        }
-        .notice li, .warning li, .severe-notice li {
-            margin-bottom: 0.2em;
-        }
-
-        /* 页脚保持简单居中 */
-        .doc-footer {
-            margin-top: 2em;
-            padding-top: 1em;
-            border-top: 1px solid #000;
-            font-size: 0.9em;
-            text-align: center;
-        }
-
-        /* 其他辅助类 */
-        .center {
-            text-align: center;
-        }
-    </style>
-</head>
-<body>
-
-<h1>Expander_CS 后端接口文档（C# + F#）</h1>
-<p><strong>原 C++ 头文件 sequence.hpp / utf8.hpp / arena.hpp / entry.hpp 的 C# + F# 映射</strong></p>
-
-<hr>
-
-<h2>目录</h2>
-<ol>
-    <li>当前状态说明</li>
-    <li>Sequence.fs — 序列解析与格式化
-        <ul>
-            <li>2.1 提供的接口</li>
-            <li>2.2 parseSequence 行为</li>
-            <li>2.3 seqToString 行为</li>
-            <li>2.4 往返一致性</li>
-            <li>2.5 典型使用场景</li>
-            <li>2.6 项目依赖</li>
-        </ul>
-    </li>
-    <li>UTF-8 与宽字符转换
-        <ul>
-            <li>3.1 为什么不再需要独立接口</li>
-            <li>3.2 使用 .NET BCL</li>
-            <li>3.3 约定</li>
-        </ul>
-    </li>
-    <li>Entry.fs — Entry 数据结构及 ykey 计算
-        <ul>
-            <li>4.1 类型 Entry</li>
-            <li>4.2 字段 / 属性说明</li>
-            <li>4.3 构造函数</li>
-            <li>4.4 成员函数</li>
-            <li>4.5 静态函数 Entry.MakeYKey</li>
-            <li>4.6 ykey 的一致使用建议</li>
-            <li>4.7 典型使用场景</li>
-        </ul>
-    </li>
-    <li>EntryArena.fs — Entry 对象 arena 分配器
-        <ul>
-            <li>5.1 类 EntryArena</li>
-            <li>5.2 成员说明</li>
-            <li>5.3 生命周期与引用有效性</li>
-            <li>5.4 C# 调用示例</li>
-        </ul>
-    </li>
-    <li>通用注意事项
-        <ul>
-            <li>6.1 命名空间</li>
-            <li>6.2 项目引用</li>
-            <li>6.3 异常</li>
-            <li>6.4 线程安全</li>
-            <li>6.5 引用有效性</li>
-        </ul>
-    </li>
-</ol>
-
-<hr>
-
-<h2>1. 当前状态说明</h2>
-<ul>
-    <li>C# 项目 <code>Expander_CS</code> 为 WinForms UI 层，命名空间 <code>omegay</code>。</li>
-    <li>F# 项目 <code>Expander_CS.Backend</code> 为算法层，命名空间 <code>Expander_CS.Backend</code>。</li>
-    <li>F# 项目目前仍只有模板 <code>Library.fs</code>，下列接口为规划契约，实现后生效。</li>
-    <li>C# 项目在 F# 接口稳定后再添加对 <code>Expander_CS.Backend</code> 的项目引用。</li>
-</ul>
-
-<hr>
-
-<h2>2. Sequence.fs — 序列解析与格式化</h2>
-<p>对应文件：<code>Sequence.fs</code><br>
-命名空间：<code>Expander_CS.Backend.Common</code><br>
-原 C++ 文件：<code>sequence.hpp</code><br>
-功能：整数序列的解析与序列化</p>
-
-<h3>2.1 提供的接口</h3>
-<p>F# 侧形态：</p>
-<pre>namespace Expander_CS.Backend.Common
+<!doctypehtml><html lang=zh-CN><meta charset=UTF-8><meta content="width=device-width,initial-scale=1"name=viewport><title>Expander_CS 后端接口文档（C# + F#）</title><style>body{font-family:Consolas,"Courier New",monospace,sans-serif;line-height:1.6;color:#000;background:#fff;max-width:960px;margin:20px auto;padding:0 20px}h1,h2,h3,h4{font-weight:700;margin-top:1.5em;margin-bottom:.5em}h1{font-size:1.8em;border-bottom:2px solid #000;padding-bottom:.3em}h2{font-size:1.4em;border-bottom:1px solid #000;padding-bottom:.2em}h3{font-size:1.2em}h4{font-size:1.1em}pre{background:#f0f0f0;border:1px solid #ccc;padding:10px;overflow-x:auto;font-family:Consolas,"Courier New",monospace;font-size:.9em;line-height:1.4;margin:1em 0}code{font-family:Consolas,"Courier New",monospace;background:#f0f0f0;padding:0 3px;font-size:.9em;border:1px solid #ddd}table{border-collapse:collapse;width:100%;margin:1em 0}td,th{border:1px solid #000;padding:6px 10px;text-align:left;vertical-align:top}th{background:#e0e0e0;font-weight:700}ol,ul{margin:.5em 0 .5em 1.5em;padding-left:0}li{margin-bottom:.3em}hr{border:none;border-top:1px solid #000;margin:2em 0}.notice{background:#f0f8ff;border:1px solid #1e90ff;border-left-width:6px;border-left-color:#1e90ff;padding:10px 14px;margin:1.5em 0;font-family:Consolas,"Courier New",monospace;font-size:.95em}.warning{background:#fff0f0;border:1px solid #d32f2f;border-left-width:6px;border-left-color:#d32f2f;padding:10px 14px;margin:1.5em 0;font-family:Consolas,"Courier New",monospace;font-size:.95em}.severe-notice{background:#fffbe6;border:1px solid #e6b800;border-left-width:6px;border-left-color:#e6b800;padding:10px 14px;margin:1.5em 0;font-family:Consolas,"Courier New",monospace;font-size:.95em}.notice p,.severe-notice p,.warning p{margin:.5em 0}.notice ul,.severe-notice ul,.warning ul{margin:.3em 0 .3em 1.5em}.notice li,.severe-notice li,.warning li{margin-bottom:.2em}.doc-footer{margin-top:2em;padding-top:1em;border-top:1px solid #000;font-size:.9em;text-align:center}.center{text-align:center}</style><h1>Expander_CS 后端接口文档（C# + F#）</h1><p><strong>原 C++ 头文件 sequence.hpp / utf8.hpp / arena.hpp / entry.hpp 的 C# + F# 映射</strong><hr><h2>目录</h2><ol><li>当前状态说明<li>Sequence.fs — 序列解析与格式化<ul><li>2.1 提供的接口<li>2.2 parseSequence 行为<li>2.3 seqToString 行为<li>2.4 往返一致性<li>2.5 典型使用场景<li>2.6 项目依赖</ul><li>UTF-8 与宽字符转换<ul><li>3.1 为什么不再需要独立接口<li>3.2 使用 .NET BCL<li>3.3 约定</ul><li>Entry.fs — Entry 数据结构及 ykey 计算<ul><li>4.1 类型 Entry<li>4.2 字段 / 属性说明<li>4.3 构造函数<li>4.4 成员函数<li>4.5 静态函数 Entry.MakeYKey<li>4.6 ykey 的一致使用建议<li>4.7 典型使用场景</ul><li>EntryArena.fs — Entry 对象 arena 分配器<ul><li>5.1 类 EntryArena<li>5.2 成员说明<li>5.3 生命周期与引用有效性<li>5.4 C# 调用示例</ul><li>通用注意事项<ul><li>6.1 命名空间<li>6.2 项目引用<li>6.3 异常<li>6.4 线程安全<li>6.5 引用有效性</ul></ol><hr><h2>1. 当前状态说明</h2><ul><li>C# 项目 <code>Expander_CS</code> 为 WinForms UI 层，命名空间 <code>omegay</code>。<li>F# 项目 <code>Expander_CS.Backend</code> 为算法层，命名空间 <code>Expander_CS.Backend</code>。<li>F# 项目目前仍只有模板 <code>Library.fs</code>，下列接口为规划契约，实现后生效。<li>C# 项目在 F# 接口稳定后再添加对 <code>Expander_CS.Backend</code> 的项目引用。</ul><hr><h2>2. Sequence.fs — 序列解析与格式化</h2><p>对应文件：<code>Sequence.fs</code><br>命名空间：<code>Expander_CS.Backend.Common</code><br>原 C++ 文件：<code>sequence.hpp</code><br>功能：整数序列的解析与序列化<h3>2.1 提供的接口</h3><p>F# 侧形态：<pre>namespace Expander_CS.Backend.Common
 
 module Sequence =
     let parseSequence (text: string) : int[] = ...
-    let seqToString (seq: int[]) : string = ...</pre>
-<p>C# 可见形态：</p>
-<pre>public static class Sequence
+    let seqToString (seq: int[]) : string = ...</pre><p>C# 可见形态：<pre>public static class Sequence
 {
     public static int[] parseSequence(string text);
     public static string seqToString(int[] seq);
-}</pre>
-
-<h3>2.2 parseSequence 行为</h3>
-<p>功能：将以逗号分隔的字符串解析为 <code>int[]</code>。</p>
-<p>输入：<code>text</code> —— 待解析字符串，可包含逗号、空白字符。</p>
-<p>输出：返回 <code>int[]</code>，为解析出的整数序列。</p>
-<p>行为说明：</p>
-<ul>
-    <li>以半角逗号 <code>','</code> 作为分隔符切分字符串。</li>
-    <li>对每个分段去除所有空白字符。</li>
-    <li>空分段（连续逗号、首尾逗号）被忽略。</li>
-    <li>对每个非空分段使用 <code>int.TryParse</code> 转成 <code>int</code>。</li>
-    <li><code>TryParse</code> 失败（非数字、溢出等）时静默跳过该分段。</li>
-    <li>不抛出异常，不报错。</li>
-    <li>若全部分段均无效，返回空数组 <code>Array.Empty&lt;int&gt;()</code>。</li>
-    <li>F# 中空数组写作 <code>[||]</code>。</li>
-</ul>
-<p>C# 调用示例：</p>
-<pre>using Expander_CS.Backend.Common;
+}</pre><h3>2.2 parseSequence 行为</h3><p>功能：将以逗号分隔的字符串解析为 <code>int[]</code>。<p>输入：<code>text</code> —— 待解析字符串，可包含逗号、空白字符。<p>输出：返回 <code>int[]</code>，为解析出的整数序列。<p>行为说明：<ul><li>以半角逗号 <code>','</code> 作为分隔符切分字符串。<li>对每个分段去除所有空白字符。<li>空分段（连续逗号、首尾逗号）被忽略。<li>对每个非空分段使用 <code>int.TryParse</code> 转成 <code>int</code>。<li><code>TryParse</code> 失败（非数字、溢出等）时静默跳过该分段。<li>不抛出异常，不报错。<li>若全部分段均无效，返回空数组 <code>Array.Empty&lt;int>()</code>。<li>F# 中空数组写作 <code>[||]</code>。</ul><p>C# 调用示例：<pre>using Expander_CS.Backend.Common;
 
 int[] a = Sequence.parseSequence("1,2,3");
 // a == new[] { 1, 2, 3 }
@@ -268,119 +15,29 @@ int[] b = Sequence.parseSequence(" 10 , 20 ,, 30 ");
 // b == new[] { 10, 20, 30 }
 
 int[] c = Sequence.parseSequence("");
-// c == Array.Empty&lt;int&gt;()
+// c == Array.Empty&lt;int>()
 
 int[] d = Sequence.parseSequence("abc,5,def");
-// d == new[] { 5 }，abc 与 def 被跳过</pre>
-
-<div class="notice">
-    <strong>NOTICE：</strong> <code>parseSequence</code> 永不抛出异常。所有解析失败均以“跳过该项”处理。允许前导/尾随逗号，行为等同于空 token。
-</div>
-
-<div class="warning">
-    <strong>警告：</strong> 当前实现静默丢弃非法输入，UI 层无法向用户报告“第 N 项解析失败”。如需改进，建议新增 <code>parseSequenceEx</code> 返回 <code>(int[], errorList)</code>，保留现有函数作为薄封装。
-</div>
-
-<h3>2.3 seqToString 行为</h3>
-<p>功能：将 <code>int[]</code> 序列化为逗号分隔字符串。</p>
-<p>输入：<code>seq</code> —— 待序列化的整数序列。</p>
-<p>输出：返回 <code>string</code>。</p>
-<p>行为说明：</p>
-<ul>
-    <li>若 <code>seq</code> 为 <code>null</code> 或空，返回字符串 <code>"[]"</code>。</li>
-    <li>否则按顺序用半角逗号 <code>','</code> 连接各元素的十进制字符串。</li>
-    <li>不添加空格，不添加首尾逗号。</li>
-</ul>
-<p>C# 调用示例：</p>
-<pre>string s1 = Sequence.seqToString(new[] { 1, 2, 3 });
+// d == new[] { 5 }，abc 与 def 被跳过</pre><div class=notice><strong>NOTICE：</strong> <code>parseSequence</code> 在任何情形下均不抛出异常。一切解析失败均按“跳过该项”处理。前导逗号与尾随逗号均被允许，其效力等同于空 token。</div><div class=warning><strong>警告：</strong> 当前实现静默丢弃非法输入，UI 层无法向用户报告“第 N 项解析失败”。如需改进，建议新增 <code>parseSequenceEx</code> 返回 <code>(int[], errorList)</code>，保留现有函数作为薄封装。</div><h3>2.3 seqToString 行为</h3><p>功能：将 <code>int[]</code> 序列化为逗号分隔字符串。<p>输入：<code>seq</code> —— 待序列化的整数序列。<p>输出：返回 <code>string</code>。<p>行为说明：<ul><li>若 <code>seq</code> 为 <code>null</code> 或空，返回字符串 <code>"[]"</code>。<li>否则按顺序用半角逗号 <code>','</code> 连接各元素的十进制字符串。<li>不添加空格，不添加首尾逗号。</ul><p>C# 调用示例：<pre>string s1 = Sequence.seqToString(new[] { 1, 2, 3 });
 // s1 == "1,2,3"
 
-string s2 = Sequence.seqToString(Array.Empty&lt;int&gt;());
+string s2 = Sequence.seqToString(Array.Empty&lt;int>());
 // s2 == "[]"
 
 string s3 = Sequence.seqToString(new[] { 42 });
-// s3 == "42"</pre>
-
-<h3>2.4 往返一致性</h3>
-<p>对不含非法分段的输入，<code>parseSequence</code> 与 <code>seqToString</code> 满足：</p>
-<p><code>seqToString(parseSequence(s))</code> 与规范化后的 <code>s</code> 语义一致。</p>
-<p>空序列往返结果为 <code>"[]"</code>。</p>
-
-<h3>2.5 典型使用场景</h3>
-<ul>
-    <li>从 UI 文本框、配置、文本协议中读取整数列表。</li>
-    <li>将内部整数列表输出为可读文本。</li>
-    <li>两者常配合使用：
-        <pre>int[] seq = Sequence.parseSequence(input);
-string outText = Sequence.seqToString(seq);</pre>
-    </li>
-</ul>
-
-<h3>2.6 项目依赖</h3>
-<ul>
-    <li>F# 侧：<code>Expander_CS.Backend.Common</code>。</li>
-    <li>C# 调用方需要 <code>using Expander_CS.Backend.Common;</code>。</li>
-    <li>不需要额外 NuGet 包，使用 .NET 自带类库。</li>
-</ul>
-
-<hr>
-
-<h2>3. UTF-8 与宽字符转换</h2>
-<p>对应文件：无独立文件<br>
-命名空间：无<br>
-原 C++ 文件：<code>utf8.hpp</code><br>
-功能：UTF-8 与 UTF-16 宽字符串互转</p>
-
-<h3>3.1 为什么不再需要独立接口</h3>
-<p>在 C# + F# 项目中，不再单独提供 <code>utf8_to_wstring</code> / <code>wstring_to_utf8</code> 接口。</p>
-<p>原因：</p>
-<ul>
-    <li>.NET 的 <code>string</code> 本身是 UTF-16。</li>
-    <li>WinForms 控件文本、<code>MessageBox</code>、<code>RichTextBox</code> 均直接使用 <code>string</code>。</li>
-    <li>C# 与 F# 之间传递字符串时也直接使用 <code>string</code>，不需要经过 UTF-8 字节数组。</li>
-    <li>因此原 <code>utf8.hpp</code> 在 UI 与后端边界上基本不再需要对应模块。</li>
-</ul>
-
-<h3>3.2 使用 .NET BCL</h3>
-<p>若确实需要与外部 UTF-8 字节流交互，使用 .NET BCL：</p>
-<pre>using System.Text;
+// s3 == "42"</pre><h3>2.4 往返一致性</h3><p>对不含非法分段的输入，<code>parseSequence</code> 与 <code>seqToString</code> 满足：<p><code>seqToString(parseSequence(s))</code> 与规范化后的 <code>s</code> 语义一致。<p>空序列往返结果为 <code>"[]"</code>。<h3>2.5 典型使用场景</h3><ul><li>从 UI 文本框、配置、文本协议中读取整数列表。<li>将内部整数列表输出为可读文本。<li>两者常配合使用：<pre>int[] seq = Sequence.parseSequence(input);
+string outText = Sequence.seqToString(seq);</pre></ul><h3>2.6 项目依赖</h3><ul><li>F# 侧：<code>Expander_CS.Backend.Common</code>。<li>C# 调用方需要 <code>using Expander_CS.Backend.Common;</code>。<li>不需要额外 NuGet 包，使用 .NET 自带类库。</ul><hr><h2>3. UTF-8 与宽字符转换</h2><p>对应文件：无独立文件<br>命名空间：无<br>原 C++ 文件：<code>utf8.hpp</code><br>功能：UTF-8 与 UTF-16 宽字符串互转<h3>3.1 为什么不再需要独立接口</h3><p>在 C# + F# 项目中，不再单独提供 <code>utf8_to_wstring</code> / <code>wstring_to_utf8</code> 接口。<p>原因：<ul><li>.NET 的 <code>string</code> 本身是 UTF-16。<li>WinForms 控件文本、<code>MessageBox</code>、<code>RichTextBox</code> 均直接使用 <code>string</code>。<li>C# 与 F# 之间传递字符串时也直接使用 <code>string</code>，不需要经过 UTF-8 字节数组。<li>因此原 <code>utf8.hpp</code> 在 UI 与后端边界上基本不再需要对应模块。</ul><h3>3.2 使用 .NET BCL</h3><p>若确实需要与外部 UTF-8 字节流交互，使用 .NET BCL：<pre>using System.Text;
 
 string w = "你好, world";
 byte[] u8 = Encoding.UTF8.GetBytes(w);
-string back = Encoding.UTF8.GetString(u8);</pre>
-
-<h3>3.3 约定</h3>
-<ul>
-    <li>编码固定为 UTF-8。</li>
-    <li>不提供 CP_ACP 版本。</li>
-    <li>非法 UTF-8 字节序列行为由 <code>System.Text.Encoding.UTF8</code> 决定。</li>
-    <li>不需要在 <code>Expander_CS.Backend</code> 中新增专用 <code>Utf8</code> 模块，除非将来出现明确的字节协议需求。</li>
-</ul>
-
-<div class="notice">
-    <strong>NOTICE：</strong> 不在 <code>Expander_CS.Backend</code> 中新增专用 Utf8 模块，除非将来出现明确的字节协议需求。
-</div>
-
-<hr>
-
-<h2>4. Entry.fs — Entry 数据结构及 ykey 计算</h2>
-<p>对应文件：<code>Entry.fs</code><br>
-命名空间：<code>Expander_CS.Backend.Core</code><br>
-原 C++ 文件：<code>entry.hpp</code><br>
-功能：Entry 数据结构及其 ykey 计算</p>
-
-<h3>4.1 类型 Entry</h3>
-<p>F# 侧建议形态：</p>
-<pre>namespace Expander_CS.Backend.Core
+string back = Encoding.UTF8.GetString(u8);</pre><h3>3.3 约定</h3><ul><li>编码固定为 UTF-8。<li>不提供 CP_ACP 版本。<li>非法 UTF-8 字节序列行为由 <code>System.Text.Encoding.UTF8</code> 决定。<li>不需要在 <code>Expander_CS.Backend</code> 中新增专用 <code>Utf8</code> 模块，除非将来出现明确的字节协议需求。</ul><div class=notice><strong>NOTICE：</strong> 不在 <code>Expander_CS.Backend</code> 中新增专用 Utf8 模块，除非将来出现明确的字节协议需求。</div><hr><h2>4. Entry.fs — Entry 数据结构及 ykey 计算</h2><p>对应文件：<code>Entry.fs</code><br>命名空间：<code>Expander_CS.Backend.Core</code><br>原 C++ 文件：<code>entry.hpp</code><br>功能：Entry 数据结构及其 ykey 计算<h3>4.1 类型 Entry</h3><p>F# 侧建议形态：<pre>namespace Expander_CS.Backend.Core
 
 open System.Collections.Generic
 
-[&lt;AllowNullLiteral&gt;]
+[&lt;AllowNullLiteral>]
 type Entry() =
     ...
-    new(v: int, x: int, y: int[]) = Entry(...)</pre>
-<p>C# 可见形态：</p>
-<pre>public sealed class Entry
+    new(v: int, x: int, y: int[]) = Entry(...)</pre><p>C# 可见形态：<pre>public sealed class Entry
 {
     public Entry();
     public Entry(int v, int x, int[] y);
@@ -390,7 +47,7 @@ type Entry() =
     public int[] Y { get; set; }
     public ulong YKey { get; }
 
-    public List&lt;Entry&gt; LeftLegUp { get; }
+    public List&lt;Entry> LeftLegUp { get; }
     public Entry? RightLegUp { get; set; }
     public Entry? RightLegDown { get; set; }
     public Entry? LeftLegDown { get; set; }
@@ -398,90 +55,7 @@ type Entry() =
     public void RefreshKey();
 
     public static ulong MakeYKey(int[] y);
-}</pre>
-
-<h3>4.2 字段 / 属性说明</h3>
-<table>
-    <tr>
-        <th>成员</th>
-        <th>类型</th>
-        <th>说明</th>
-    </tr>
-    <tr>
-        <td><code>Value</code></td>
-        <td>int</td>
-        <td>默认 0。语义由使用方定义。</td>
-    </tr>
-    <tr>
-        <td><code>X</code></td>
-        <td>int</td>
-        <td>默认 0。语义由使用方定义。</td>
-    </tr>
-    <tr>
-        <td><code>Y</code></td>
-        <td>int[]</td>
-        <td>默认空数组。语义由使用方定义。修改 Y 后不会自动刷新 YKey，必须手动调用 <code>RefreshKey()</code>。</td>
-    </tr>
-    <tr>
-        <td><code>YKey</code></td>
-        <td>ulong</td>
-        <td>由 Y 派生的紧凑键值，默认 0。由 <code>RefreshKey()</code> 或 <code>Entry.MakeYKey()</code> 计算。用于快速比较/索引，不自动随 Y 变化。</td>
-    </tr>
-    <tr>
-        <td><code>LeftLegUp</code></td>
-        <td><code>List&lt;Entry&gt;</code></td>
-        <td>指向上层左侧相关 Entry 的列表，默认空。F# 侧可用 <code>ResizeArray&lt;Entry&gt;</code>，它等价于 <code>System.Collections.Generic.List&lt;Entry&gt;</code>。</td>
-    </tr>
-    <tr>
-        <td><code>RightLegUp</code></td>
-        <td><code>Entry?</code></td>
-        <td>指向上层右侧相关 Entry，默认 <code>null</code>。跨 C# 边界避免 F# option，使用 <code>null</code> 表示空引用。</td>
-    </tr>
-    <tr>
-        <td><code>RightLegDown</code></td>
-        <td><code>Entry?</code></td>
-        <td>指向下层右侧相关 Entry，默认 <code>null</code>。</td>
-    </tr>
-    <tr>
-        <td><code>LeftLegDown</code></td>
-        <td><code>Entry?</code></td>
-        <td>指向下层左侧相关 Entry，默认 <code>null</code>。</td>
-    </tr>
-</table>
-
-<div class="warning">
-    <strong>警告：</strong> 修改 <code>Y</code> 后必须手动调用 <code>RefreshKey()</code>，<code>YKey</code> 不会自动刷新。跨 C# 边界避免 F# option，引用字段用 <code>null</code>。
-</div>
-
-<h3>4.3 构造函数</h3>
-<p><code>Entry()</code></p>
-<p>默认构造。所有字段使用默认值，<code>YKey</code> 为 0。</p>
-<p><code>Entry(int v, int x, int[] y)</code></p>
-<p>带参构造。依次设置 <code>Value = v</code>，<code>X = x</code>，<code>Y = y</code>，然后调用 <code>RefreshKey()</code> 计算 <code>YKey</code>。</p>
-
-<h3>4.4 成员函数</h3>
-<p><code>RefreshKey()</code></p>
-<p>根据当前 <code>Y</code> 重新计算 <code>YKey</code>。</p>
-<ul>
-    <li>不抛异常。</li>
-    <li><code>Y</code> 改变后必须调用此函数，<code>YKey</code> 才会更新。</li>
-</ul>
-
-<h3>4.5 静态函数 Entry.MakeYKey</h3>
-<p><code>Entry.MakeYKey(int[] y)</code></p>
-<p>根据整数序列 <code>y</code> 计算 64 位键值。</p>
-<p>计算规则：</p>
-<ul>
-    <li>取 <code>y.Length</code> 的低 8 位，左移 56 位，放入最高字节。</li>
-    <li>取 <code>y</code> 的前 7 个元素（不足则取全部）。</li>
-    <li>第 <code>i</code> 个元素（<code>i</code> 从 0 起）取低 16 位，左移 <code>(i * 8)</code> 位，按位或进结果。</li>
-    <li>元素之间在键中按字节递增，实际每个元素占用 8 位步进，仅低 16 位参与且会相互重叠。</li>
-    <li>该键不是 <code>y</code> 的精确编码，存在碰撞可能。</li>
-    <li>超过 7 个元素的部分不参与。</li>
-    <li>长度为 256 的倍数时，长度字节为 0，可能与其他长度碰撞。</li>
-</ul>
-<p>C# 调用示例：</p>
-<pre>using Expander_CS.Backend.Core;
+}</pre><h3>4.2 字段 / 属性说明</h3><table><tr><th>成员<th>类型<th>说明<tr><td><code>Value</code><td>int<td>默认 0。语义由使用方定义。<tr><td><code>X</code><td>int<td>默认 0。语义由使用方定义。<tr><td><code>Y</code><td>int[]<td>默认空数组。语义由使用方定义。修改 Y 后不会自动刷新 YKey，必须手动调用 <code>RefreshKey()</code>。<tr><td><code>YKey</code><td>ulong<td>由 Y 派生的紧凑键值，默认 0。由 <code>RefreshKey()</code> 或 <code>Entry.MakeYKey()</code> 计算。用于快速比较/索引，不自动随 Y 变化。<tr><td><code>LeftLegUp</code><td><code>List&lt;Entry></code><td>指向上层左侧相关 Entry 的列表，默认空。F# 侧可用 <code>ResizeArray&lt;Entry></code>，它等价于 <code>System.Collections.Generic.List&lt;Entry></code>。<tr><td><code>RightLegUp</code><td><code>Entry?</code><td>指向上层右侧相关 Entry，默认 <code>null</code>。跨 C# 边界避免 F# option，使用 <code>null</code> 表示空引用。<tr><td><code>RightLegDown</code><td><code>Entry?</code><td>指向下层右侧相关 Entry，默认 <code>null</code>。<tr><td><code>LeftLegDown</code><td><code>Entry?</code><td>指向下层左侧相关 Entry，默认 <code>null</code>。</table><div class=warning><strong>警告：</strong> 修改 <code>Y</code> 后必须手动调用 <code>RefreshKey()</code>，<code>YKey</code> 不会自动刷新。跨 C# 边界避免 F# option，引用字段用 <code>null</code>。</div><h3>4.3 构造函数</h3><p><code>Entry()</code><p>默认构造。所有字段使用默认值，<code>YKey</code> 为 0。<p><code>Entry(int v, int x, int[] y)</code><p>带参构造。依次设置 <code>Value = v</code>，<code>X = x</code>，<code>Y = y</code>，然后调用 <code>RefreshKey()</code> 计算 <code>YKey</code>。<h3>4.4 成员函数</h3><p><code>RefreshKey()</code><p>根据当前 <code>Y</code> 重新计算 <code>YKey</code>。<ul><li>不抛异常。<li><code>Y</code> 改变后必须调用此函数，<code>YKey</code> 才会更新。</ul><h3>4.5 静态函数 Entry.MakeYKey</h3><p><code>Entry.MakeYKey(int[] y)</code><p>根据整数序列 <code>y</code> 计算 64 位键值。<p>计算规则：<ul><li>取 <code>y.Length</code> 的低 8 位，左移 56 位，放入最高字节。<li>取 <code>y</code> 的前 7 个元素（不足则取全部）。<li>第 <code>i</code> 个元素（<code>i</code> 从 0 起）取低 16 位，左移 <code>(i * 8)</code> 位，按位或进结果。<li>元素之间在键中按字节递增，实际每个元素占用 8 位步进，仅低 16 位参与且会相互重叠。<li>该键不是 <code>y</code> 的精确编码，存在碰撞可能。<li>超过 7 个元素的部分不参与。<li>长度为 256 的倍数时，长度字节为 0，可能与其他长度碰撞。</ul><p>C# 调用示例：<pre>using Expander_CS.Backend.Core;
 
 Entry e1 = new Entry();
 Entry e2 = new Entry(1, 2, new[] { 3, 4, 5 });
@@ -492,47 +66,14 @@ e2.RefreshKey();
 ulong k1 = Entry.MakeYKey(new[] { 1, 2, 3 });
 Entry e3 = new Entry(1, 0, new[] { 1, 2, 3 });
 ulong k2 = e3.YKey;
-// k1 == k2</pre>
-
-<div class="notice">
-    <strong>NOTICE：</strong> 该键不是 <code>y</code> 的精确编码，存在碰撞可能。比较两个 Entry 的 Y 是否“键等价”可比较 <code>YKey</code>，但需接受碰撞与截断特性。
-</div>
-
-<h3>4.6 ykey 的一致使用建议</h3>
-<ul>
-    <li>创建 <code>Entry</code> 时若通过带参构造，<code>YKey</code> 自动计算。</li>
-    <li>直接修改 <code>e.Y</code> 后，必须调用 <code>e.RefreshKey()</code>。</li>
-    <li>需要单独计算时使用 <code>Entry.MakeYKey(e.Y)</code>。</li>
-    <li>比较两个 <code>Entry</code> 的 <code>Y</code> 是否“键等价”，可比较 <code>YKey</code>，但需接受碰撞与截断特性。</li>
-</ul>
-
-<h3>4.7 典型使用场景</h3>
-<ul>
-    <li>作为图/树节点，通过 leg 引用建立上下左右关系。</li>
-    <li>使用 <code>YKey</code> 做快速分组、哈希或索引。</li>
-    <li>配合 <code>EntryArena</code> 批量创建与管理。</li>
-</ul>
-
-<hr>
-
-<h2>5. EntryArena.fs — Entry 对象 arena 分配器</h2>
-<p>对应文件：<code>EntryArena.fs</code><br>
-命名空间：<code>Expander_CS.Backend.Core</code><br>
-原 C++ 文件：<code>arena.hpp</code><br>
-功能：Entry 对象 arena 分配器，统一持有并管理 Entry 生命周期</p>
-
-<h3>5.1 类 EntryArena</h3>
-<p>F# 侧建议形态：</p>
-<pre>namespace Expander_CS.Backend.Core
+// k1 == k2</pre><div class=notice><strong>NOTICE：</strong> 该键不是 <code>y</code> 的精确编码，存在碰撞可能。比较两个 Entry 的 Y 是否“键等价”可比较 <code>YKey</code>，但需接受碰撞与截断特性。</div><h3>4.6 ykey 的一致使用建议</h3><ul><li>创建 <code>Entry</code> 时若通过带参构造，<code>YKey</code> 自动计算。<li>直接修改 <code>e.Y</code> 后，必须调用 <code>e.RefreshKey()</code>。<li>需要单独计算时使用 <code>Entry.MakeYKey(e.Y)</code>。<li>比较两个 <code>Entry</code> 的 <code>Y</code> 是否“键等价”，可比较 <code>YKey</code>，但需接受碰撞与截断特性。</ul><h3>4.7 典型使用场景</h3><ul><li>作为图/树节点，通过 leg 引用建立上下左右关系。<li>使用 <code>YKey</code> 做快速分组、哈希或索引。<li>配合 <code>EntryArena</code> 批量创建与管理。</ul><hr><h2>5. EntryArena.fs — Entry 对象 arena 分配器</h2><p>对应文件：<code>EntryArena.fs</code><br>命名空间：<code>Expander_CS.Backend.Core</code><br>原 C++ 文件：<code>arena.hpp</code><br>功能：Entry 对象 arena 分配器，统一持有并管理 Entry 生命周期<h3>5.1 类 EntryArena</h3><p>F# 侧建议形态：<pre>namespace Expander_CS.Backend.Core
 
 type EntryArena() =
     member _.Make() : Entry = ...
     member _.Make(v: int, x: int, y: int[]) : Entry = ...
     member _.MakeEmpty() : Entry = ...
     member _.Clear() : unit = ...
-    member _.Size : int = ...</pre>
-<p>C# 可见形态：</p>
-<pre>public sealed class EntryArena
+    member _.Size : int = ...</pre><p>C# 可见形态：<pre>public sealed class EntryArena
 {
     public EntryArena();
 
@@ -542,57 +83,7 @@ type EntryArena() =
 
     public void Clear();
     public int Size { get; }
-}</pre>
-<p>职责：</p>
-<p>集中创建并持有 <code>Entry</code> 对象，返回引用供外部使用；所有 <code>Entry</code> 的生命周期由 <code>EntryArena</code> 统一管理。</p>
-
-<h3>5.2 成员说明</h3>
-<table>
-    <tr>
-        <th>成员</th>
-        <th>说明</th>
-    </tr>
-    <tr>
-        <td><code>Make()</code></td>
-        <td>在 arena 内创建一个默认 <code>Entry</code>。</td>
-    </tr>
-    <tr>
-        <td><code>Make(int v, int x, int[] y)</code></td>
-        <td>在 arena 内创建一个 <code>Entry</code>，使用给定参数构造。</td>
-    </tr>
-    <tr>
-        <td><code>MakeEmpty()</code></td>
-        <td>在 arena 内创建一个默认构造的 <code>Entry</code>。语义等价于 <code>Make()</code>，但更明确表示“空 Entry”。</td>
-    </tr>
-    <tr>
-        <td><code>Clear()</code></td>
-        <td>释放 arena 中所有 <code>Entry</code>。清空内部容器，所有由此 arena 创建的 <code>Entry</code> 引用立即失效。不抛异常。</td>
-    </tr>
-    <tr>
-        <td><code>Size</code></td>
-        <td>返回当前 arena 中 <code>Entry</code> 的数量。</td>
-    </tr>
-</table>
-
-<div class="notice">
-    <strong>NOTICE：</strong> 原 C++ 的 <code>make(int v = 0, int x = 0, std::vector&lt;int&gt; y = {})</code> 默认参数形式，在 F#/C# 跨边界时改为重载，避免 F# option 和可选参数在 C# 侧处理繁琐。
-</div>
-
-<h3>5.3 生命周期与引用有效性</h3>
-<ul>
-    <li><code>EntryArena</code> 对象必须比其返回的所有 <code>Entry</code> 引用存活更久。</li>
-    <li><code>Clear()</code> 之后，之前返回的所有 <code>Entry</code> 引用均失效。</li>
-    <li>arena 析构时，所有 <code>Entry</code> 被释放，引用全部失效。</li>
-    <li><code>Make</code> / <code>MakeEmpty</code> 返回的引用在未 <code>Clear</code>、arena 未析构前始终有效。</li>
-    <li><code>Entry</code> 之间可能存在引用链接：<code>LeftLegUp</code>、<code>RightLegUp</code>、<code>RightLegDown</code>、<code>LeftLegDown</code>。这些链接不参与生命周期管理，<code>Clear</code> 或析构后需自行保证不再访问。</li>
-</ul>
-
-<div class="warning">
-    <strong>警告：</strong> <code>EntryArena</code> 返回的 <code>Entry</code> 引用在 <code>Clear</code> 或 arena 析构后失效；<code>Entry</code> 之间的 leg 引用不参与生命周期管理，需自行保证不悬空。
-</div>
-
-<h3>5.4 C# 调用示例</h3>
-<pre>using Expander_CS.Backend.Core;
+}</pre><p>职责：<p>集中创建并持有 <code>Entry</code> 对象，返回引用供外部使用；所有 <code>Entry</code> 的生命周期由 <code>EntryArena</code> 统一管理。<h3>5.2 成员说明</h3><table><tr><th>成员<th>说明<tr><td><code>Make()</code><td>在 arena 内创建一个默认 <code>Entry</code>。<tr><td><code>Make(int v, int x, int[] y)</code><td>在 arena 内创建一个 <code>Entry</code>，使用给定参数构造。<tr><td><code>MakeEmpty()</code><td>在 arena 内创建一个默认构造的 <code>Entry</code>。语义等价于 <code>Make()</code>，但更明确表示“空 Entry”。<tr><td><code>Clear()</code><td>释放 arena 中所有 <code>Entry</code>。清空内部容器，所有由此 arena 创建的 <code>Entry</code> 引用立即失效。不抛异常。<tr><td><code>Size</code><td>返回当前 arena 中 <code>Entry</code> 的数量。</table><div class=notice><strong>NOTICE：</strong> 原 C++ 的 <code>make(int v = 0, int x = 0, std::vector&lt;int> y = {})</code> 默认参数形式，在 F#/C# 跨边界时改为重载，避免 F# option 和可选参数在 C# 侧处理繁琐。</div><h3>5.3 生命周期与引用有效性</h3><ul><li><code>EntryArena</code> 对象必须比其返回的所有 <code>Entry</code> 引用存活更久。<li><code>Clear()</code> 之后，之前返回的所有 <code>Entry</code> 引用均失效。<li>arena 析构时，所有 <code>Entry</code> 被释放，引用全部失效。<li><code>Make</code> / <code>MakeEmpty</code> 返回的引用在未 <code>Clear</code>、arena 未析构前始终有效。<li><code>Entry</code> 之间可能存在引用链接：<code>LeftLegUp</code>、<code>RightLegUp</code>、<code>RightLegDown</code>、<code>LeftLegDown</code>。这些链接不参与生命周期管理，<code>Clear</code> 或析构后需自行保证不再访问。</ul><div class=warning><strong>警告：</strong> <code>EntryArena</code> 返回的 <code>Entry</code> 引用在 <code>Clear</code> 或 arena 析构后失效；<code>Entry</code> 之间的 leg 引用不参与生命周期管理，需自行保证不悬空。</div><h3>5.4 C# 调用示例</h3><pre>using Expander_CS.Backend.Core;
 
 var arena = new EntryArena();
 
@@ -607,52 +98,4 @@ child.RefreshKey();
 
 ulong key = Entry.MakeYKey(child.Y);
 
-arena.Clear();</pre>
-
-<hr>
-
-<h2>6. 通用注意事项</h2>
-
-<h3>6.1 命名空间</h3>
-<ul>
-    <li><code>Sequence.fs</code> 位于 <code>Expander_CS.Backend.Common</code>。</li>
-    <li><code>Entry.fs</code> / <code>EntryArena.fs</code> 位于 <code>Expander_CS.Backend.Core</code>。</li>
-    <li>记号模块位于 <code>Expander_CS.Backend.Notation</code>。</li>
-</ul>
-
-<h3>6.2 项目引用</h3>
-<ul>
-    <li>C# 项目 <code>Expander_CS</code> 需要添加对 <code>Expander_CS.Backend</code> 的项目引用后，才能 <code>using Expander_CS.Backend.Common / Core / Notation</code>。</li>
-    <li>当前 F# 侧尚未实现真实算法，因此 C# 侧暂不添加引用。</li>
-</ul>
-
-<h3>6.3 异常</h3>
-<ul>
-    <li><code>parseSequence</code> 内部使用 <code>TryParse</code> 并跳过失败项，不抛异常。</li>
-    <li>其余接口基本不抛异常，除容器分配失败等系统级异常。</li>
-    <li>F# 记号层 <code>expand</code> 不应抛出异常。</li>
-</ul>
-
-<h3>6.4 线程安全</h3>
-<p>各接口未做同步，多线程访问同一对象需外部加锁。</p>
-
-<h3>6.5 引用有效性</h3>
-<ul>
-    <li><code>EntryArena</code> 返回的 <code>Entry</code> 引用在 <code>Clear</code> 或 arena 析构后失效；</li>
-    <li><code>Entry</code> 之间的 leg 引用不参与生命周期管理，需自行保证不悬空。</li>
-</ul>
-
-<div class="severe-notice">
-    <strong>严重 NOTICE：</strong> 修改 <code>Y</code> 后必须手动调用 <code>RefreshKey()</code>，<code>YKey</code> 不会自动刷新。跨 C# 边界避免 F# option，引用字段用 <code>null</code>。
-</div>
-
-<hr>
-
-<div class="doc-footer">
-    <p><strong>文档结束</strong></p>
-    <p>署名：Cream-CN，文档系使用AI技术修改</p>
-    <p>2026/09/23</p>
-</div>
-
-</body>
-</html>
+arena.Clear();</pre><hr><h2>6. 通用注意事项</h2><h3>6.1 命名空间</h3><ul><li><code>Sequence.fs</code> 位于 <code>Expander_CS.Backend.Common</code>。<li><code>Entry.fs</code> / <code>EntryArena.fs</code> 位于 <code>Expander_CS.Backend.Core</code>。<li>记号模块位于 <code>Expander_CS.Backend.Notation</code>。</ul><h3>6.2 项目引用</h3><ul><li>C# 项目 <code>Expander_CS</code> 需要添加对 <code>Expander_CS.Backend</code> 的项目引用后，才能 <code>using Expander_CS.Backend.Common / Core / Notation</code>。<li>当前 F# 侧尚未实现真实算法，因此 C# 侧暂不添加引用。</ul><h3>6.3 异常</h3><ul><li><code>parseSequence</code> 内部使用 <code>TryParse</code> 并跳过失败项，不抛异常。<li>其余接口基本不抛异常，除容器分配失败等系统级异常。<li>F# 记号层 <code>expand</code> 不应抛出异常。</ul><h3>6.4 线程安全</h3><p>各接口未做同步，多线程访问同一对象需外部加锁。<h3>6.5 引用有效性</h3><ul><li><code>EntryArena</code> 返回的 <code>Entry</code> 引用在 <code>Clear</code> 或 arena 析构后失效；<li><code>Entry</code> 之间的 leg 引用不参与生命周期管理，需自行保证不悬空。</ul><div class=severe-notice><strong>严重 NOTICE：</strong> 修改 <code>Y</code> 后必须手动调用 <code>RefreshKey()</code>，<code>YKey</code> 不会自动刷新。跨 C# 边界避免 F# option，引用字段用 <code>null</code>。</div><hr><div class=doc-footer><p><strong>文档结束</strong><p>署名：Cream-CN，文档系使用AI技术修改<p>2026/10/01</div>

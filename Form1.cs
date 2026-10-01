@@ -56,6 +56,31 @@ namespace omegay
 				Suffix      = EpsilonYNotation.suffix,
 				ExpandText  = null, // ε-Y 不支持文本展开
 			},
+			new NotationInfo
+			{
+				DisplayName = OmegaYNotation.Name,
+				Definition  = OmegaYNotation.definition,
+				Expand      = OmegaYNotation.expandAlter,
+				Suffix      = OmegaYNotation.suffix,
+				ExpandText  = null,
+			},
+
+			new NotationInfo
+			{
+				DisplayName = OmegaYMediumNotation.Name,
+				Definition  = OmegaYMediumNotation.definition,
+				Expand      = OmegaYMediumNotation.expand,
+				Suffix      = OmegaYMediumNotation.suffix,
+				ExpandText  = null,
+			},
+			new NotationInfo
+			{
+				DisplayName = OmegaYStrongNotation.Name,
+				Definition  = OmegaYStrongNotation.definition,
+				Expand      = OmegaYStrongNotation.expand,
+				Suffix      = OmegaYStrongNotation.suffix,
+				ExpandText  = null,
+			},
 		};
 
 		public Form1()
@@ -92,6 +117,18 @@ namespace omegay
 				var menuDefEpsilonY = new ToolStripMenuItem("ε-Y");
 				menuDefEpsilonY.Click += MenuDefinitionEpsilonY_Click;
 				menuDefinition.DropDownItems.Add(menuDefEpsilonY);
+
+				var menuDefOmegaY = new ToolStripMenuItem("ω-Y");
+				menuDefOmegaY.Click += MenuDefinitionOmegaY_Click;
+				menuDefinition.DropDownItems.Add(menuDefOmegaY);
+
+				var menuDefOmegaYMedium = new ToolStripMenuItem("ω-Y (medium magma)");
+				menuDefOmegaYMedium.Click += MenuDefinitionOmegaYMedium_Click;
+				menuDefinition.DropDownItems.Add(menuDefOmegaYMedium);
+
+				var menuDefOmegaYStrong = new ToolStripMenuItem("ω-Y (strong magma)");
+				menuDefOmegaYStrong.Click += MenuDefinitionOmegaYStrong_Click;
+				menuDefinition.DropDownItems.Add(menuDefOmegaYStrong);
 			}
 
 			menuHelp = new ToolStripMenuItem("帮助(&H)");
@@ -256,6 +293,7 @@ namespace omegay
 			MessageBox.Show(this, final, "展开结果",
 				MessageBoxButtons.OK, MessageBoxIcon.Information);
 		}
+
 		// ================= 菜单事件 =================
 		private void MenuDefinitionPrSS_Click(object? sender, EventArgs e)
 		{
@@ -265,6 +303,23 @@ namespace omegay
 		private void MenuDefinitionEpsilonY_Click(object? sender, EventArgs e)
 		{
 			ShowDefinitionDialog("ε-Y 定义", EpsilonYNotation.definition);
+		}
+
+		private void MenuDefinitionOmegaY_Click(object? sender, EventArgs e)
+		{
+			ShowDefinitionDialog("ω-Y 定义", OmegaYNotation.definition);
+		}
+
+		private void MenuDefinitionOmegaYMedium_Click(object? sender, EventArgs e)
+		{
+			ShowDefinitionDialog("ω-Y (medium magma) 定义",
+				OmegaYMediumNotation.definition);
+		}
+
+		private void MenuDefinitionOmegaYStrong_Click(object? sender, EventArgs e)
+		{
+			ShowDefinitionDialog("ω-Y (strong magma) 定义",
+				OmegaYStrongNotation.definition);
 		}
 
 		private void ShowDefinitionDialog(string title, string text)
@@ -315,6 +370,7 @@ namespace omegay
 				"曹知秋 记号提供给AI的定义使用《大数理论》的原文\n" +
 				"MrSS的定义来自 AAA滚木批发 (QQ3682911373)\n" +
 				"ε-Y的代码修改自Go men的代码\n" +
+				"ω-Y 三个记号移植自 omega_y.hpp 与 omega-Y-magma.js\n" +
 				"请注意 代码系利用人工智能技术生成，我（和所有贡献者）不保证展开结果正确",
 				"帮助", MessageBoxButtons.OK, MessageBoxIcon.Information);
 		}
