@@ -1,0 +1,730 @@
+VB6 PORT — API SPECIFICATION
+============================
+
+Document status: normative reference
+Language:        English
+Format:          plain text
+Version:         1.0
+Applies to:      all standard modules, class modules, and forms
+                 distributed under the notat/ and root/ directories
+                 of the VB6 port.
+
+
+----------------------------------------------------------------
+SECTION 0. INTERPRETATION AND DEFINITIONS
+----------------------------------------------------------------
+
+0.1   The key words "MUST", "MUST NOT", "REQUIRED", "SHALL",
+      "SHALL NOT", "SHOULD", "SHOULD NOT", "RECOMMENDED", "MAY",
+      and "OPTIONAL" in this document are to be interpreted as
+      described in common normative-usage conventions.
+
+0.2   "Caller" means any code that invokes a procedure described
+      in this document.
+
+0.3   "Implementer" means any party modifying, extending, or
+      re-implementing the described interface.
+
+0.4   "Array", absent qualification, means a VB6 dynamic array of
+      type Long with a lower bound of zero (0).
+
+0.5   "Uninitialized array" means a dynamic array for which no
+      ReDim has yet been performed, such that UBound raises
+      runtime error 9 ("Subscript out of range") when evaluated
+      without error handling.
+
+0.6   "Nothing" means the VB6 null object reference.
+
+0.7   "Index" means a zero-based Long value identifying an entry
+      in the notation registry defined in Section 5.
+
+0.8   Where a procedure is specified to accept an array parameter
+      ByRef, the callee SHALL NOT reassign the parameter unless
+      expressly specified.
+
+0.9   Where a procedure is specified to return an array, the
+      returned array MAY be uninitialized unless the return value
+      is expressly specified to be non-empty. Callers MUST guard
+      every UBound invocation with error handling.
+
+0.10  Numeric ranges are specified in terms of the VB6 Long type
+      (signed 32-bit, range -2,147,483,648 to 2,147,483,647).
+      Implementers SHALL NOT assume wider integer types.
+
+0.11  All error conditions described as "MsgBox" refer to a modal
+      message box raised with the vbCritical icon. No procedure
+      specified in this document SHALL permit an unhandled
+      runtime error to propagate to the caller, except where
+      expressly stated otherwise.
+
+
+----------------------------------------------------------------
+SECTION 1. SCOPE
+----------------------------------------------------------------
+
+1.1   This document specifies the public interface surface of
+      every module, class, and form comprising the VB6 port.
+
+1.2   This document does not specify the internal algorithms of
+      any notation. Where a notation's expansion is not yet
+      implemented, the corresponding module SHALL return the
+      input unchanged and SHALL provide a Suffix indicating the
+      incomplete state.
+
+1.3   Implementers MAY add private members. Implementers SHALL
+      NOT remove, rename, or alter the semantics of any public
+      member specified herein without a version increment of
+      this document.
+
+
+----------------------------------------------------------------
+SECTION 2. MODULE Common
+----------------------------------------------------------------
+
+Module Common is a standard module (.bas). It exposes the
+following public procedures.
+
+2.1   ParseSequence
+
+      Signature
+          Public Function ParseSequence(ByVal s As String) As Long()
+
+      Normative behavior
+          (a) The procedure SHALL split s on the comma character
+              (",").
+          (b) For each resulting token, the procedure SHALL
+              remove all space characters and horizontal tab
+              characters.
+          (c) A token whose cleaned form is empty SHALL be
+              discarded.
+          (d) A token whose cleaned form is non-numeric SHALL be
+              discarded.
+          (e) A token whose cleaned form is numeric SHALL be
+              converted to Long via CLng and appended to the
+              result.
+          (f) The order of retained tokens SHALL be preserved.
+
+      Return value
+          A zero-based Long array containing the retained values
+          in order. If no token is retained, the return value
+          MAY be uninitialized.
+
+      Caller obligations
+          The caller MUST guard any UBound invocation on the
+          return value with error handling.
+
+      Error behavior
+          If a numeric token exceeds the Long range, the
+          procedure SHALL NOT suppress the resulting runtime
+          error 6. Callers requiring suppression MUST install
+          their own error handler.
+
+2.2   SeqToString
+
+      Signature
+          Public Function SeqToString(seq() As Long) As String
+
+      Normative behavior
+          (a) If seq is uninitialized or contains zero elements,
+              the procedure SHALL return the two-character
+              string "[]".
+          (b) Otherwise, the procedure SHALL return the
+              elements joined by "," in ascending index order,
+              each element formatted via CStr.
+
+      Error behavior
+          The procedure SHALL NOT raise on any input, including
+          uninitialized arrays.
+
+2.3   WStringToUTF8
+      UTF8ToWString
+
+      Signatures
+          Public Function WStringToUTF8(ByVal w As String) As String
+          Public Function UTF8ToWString(ByVal s As String) As String
+
+      Normative behavior
+          Each procedure SHALL return its argument unchanged.
+
+      Rationale
+          Retained solely for signature parity with the C++
+          source. VB6 String is a Unicode BSTR and requires no
+          conversion.
+
+      Status
+          These procedures SHOULD NOT be used in new code.
+
+2.4   MakeYKey
+
+      Signature
+          Public Function MakeYKey(y() As Long) As Double
+
+      Normative behavior
+          (a) Let n be the number of elements in y, or zero if
+              y is uninitialized.
+          (b) Let m be min(n, 7).
+          (c) The procedure SHALL compute the value
+
+                  k = ((n AND &HFF) * 2^56)
+                    + sum over i in [0, m) of
+                        ((y(i) AND &HFFFF) * 2^(i * 8))
+
+              using Double arithmetic.
+          (d) The procedure SHALL return k.
+
+      Precision caveat
+          Double carries at most 53 bits of integer precision.
+          The value k MAY lose low-order bits when n is large or
+          when the packed value exceeds 2^53. The procedure
+          SHALL NOT be relied upon as a collision-free key for
+          trees whose sequences exceed the stated bound.
+
+      Status
+          Display and diagnostic use only.
+
+
+----------------------------------------------------------------
+SECTION 3. CLASS Entry
+----------------------------------------------------------------
+
+Class Entry is a class module (.cls) representing a single node.
+It exposes the following public members.
+
+3.1   Public instance variables
+
+      value           As Long         Numeric value of the node.
+      x               As Long         Column or index.
+      y               As Long()       Associated sequence; MAY
+                                      be uninitialized.
+      ykey            As Double       Cached hash of y.
+      leftleg_up      As Collection   Parents on the left leg.
+                                      Allocated on construction.
+      rightleg_up     As Entry        Reference; MAY be Nothing.
+      rightleg_down   As Entry        Reference; MAY be Nothing.
+      leftleg_down    As Entry        Reference; MAY be Nothing.
+
+3.2   Class_Initialize
+
+      Signature
+          Private Sub Class_Initialize()
+
+      Normative behavior
+          SHALL allocate an empty Collection for leftleg_up.
+          SHALL NOT allocate any other field.
+
+3.3   RefreshKey
+
+      Signature
+          Public Sub RefreshKey()
+
+      Normative behavior
+          SHALL set ykey = MakeYKey(y).
+
+      Caller obligation
+          Any caller that mutates y MUST subsequently invoke
+          RefreshKey before reading ykey. Failure to do so
+          leaves ykey inconsistent with y; the implementation
+          is not required to detect or report this condition.
+
+      Error behavior
+          SHALL NOT raise for any value of y, including
+          uninitialized y.
+
+3.4   Construction contract
+
+      Instances of Entry SHOULD be created via Arena.Make or
+      Arena.MakeEmpty. Direct construction via New Entry is
+      permitted but yields a node with value = 0, x = 0, and an
+      uninitialized y.
+
+
+----------------------------------------------------------------
+SECTION 4. CLASS Arena
+----------------------------------------------------------------
+
+Class Arena is a class module (.cls) owning a set of Entry
+objects. It exposes the following public members.
+
+4.1   Make
+
+      Signature
+          Public Function Make(ByVal v As Long, _
+                               ByVal xVal As Long, _
+                               ByRef yArr() As Long) As Entry
+
+      Normative behavior
+          (a) SHALL construct a new Entry.
+          (b) SHALL assign value = v, x = xVal, y = yArr.
+          (c) SHALL invoke RefreshKey on the new Entry.
+          (d) SHALL retain a strong reference to the new Entry
+              for the lifetime of the Arena, or until Clear is
+              invoked.
+          (e) SHALL return a reference to the new Entry.
+
+      Return guarantee
+          The returned reference SHALL NOT be Nothing.
+
+4.2   MakeEmpty
+
+      Signature
+          Public Function MakeEmpty() As Entry
+
+      Normative behavior
+          SHALL construct an Entry with default field values
+          and SHALL retain and return it in the manner of 4.1.
+
+      Return guarantee
+          The returned reference SHALL NOT be Nothing.
+
+4.3   Clear
+
+      Signature
+          Public Sub Clear()
+
+      Normative behavior
+          SHALL release every reference held by the Arena.
+
+      Limitation
+          Clear SHALL NOT be construed as guaranteeing the
+          release of Entry objects that participate in mutual
+          reference cycles. VB6's reference counting does not
+          collect cycles; such objects MAY remain allocated
+          until process termination.
+
+4.4   Size
+
+      Signature
+          Public Property Get Size() As Long
+
+      Normative behavior
+          SHALL return the number of Entry objects currently
+          retained. A freshly constructed Arena SHALL report
+          Size = 0.
+
+
+----------------------------------------------------------------
+SECTION 5. NOTATION MODULES
+----------------------------------------------------------------
+
+A notation module is a standard module (.bas). Every notation
+module SHALL implement the mandatory interface of 5.1 and MAY
+implement the optional interface of 5.2. Invocation SHALL be
+performed exclusively through Section 6; callers SHALL NOT
+invoke a notation module's procedures directly except for
+testing purposes.
+
+5.1   Mandatory interface
+
+5.1.1 Expand
+
+      Signature
+          Public Function Expand(ByRef seq() As Long, _
+                                 ByVal term As Long) As Long()
+
+      Preconditions
+          (a) term >= 1. The caller SHALL enforce this
+              precondition; the procedure is not required to
+              validate it.
+          (b) seq MAY be uninitialized.
+
+      Postconditions
+          (a) seq SHALL NOT be modified.
+          (b) The return value SHALL be a Long array, possibly
+              uninitialized.
+
+      Error behavior
+          For input satisfying the preconditions, the procedure
+          SHOULD NOT raise.
+
+      Placeholder behavior
+          A notation whose expansion has not been implemented
+          SHALL return seq unchanged.
+
+5.1.2 Suffix
+
+      Signature
+          Public Function Suffix() As String
+
+      Normative behavior
+          SHALL return a string to be appended verbatim to the
+          formatted result. The string MAY be empty.
+
+      Placeholder behavior
+          A notation whose expansion has not been implemented
+          SHOULD return a suffix indicating the incomplete
+          state.
+
+5.2   Optional interface (text-based notations)
+
+5.2.1 ExpandString
+
+      Signature
+          Public Function ExpandString(ByVal s As String, _
+                                       ByVal term As Long) As String
+
+      Preconditions
+          term >= 1. The caller SHALL enforce this
+          precondition.
+
+      Normative behavior
+          SHALL accept raw user input, including any of the
+          characters "(", ")", ",", and whitespace, and SHALL
+          return a string suitable for appending the notation's
+          Suffix.
+
+5.2.2 RemoveLast
+
+      Signature
+          Public Function RemoveLast(ByVal s As String) As String
+
+      Normative behavior
+          (a) SHALL track parenthesis nesting depth while
+              scanning s.
+          (b) A comma encountered at depth zero SHALL be
+              regarded as a top-level separator.
+          (c) SHALL remove the last top-level item and the
+              preceding separator.
+          (d) If no top-level separator exists, SHALL return s
+              unchanged.
+
+      Rationale
+          Required by the "Remove last term" control for
+          notations that operate on strings rather than Long
+          arrays. Currently only Mrss121Notation requires it.
+
+5.3   Activation rule
+
+      A notation SHALL be treated as text-based if and only if
+      NotationHasTextExpand(index) returns True. In that case
+      the dispatcher SHALL invoke DispatchExpandText and SHALL
+      NOT invoke DispatchExpand. Otherwise the dispatcher SHALL
+      invoke DispatchExpand and SHALL NOT invoke
+      DispatchExpandText.
+
+
+----------------------------------------------------------------
+SECTION 6. MODULE NotationTable
+----------------------------------------------------------------
+
+Module NotationTable is the sole registry and dispatcher for
+notation modules. It exposes the following public procedures.
+
+6.1   NotationCount
+
+      Signature
+          Public Function NotationCount() As Long
+
+      Normative behavior
+          SHALL return the number of registered notations. The
+          value SHALL be 13 as of this specification.
+
+6.2   NotationName
+
+      Signature
+          Public Function NotationName(ByVal i As Long) As String
+
+      Normative behavior
+          SHALL return the display name of the notation at index
+          i, or the empty string if i lies outside
+          [0, NotationCount).
+
+6.3   NotationId
+
+      Signature
+          Public Function NotationId(ByVal i As Long) As String
+
+      Normative behavior
+          SHALL return a stable ASCII identifier for the
+          notation at index i, or the empty string if i lies
+          outside [0, NotationCount).
+
+      Stability guarantee
+          Once assigned, an identifier SHALL NOT be changed or
+          reused for a different notation.
+
+6.4   NotationDefinition
+
+      Signature
+          Public Function NotationDefinition(ByVal i As Long) As String
+
+      Normative behavior
+          SHALL return the long-form definition text of the
+          notation at index i, using vbCrLf as the line
+          separator, or the empty string if i lies outside
+          [0, NotationCount).
+
+6.5   NotationHasTextExpand
+
+      Signature
+          Public Function NotationHasTextExpand(ByVal i As Long) As Boolean
+
+      Normative behavior
+          SHALL return True if and only if the notation at index
+          i uses the text-based interface. SHALL return False
+          for any i outside [0, NotationCount).
+
+6.6   DispatchExpand
+
+      Signature
+          Public Function DispatchExpand(ByVal idx As Long, _
+                                         ByRef seq() As Long, _
+                                         ByVal term As Long) As Long()
+
+      Preconditions
+          term >= 1.
+
+      Normative behavior
+          If idx lies within [0, NotationCount) and the notation
+          at that index is not text-based, SHALL invoke the
+          notation's Expand(seq, term) and return the result.
+          Otherwise SHALL return seq unchanged.
+
+6.7   DispatchExpandText
+
+      Signature
+          Public Function DispatchExpandText(ByVal idx As Long, _
+                                             ByVal s As String, _
+                                             ByVal term As Long) As String
+
+      Preconditions
+          term >= 1.
+
+      Normative behavior
+          If idx lies within [0, NotationCount) and the notation
+          at that index is text-based, SHALL invoke the
+          notation's ExpandString(s, term) and return the
+          result. Otherwise SHALL return s unchanged.
+
+6.8   DispatchSuffix
+
+      Signature
+          Public Function DispatchSuffix(ByVal idx As Long) As String
+
+      Normative behavior
+          If idx lies within [0, NotationCount), SHALL return
+          the Suffix of the notation at that index. Otherwise
+          SHALL return the empty string.
+
+6.9   Registry index assignment
+
+      Indices SHALL be assigned as follows and SHALL NOT be
+      renumbered within version 1.x of this specification.
+
+          0    EmptyNotation
+          1    PPSNotation
+          2    PPS4Notation
+          3    WPPS4Notation
+          4    TPPS4Notation
+          5    EWPPS4Notation
+          6    SecondPPS4Notation
+          7    PPS2Notation
+          8    OmegaYMediumNotation
+          9    OmegaYStrongNotation
+          10   Mrss121Notation          (text-based)
+          11   OmegaYNotation
+          12   EpsilonYNotation
+
+6.10  Extension procedure for new notations
+
+      An implementer adding a notation SHALL perform all of the
+      following:
+
+          (a) Create a standard module under notat/ that
+              satisfies Section 5.
+          (b) Add a Case clause to NotationName, NotationId, and
+              NotationDefinition.
+          (c) Add a Case clause to DispatchExpand.
+          (d) If the notation is text-based, add a Case clause
+              to DispatchExpandText and ensure
+              NotationHasTextExpand returns True for the new
+              index.
+          (e) Add a Case clause to DispatchSuffix.
+          (f) Increment the value returned by NotationCount.
+
+      An implementer SHALL NOT modify frmMain in order to add a
+      notation. The user interface SHALL discover new notations
+      solely through this module.
+
+
+----------------------------------------------------------------
+SECTION 7. FORM frmMain
+----------------------------------------------------------------
+
+frmMain is a form module (.frm). It exposes no public procedures
+and no public properties. All behavior is expressed through
+control event handlers and private helpers.
+
+7.1   Controls (contractual identifiers)
+
+      txtSeq          TextBox        Input sequence string.
+      txtTerm         TextBox        FS term [n].
+      cboNotation     ComboBox       Notation selector; Style
+                                     SHALL be 2 (Dropdown List).
+      cmdFS           CommandButton  "Remove last term".
+      cmdFSalter      CommandButton  "Keep last term".
+      txtDef          TextBox        Definition display; SHALL be
+                                     read-only, multi-line, with
+                                     vertical scroll bars.
+      mnuFile         Menu           Parent.
+      mnuExit         Menu           Child.
+      mnuDef          Menu           Parent.
+      mnuDefShow      Menu           Child.
+      mnuSep1         Menu           Separator.
+      mnuEntryDemo    Menu           Child.
+      mnuHelp         Menu           Parent.
+      mnuHelpHelp     Menu           Child.
+      mnuHelpAbout    Menu           Child.
+      mnuHelpLegal    Menu           Child.
+
+      Implementers MAY rename these identifiers only if all
+      references in the form's code are updated consistently.
+
+7.2   Event handler obligations
+
+      Form_Load
+          SHALL populate cboNotation with NotationName(i) for
+          every i in [0, NotationCount).
+          SHALL select index 0.
+          SHALL invoke ShowDefinition 0.
+
+      cboNotation_Click
+          SHALL invoke ShowDefinition with cboNotation.ListIndex.
+
+      cmdFS_Click
+          SHALL invoke DoExpand True.
+
+      cmdFSalter_Click
+          SHALL invoke DoExpand False.
+
+      mnuExit_Click
+          SHALL invoke Unload Me.
+
+      mnuDefShow_Click
+          SHALL invoke ShowDefinition with cboNotation.ListIndex.
+
+      mnuEntryDemo_Click
+          SHALL invoke ShowEntryDemo.
+
+      mnuHelpHelp_Click
+      mnuHelpAbout_Click
+      mnuHelpLegal_Click
+          SHALL present the corresponding informational MsgBox.
+          Text content is not normative.
+
+7.3   Expand pipeline (DoExpand)
+
+      The procedure DoExpand(ByVal removeLast As Boolean) SHALL
+      perform the following steps in order.
+
+          (a) Read idx = cboNotation.ListIndex. If idx < 0, set
+              idx = 0.
+
+          (b) If NotationHasTextExpand(idx) is True:
+
+                (i)  Validate txtTerm via TryParseTerm. If
+                     validation fails, abort.
+                (ii) If txtSeq.Text is empty, present MsgBox
+                     "序列不能为空" with vbCritical and abort.
+                (iii) Invoke DispatchExpandText(idx,
+                     txtSeq.Text, term).
+                (iv) If removeLast is True, apply
+                     Mrss121Notation.RemoveLast to the result.
+
+          (c) Otherwise:
+
+                (i)  Invoke ReadSeqAndTerm. If validation
+                     fails, abort.
+                (ii) Invoke DispatchExpand(idx, seq, term).
+                (iii) If removeLast is True and the result
+                     contains more than one element, discard
+                     the last element.
+
+          (d) Append DispatchSuffix(idx) to the result.
+
+          (e) Present the result via MsgBox with caption
+              "展开结果" and icon vbInformation.
+
+7.4   Validation messages
+
+      The following messages SHALL be presented with the
+      vbCritical icon and the caption "错误":
+
+          "项数必须是整数"       Term field empty or non-numeric.
+          "项数必须为正整数"     Term < 1.
+          "序列不能为空"         Sequence field empty or parses
+                                 to zero tokens.
+
+      These strings SHALL be treated as identifiers for the
+      purposes of maintenance; altering them constitutes an
+      observable interface change.
+
+
+----------------------------------------------------------------
+SECTION 8. BUILD AND ENCODING REQUIREMENTS
+----------------------------------------------------------------
+
+8.1   Source files SHALL be saved as UTF-8 with byte-order mark
+      (BOM), or as ANSI in a code page that represents every
+      non-ASCII literal appearing in the file.
+
+8.2   Implementers who cannot guarantee 8.1 SHALL express
+      non-ASCII literals through ChrW with the corresponding
+      code point.
+
+8.3   The project SHALL declare a startup object of either
+      Sub Main in Startup.bas or frmMain. Both configurations
+      are permitted.
+
+8.4   The project SHALL NOT require any reference beyond
+      msvbvm60.dll. Use of any OCX or external DLL constitutes
+      a deviation from this specification and SHALL be
+      documented in the implementer's own materials.
+
+8.5   Where the definition pane requires rich formatting
+      beyond the capabilities of a native TextBox, an
+      implementer MAY substitute a RichTextBox control. Such a
+      substitution SHALL be confined to frmMain and SHALL NOT
+      affect Sections 1 through 6.
+
+
+----------------------------------------------------------------
+SECTION 9. KNOWN LIMITATIONS
+----------------------------------------------------------------
+
+9.1   Function pointers are not available in VB6. The dispatch
+      mechanism defined in Section 6 therefore relies on Select
+      Case and requires edits in multiple locations when a
+      notation is added.
+
+9.2   The ykey field carries at most 53 bits of integer
+      precision. No guarantee is given that two distinct
+      sequences produce distinct keys.
+
+9.3   Empty arrays are represented as uninitialized dynamic
+      arrays. Every call site that consumes an array returned
+      by a procedure specified in this document SHALL guard
+      UBound with error handling.
+
+9.4   Reference cycles between Entry objects are not collected
+      by VB6. Owners of Arena objects SHALL invoke Clear when
+      release of the underlying nodes is required before
+      process termination.
+
+9.5   Format of numeric values for display via Format$ does not
+      reproduce the exact textual output of the C++ original
+      for values beyond the double-precision integer range.
+
+
+----------------------------------------------------------------
+SECTION 10. VERSIONING
+----------------------------------------------------------------
+
+10.1  Any change that adds, removes, or alters the semantics of
+      a procedure specified in Sections 2 through 6 SHALL
+      increment the minor version of this specification.
+
+10.2  Any change to the registry index assignment in 6.9 SHALL
+      increment the major version.
+
+10.3  This document does not itself confer any license. Refer
+      to the distribution's Unlicense notice for terms of use.
