@@ -1,14 +1,21 @@
-EXPANDER
+# EXPANDER
+[![star](https://gitee.com/Cream-CN/Expander2/badge/star.svg?theme=dark)](https://gitee.com/Cream-CN/Expander2/stargazers)
+![GitHub Stars](https://img.shields.io/github/stars/cream-cn/expander2?style=for-the-badge&logo=github&label=Stars&color=24292e)
 
-法律提示
+![C](https://img.shields.io/badge/C-00599C?style=for-the-badge&logo=c&logoColor=white)
+![C++](https://img.shields.io/badge/C++-00599C?style=for-the-badge&logo=c%2B%2B&logoColor=white)
+
+![Branch](https://img.shields.io/badge/Branch-Master-24292e?style=for-the-badge&logo=github&logoColor=white)
+![GitHub Stars](https://img.shields.io/github/stars/cream-cn/expander2?style=for-the-badge&logo=github&label=Stars&color=24292e)
+![GitHub Forks](https://img.shields.io/github/forks/cream-cn/expander2?style=for-the-badge&logo=github&label=Forks&color=24292e)
+![Issues Total](https://img.shields.io/github/issues-search/cream-cn/expander2?query=repo%3Acream-cn%2Fexpander2&style=for-the-badge&logo=github&label=Issues&color=24292e)
+[![fork](https://gitee.com/Cream-CN/Expander2/badge/fork.svg?theme=dark)](https://gitee.com/Cream-CN/Expander2/members)
+## 法律提示
 本软体使用Unlicense授权，但实际上，若您是中国大陆地区的人，您应当将其当作MIT看待，也就是保留署名
 
-有什么功能？
-实际上就是序列记号的展开器，目前支持了ω-Y的三种Magma
 
-TODO
-1.支持更多序列记号
-2.有条件的话，换成Qt6这种跨平台的GUI库
+## TODO
+缺省
 
 
 
