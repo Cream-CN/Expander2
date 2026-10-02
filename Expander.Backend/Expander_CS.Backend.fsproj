@@ -8,20 +8,22 @@
 		<Product>Googology Expander</Product>
 		<Copyright>Copyright © 2026 Cream-CN</Copyright>
 		<Description>Expander 后端类库</Description>
-		<AssemblyVersion>1.0.0.3</AssemblyVersion>
-		<FileVersion>1.0.0.3</FileVersion>
+		<AssemblyVersion>1.0.0.4</AssemblyVersion>
+		<FileVersion>1.0.0.4</FileVersion>
 		<InformationalVersion>1.0.0</InformationalVersion>
 		<SatelliteResourceLanguages>en;zh-Hans</SatelliteResourceLanguages>
 	</PropertyGroup>
 
 	<ItemGroup>
 		<Compile Include="Common\Sequence.fs" />
+		<Compile Include="MrSSShare.fs" />
 		<Compile Include="Core\Entry.fs" />
 		<Compile Include="Core\EntryArena.fs" />
 		<Compile Include="Notation\Omega-YMagma.fs" />
 		<Compile Include="Notation\EpsilonY.fs" />
 		<Compile Include="Notation\PrSS.fs" />
 		<Compile Include="Notation\Empty.fs" />
+		<Compile Include="MrSS121.fs" />
 	</ItemGroup>
 
 </Project>

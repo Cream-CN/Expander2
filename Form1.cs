@@ -56,6 +56,14 @@ namespace omegay
 				Suffix      = EpsilonYNotation.suffix,
 				ExpandText  = null, // ε-Y 不支持文本展开
 			},
+			new NotationInfo{
+				DisplayName = Mrss121Notation.Name,
+				Definition  = "MrSS1.2.1 定义\n\n" +
+				  "\n",
+				Expand      = Mrss121Notation.Expand,
+				Suffix      = Mrss121Notation.Suffix,
+				ExpandText  = Mrss121Notation.ExpandString,
+},
 			new NotationInfo
 			{
 				DisplayName = OmegaYNotation.Name,
