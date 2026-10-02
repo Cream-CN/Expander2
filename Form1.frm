@@ -7,7 +7,7 @@ Begin VB.Form Form1
    ClientWidth     =   6480
    ScaleHeight     =   6060
    ScaleWidth      =   6480
-   StartUpPosition =   2  '???????
+   StartUpPosition =   2  'CenterScreen
    Begin VB.ComboBox ComboNotation 
       Height          =   315
       Left            =   1680
