@@ -1,0 +1,637 @@
+VB6 移植版 — API 规范
+============================
+
+文档状态：规范性参考
+语言：        英语
+格式：          纯文本
+版本：          1.0
+适用范围：      所有标准模块、类模块和窗体，
+                 分布于 VB6 移植版的 notat/ 和 root/ 目录下。
+
+
+----------------------------------------------------------------
+第 0 节. 解释与定义
+----------------------------------------------------------------
+
+0.1   关键词 "MUST"、"MUST NOT"、"REQUIRED"、"SHALL"、
+      "SHALL NOT"、"SHOULD"、"SHOULD NOT"、"RECOMMENDED"、"MAY"
+      和 "OPTIONAL" 在本文档中应按通用规范性用法惯例进行解释。
+
+0.2   "调用方"（Caller）指调用本文档所述任何过程的任何代码。
+
+0.3   "实现方"（Implementer）指修改、扩展或重新实现所述接口的任何一方。
+
+0.4   "数组"（Array），在无修饰的情况下，指 VB6 动态数组，
+      类型为 Long，下界为零（0）。
+
+0.5   "未初始化数组"（Uninitialized array）指尚未执行过 ReDim 的动态数组，
+      以致在无错误处理的情况下求值 UBound 时会引发运行时错误 9
+      （"下标越界"）。
+
+0.6   "Nothing" 指 VB6 空对象引用。
+
+0.7   "索引"（Index）指第 5 节所定义的记法注册表中用于标识条目的
+      从零开始的 Long 值。
+
+0.8   当某过程被规定为按引用（ByRef）接受数组参数时，
+      除非另有明确规定，被调用方不得重新赋值该参数。
+
+0.9   当某过程被规定为返回数组时，除非返回值被明确规定为非空，
+      否则返回的数组可以处于未初始化状态。调用方必须对每一次
+      UBound 调用进行错误处理保护。
+
+0.10  数值范围以 VB6 Long 类型（有符号 32 位，范围 -2,147,483,648
+      至 2,147,483,647）规定。实现方不得假定存在更宽的整数类型。
+
+0.11  所有被描述为 "MsgBox" 的错误条件均指以 vbCritical 图标
+      引发的模态消息框。本文档所述任何过程均不得允许未处理的
+      运行时错误传播至调用方，除非另有明确规定。
+
+
+----------------------------------------------------------------
+第 1 节. 范围
+----------------------------------------------------------------
+
+1.1   本文档规定构成 VB6 移植版的每个模块、类和窗体的公共接口面。
+
+1.2   本文档不规定任何记法的内部算法。当某记法的展开尚未实现时，
+      相应模块应原样返回输入，并应提供一个后缀（Suffix）以指示
+      未完成状态。
+
+1.3   实现方可以添加私有成员。实现方不得在未递增本文档版本的情况下
+      移除、重命名或改变本文档所述任何公共成员的语义。
+
+
+----------------------------------------------------------------
+第 2 节. 模块 Common
+----------------------------------------------------------------
+
+模块 Common 是一个标准模块（.bas）。它公开以下公共过程。
+
+2.1   ParseSequence
+
+      签名
+          Public Function ParseSequence(ByVal s As String) As Long()
+
+      规范性行为
+          (a) 该过程应按逗号字符（","）拆分 s。
+          (b) 对于每个结果词元，该过程应移除所有空格字符和
+              水平制表符。
+          (c) 清理后为空的词元应被丢弃。
+          (d) 清理后为非数字的词元应被丢弃。
+          (e) 清理后为数字的词元应通过 CLng 转换为 Long
+              并追加到结果中。
+          (f) 保留词元的顺序应保持不变。
+
+      返回值
+          一个从零开始的 Long 数组，按顺序包含保留的值。
+          如果未保留任何词元，返回值可以处于未初始化状态。
+
+      调用方义务
+          调用方必须对返回值上的任何 UBound 调用进行错误处理保护。
+
+      错误行为
+          如果某个数字词元超出 Long 范围，该过程不得抑制由此产生的
+          运行时错误 6。需要抑制的调用方必须安装自己的错误处理程序。
+
+2.2   SeqToString
+
+      签名
+          Public Function SeqToString(seq() As Long) As String
+
+      规范性行为
+          (a) 如果 seq 未初始化或包含零个元素，该过程应返回
+              两字符字符串 "[]"。
+          (b) 否则，该过程应按索引升序返回以 "," 连接的元素，
+              每个元素通过 CStr 格式化。
+
+      错误行为
+          该过程对任何输入均不得引发错误，包括未初始化数组。
+
+2.3   WStringToUTF8
+      UTF8ToWString
+
+      签名
+          Public Function WStringToUTF8(ByVal w As String) As String
+          Public Function UTF8ToWString(ByVal s As String) As String
+
+      规范性行为
+          每个过程应原样返回其参数。
+
+      理由
+          仅为与 C++ 源代码保持签名一致性而保留。
+          VB6 String 是 Unicode BSTR，无需转换。
+
+      状态
+          这些过程不应在新代码中使用。
+
+2.4   MakeYKey
+
+      签名
+          Public Function MakeYKey(y() As Long) As Double
+
+      规范性行为
+          (a) 设 n 为 y 中的元素数量，若 y 未初始化则为零。
+          (b) 设 m 为 min(n, 7)。
+          (c) 该过程应使用 Double 算术计算值
+
+                  k = ((n AND &HFF) * 2^56)
+                    + 对 i 在 [0, m) 范围内求和
+                        ((y(i) AND &HFFFF) * 2^(i * 8))
+
+          (d) 该过程应返回 k。
+
+      精度注意事项
+          Double 最多携带 53 位整数精度。当 n 较大或打包值超过 2^53 时，
+          值 k 可能丢失低位。对于序列超出所述界限的树，不得依赖该过程
+          作为无冲突键。
+
+      状态
+          仅用于显示和诊断目的。
+
+
+----------------------------------------------------------------
+第 3 节. 类 Entry
+----------------------------------------------------------------
+
+类 Entry 是一个类模块（.cls），表示单个节点。
+它公开以下公共成员。
+
+3.1   公共实例变量
+
+      value           As Long         节点的数值。
+      x               As Long         列或索引。
+      y               As Long()       关联序列；可以处于
+                                      未初始化状态。
+      ykey            As Double       y 的缓存哈希值。
+      leftleg_up      As Collection   左腿上的父节点。
+                                      在构造时分配。
+      rightleg_up     As Entry        引用；可以为 Nothing。
+      rightleg_down   As Entry        引用；可以为 Nothing。
+      leftleg_down    As Entry        引用；可以为 Nothing。
+
+3.2   Class_Initialize
+
+      签名
+          Private Sub Class_Initialize()
+
+      规范性行为
+          应为 leftleg_up 分配一个空 Collection。
+          不得分配任何其他字段。
+
+3.3   RefreshKey
+
+      签名
+          Public Sub RefreshKey()
+
+      规范性行为
+          应设置 ykey = MakeYKey(y)。
+
+      调用方义务
+          任何修改 y 的调用方必须在读取 ykey 之前随后调用 RefreshKey。
+          未能这样做会使 ykey 与 y 不一致；实现方无需检测或报告此情况。
+
+      错误行为
+          对任何 y 值均不得引发错误，包括未初始化的 y。
+
+3.4   构造契约
+
+      Entry 实例应通过 Arena.Make 或 Arena.MakeEmpty 创建。
+      允许通过 New Entry 直接构造，但会产生 value = 0、x = 0
+      且 y 未初始化的节点。
+
+
+----------------------------------------------------------------
+第 4 节. 类 Arena
+----------------------------------------------------------------
+
+类 Arena 是一个类模块（.cls），拥有一个 Entry 对象集合。
+它公开以下公共成员。
+
+4.1   Make
+
+      签名
+          Public Function Make(ByVal v As Long, _
+                               ByVal xVal As Long, _
+                               ByRef yArr() As Long) As Entry
+
+      规范性行为
+          (a) 应构造一个新的 Entry。
+          (b) 应赋值 value = v、x = xVal、y = yArr。
+          (c) 应对新 Entry 调用 RefreshKey。
+          (d) 应在 Arena 的生命周期内保留对新 Entry 的强引用，
+              直至调用 Clear。
+          (e) 应返回对新 Entry 的引用。
+
+      返回保证
+          返回的引用不得为 Nothing。
+
+4.2   MakeEmpty
+
+      签名
+          Public Function MakeEmpty() As Entry
+
+      规范性行为
+          应构造一个具有默认字段值的 Entry，并按照 4.1 的方式
+          保留并返回它。
+
+      返回保证
+          返回的引用不得为 Nothing。
+
+4.3   Clear
+
+      签名
+          Public Sub Clear()
+
+      规范性行为
+          应释放 Arena 持有的每一个引用。
+
+      限制
+          Clear 不得被解释为保证释放参与相互引用循环的 Entry 对象。
+          VB6 的引用计数不收集循环；此类对象可能保持已分配状态
+          直至进程终止。
+
+4.4   Size
+
+      签名
+          Public Property Get Size() As Long
+
+      规范性行为
+          应返回当前保留的 Entry 对象数量。新构造的 Arena
+          应报告 Size = 0。
+
+
+----------------------------------------------------------------
+第 5 节. 记法模块
+----------------------------------------------------------------
+
+记法模块是一个标准模块（.bas）。每个记法模块应实现 5.1 的
+强制接口，并可实现 5.2 的可选接口。调用应排他性地通过第 6 节
+执行；调用方不得直接调用记法模块的过程，测试目的除外。
+
+5.1   强制接口
+
+5.1.1 Expand
+
+      签名
+          Public Function Expand(ByRef seq() As Long, _
+                                 ByVal term As Long) As Long()
+
+      前置条件
+          (a) term >= 1。调用方应强制执行此前置条件；
+              该过程无需验证它。
+          (b) seq 可以处于未初始化状态。
+
+      后置条件
+          (a) seq 不得被修改。
+          (b) 返回值应为一个 Long 数组，可能处于未初始化状态。
+
+      错误行为
+          对于满足前置条件的输入，该过程不应引发错误。
+
+      占位行为
+          展开尚未实现的记法应原样返回 seq。
+
+5.1.2 Suffix
+
+      签名
+          Public Function Suffix() As String
+
+      规范性行为
+          应返回一个字符串，将其逐字追加到格式化结果之后。
+          该字符串可以为空。
+
+      占位行为
+          展开尚未实现的记法应返回一个指示未完成状态的后缀。
+
+5.2   可选接口（基于文本的记法）
+
+5.2.1 ExpandString
+
+      签名
+          Public Function ExpandString(ByVal s As String, _
+                                       ByVal term As Long) As String
+
+      前置条件
+          term >= 1。调用方应强制执行此前置条件。
+
+      规范性行为
+          应接受原始用户输入，包括任何字符 "("、")"、"," 和空白，
+          并应返回一个适合追加该记法 Suffix 的字符串。
+
+5.2.2 RemoveLast
+
+      签名
+          Public Function RemoveLast(ByVal s As String) As String
+
+      规范性行为
+          (a) 应在扫描 s 时跟踪括号嵌套深度。
+          (b) 在深度为零时遇到的逗号应被视为顶层分隔符。
+          (c) 应移除最后一个顶层项及其前面的分隔符。
+          (d) 如果不存在顶层分隔符，应原样返回 s。
+
+      理由
+          对于操作字符串而非 Long 数组的记法，"移除最后一项"控件
+          需要此功能。目前仅 Mrss121Notation 需要它。
+
+5.3   激活规则
+
+      当且仅当 NotationHasTextExpand(index) 返回 True 时，
+      记法应被视为基于文本的。在这种情况下，调度器应调用
+      DispatchExpandText，且不得调用 DispatchExpand。否则，
+      调度器应调用 DispatchExpand，且不得调用 DispatchExpandText。
+
+
+----------------------------------------------------------------
+第 6 节. 模块 NotationTable
+----------------------------------------------------------------
+
+模块 NotationTable 是记法模块的唯一注册表和调度器。
+它公开以下公共过程。
+
+6.1   NotationCount
+
+      签名
+          Public Function NotationCount() As Long
+
+      规范性行为
+          应返回已注册记法的数量。截至本规范，该值应为 13。
+
+6.2   NotationName
+
+      签名
+          Public Function NotationName(ByVal i As Long) As String
+
+      规范性行为
+          应返回索引 i 处记法的显示名称，如果 i 超出
+          [0, NotationCount) 范围则返回空字符串。
+
+6.3   NotationId
+
+      签名
+          Public Function NotationId(ByVal i As Long) As String
+
+      规范性行为
+          应返回索引 i 处记法的稳定 ASCII 标识符，如果 i 超出
+          [0, NotationCount) 范围则返回空字符串。
+
+      稳定性保证
+          一旦分配，标识符不得更改或复用于不同的记法。
+
+6.4   NotationDefinition
+
+      签名
+          Public Function NotationDefinition(ByVal i As Long) As String
+
+      规范性行为
+          应返回索引 i 处记法的长格式定义文本，使用 vbCrLf
+          作为行分隔符，如果 i 超出 [0, NotationCount) 范围
+          则返回空字符串。
+
+6.5   NotationHasTextExpand
+
+      签名
+          Public Function NotationHasTextExpand(ByVal i As Long) As Boolean
+
+      规范性行为
+          当且仅当索引 i 处记法使用基于文本的接口时应返回 True。
+          对于任何超出 [0, NotationCount) 范围的 i 应返回 False。
+
+6.6   DispatchExpand
+
+      签名
+          Public Function DispatchExpand(ByVal idx As Long, _
+                                         ByRef seq() As Long, _
+                                         ByVal term As Long) As Long()
+
+      前置条件
+          term >= 1。
+
+      规范性行为
+          如果 idx 位于 [0, NotationCount) 范围内且该索引处的记法
+          不是基于文本的，应调用该记法的 Expand(seq, term) 并返回结果。
+          否则应原样返回 seq。
+
+6.7   DispatchExpandText
+
+      签名
+          Public Function DispatchExpandText(ByVal idx As Long, _
+                                             ByVal s As String, _
+                                             ByVal term As Long) As String
+
+      前置条件
+          term >= 1。
+
+      规范性行为
+          如果 idx 位于 [0, NotationCount) 范围内且该索引处的记法
+          是基于文本的，应调用该记法的 ExpandString(s, term) 并返回结果。
+          否则应原样返回 s。
+
+6.8   DispatchSuffix
+
+      签名
+          Public Function DispatchSuffix(ByVal idx As Long) As String
+
+      规范性行为
+          如果 idx 位于 [0, NotationCount) 范围内，应返回该索引处
+          记法的 Suffix。否则应返回空字符串。
+
+6.9   注册表索引分配
+
+      索引应按如下方式分配，且在本规范 1.x 版本内不得重新编号。
+
+          0    EmptyNotation
+          1    PPSNotation
+          2    PPS4Notation
+          3    WPPS4Notation
+          4    TPPS4Notation
+          5    EWPPS4Notation
+          6    SecondPPS4Notation
+          7    PPS2Notation
+          8    OmegaYMediumNotation
+          9    OmegaYStrongNotation
+          10   Mrss121Notation          （基于文本的）
+          11   OmegaYNotation
+          12   EpsilonYNotation
+
+6.10  新记法的扩展过程
+
+      添加记法的实现方应执行以下所有操作：
+
+          (a) 在 notat/ 下创建一个满足第 5 节的标准模块。
+          (b) 向 NotationName、NotationId 和 NotationDefinition
+              添加 Case 子句。
+          (c) 向 DispatchExpand 添加 Case 子句。
+          (d) 如果该记法是基于文本的，向 DispatchExpandText
+              添加 Case 子句，并确保 NotationHasTextExpand
+              对新索引返回 True。
+          (e) 向 DispatchSuffix 添加 Case 子句。
+          (f) 递增 NotationCount 返回的值。
+
+      实现方不得为了添加记法而修改 frmMain。用户界面应仅通过
+      此模块发现新记法。
+
+
+----------------------------------------------------------------
+第 7 节. 窗体 frmMain
+----------------------------------------------------------------
+
+frmMain 是一个窗体模块（.frm）。它不公开任何公共过程，
+也不公开任何公共属性。所有行为均通过控件事件处理程序和
+私有辅助过程表达。
+
+7.1   控件（契约性标识符）
+
+      txtSeq          TextBox        输入序列字符串。
+      txtTerm         TextBox        FS 项 [n]。
+      cboNotation     ComboBox       记法选择器；Style
+                                     应为 2（Dropdown List）。
+      cmdFS           CommandButton  "移除最后一项"。
+      cmdFSalter      CommandButton  "保留最后一项"。
+      txtDef          TextBox        定义显示；应为
+                                     只读、多行，带
+                                     垂直滚动条。
+      mnuFile         Menu           父菜单。
+      mnuExit         Menu           子菜单。
+      mnuDef          Menu           父菜单。
+      mnuDefShow      Menu           子菜单。
+      mnuSep1         Menu           分隔符。
+      mnuEntryDemo    Menu           子菜单。
+      mnuHelp         Menu           父菜单。
+      mnuHelpHelp     Menu           子菜单。
+      mnuHelpAbout    Menu           子菜单。
+      mnuHelpLegal    Menu           子菜单。
+
+      实现方只有在窗体代码中所有引用均一致更新的情况下，
+      方可重命名这些标识符。
+
+7.2   事件处理程序义务
+
+      Form_Load
+          应为 [0, NotationCount) 中的每个 i 用 NotationName(i)
+          填充 cboNotation。
+          应选择索引 0。
+          应调用 ShowDefinition 0。
+
+      cboNotation_Click
+          应使用 cboNotation.ListIndex 调用 ShowDefinition。
+
+      cmdFS_Click
+          应调用 DoExpand True。
+
+      cmdFSalter_Click
+          应调用 DoExpand False。
+
+      mnuExit_Click
+          应调用 Unload Me。
+
+      mnuDefShow_Click
+          应使用 cboNotation.ListIndex 调用 ShowDefinition。
+
+      mnuEntryDemo_Click
+          应调用 ShowEntryDemo。
+
+      mnuHelpHelp_Click
+      mnuHelpAbout_Click
+      mnuHelpLegal_Click
+          应呈现相应的信息性 MsgBox。
+          文本内容非规范性。
+
+7.3   展开流水线（DoExpand）
+
+      过程 DoExpand(ByVal removeLast As Boolean) 应按顺序执行
+      以下步骤。
+
+          (a) 读取 idx = cboNotation.ListIndex。如果 idx < 0，
+              设置 idx = 0。
+
+          (b) 如果 NotationHasTextExpand(idx) 为 True：
+
+                (i)  通过 TryParseTerm 验证 txtTerm。如果
+                     验证失败，中止。
+                (ii) 如果 txtSeq.Text 为空，呈现 MsgBox
+                     "序列不能为空"，使用 vbCritical 并中止。
+                (iii) 调用 DispatchExpandText(idx,
+                     txtSeq.Text, term)。
+                (iv) 如果 removeLast 为 True，对结果应用
+                     Mrss121Notation.RemoveLast。
+
+          (c) 否则：
+
+                (i)  调用 ReadSeqAndTerm。如果验证失败，中止。
+                (ii) 调用 DispatchExpand(idx, seq, term)。
+                (iii) 如果 removeLast 为 True 且结果包含
+                     多于一个元素，丢弃最后一个元素。
+
+          (d) 将 DispatchSuffix(idx) 追加到结果。
+
+          (e) 通过 MsgBox 呈现结果，标题为
+              "展开结果"，图标为 vbInformation。
+
+7.4   验证消息
+
+      以下消息应使用 vbCritical 图标和标题 "错误" 呈现：
+
+          "项数必须是整数"       项数字段为空或非数字。
+          "项数必须为正整数"     项数 < 1。
+          "序列不能为空"         序列字段为空或解析为
+                                 零个词元。
+
+      这些字符串应被视为维护用的标识符；更改它们构成
+      可观察的接口变更。
+
+
+----------------------------------------------------------------
+第 8 节. 构建与编码要求
+----------------------------------------------------------------
+
+8.1   源文件应保存为带字节顺序标记（BOM）的 UTF-8，
+      或保存为能表示文件中出现的每个非 ASCII 字面量的
+      代码页 ANSI。
+
+8.2   无法保证 8.1 的实现方应通过 ChrW 及相应的码点
+      来表达非 ASCII 字面量。
+
+8.3   项目应声明启动对象为 Startup.bas 中的 Sub Main
+      或 frmMain。两种配置均被允许。
+
+8.4   项目不得要求除 msvbvm60.dll 以外的任何引用。
+      使用任何 OCX 或外部 DLL 构成对本规范的偏离，
+      并应在实现方自己的材料中记录。
+
+8.5   当定义窗格需要超出本机 TextBox 能力的丰富格式时，
+      实现方可以用 RichTextBox 控件替代。此类替代应限于
+      frmMain，且不得影响第 1 至第 6 节。
+
+
+----------------------------------------------------------------
+第 9 节. 已知限制
+----------------------------------------------------------------
+
+9.1   VB6 中不提供函数指针。因此第 6 节定义的调度机制
+      依赖 Select Case，并在添加记法时需要编辑多个位置。
+
+9.2   ykey 字段最多携带 53 位整数精度。不保证两个不同的
+      序列产生不同的键。
+
+9.3   空数组表示为未初始化的动态数组。每个消费本文档所述
+      过程返回的数组的调用点均应对 UBound 进行错误处理保护。
+
+9.4   Entry 对象之间的引用循环不会被 VB6 收集。Arena 对象的
+      所有者应在需要在进程终止前释放底层节点时调用 Clear。
+
+9.5   通过 Format$ 显示数值的格式，对于超出双精度整数范围的
+      值，不能复现 C++ 原版的精确文本输出。
+
+
+----------------------------------------------------------------
+第 10 节. 版本管理
+----------------------------------------------------------------
+
+10.1  任何添加、移除或改变第 2 至第 6 节所述过程语义的更改
+      应递增本规范的次版本号。
+
+10.2  任何对 6.9 中注册表索引分配的更改应递增主版本号。
+
+10.3  本文档本身不授予任何许可证。使用条款请参阅分发版的
+      Unlicense 声明。
