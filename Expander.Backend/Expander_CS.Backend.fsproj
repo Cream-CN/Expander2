@@ -8,8 +8,8 @@
 		<Product>Googology Expander</Product>
 		<Copyright>Copyright © 2026 Cream-CN</Copyright>
 		<Description>Expander 后端类库</Description>
-		<AssemblyVersion>1.0.0.4</AssemblyVersion>
-		<FileVersion>1.0.0.4</FileVersion>
+		<AssemblyVersion>1.1.0.0</AssemblyVersion>
+		<FileVersion>1.1.0.0</FileVersion>
 		<InformationalVersion>1.0.0</InformationalVersion>
 		<SatelliteResourceLanguages>en;zh-Hans</SatelliteResourceLanguages>
 	</PropertyGroup>
