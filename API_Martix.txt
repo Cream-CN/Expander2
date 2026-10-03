@@ -1,0 +1,321 @@
+====================================================================
+文件：Matrix.hpp
+命名空间：omegay::common
+功能：整数矩阵（列主序）+ BMS 字符串的解析与序列化
+====================================================================
+
+一、概述
+
+本头文件提供 omegay::common::Matrix 类，用于以列主序存放整数矩阵，
+并配套提供与 Bashicu 矩阵系统（BMS）文本形式互转的两个函数：
+
+    parse_matrix(std::string_view, long& term)
+    matrix_to_string(const Matrix&, long term)
+
+Matrix 的行数在构造时固定、列数可动态增长，正好对应 BMS 中"行数由
+初始序列决定、列数随展开增长"的语义。所有接口均为 header-only、
+不引入额外依赖，C++17 即可编译。
+
+本文件只依赖 <algorithm> <cctype> <cstddef> <stdexcept> <string>
+<string_view> <vector>，不依赖 notation 层、不包含 <windows.h>。
+
+
+====================================================================
+二、类 Matrix
+====================================================================
+
+二.1 构造
+
+声明：
+    Matrix();
+    Matrix(int rows, int cols);
+
+功能：
+    默认构造产生 0×0 空矩阵。
+    带参构造产生 rows × cols 的矩阵，所有元素初始化为 0。
+
+参数：
+    rows —— 行数，必须 >= 0。
+    cols —— 列数，必须 >= 0。
+
+异常：
+    rows 或 cols 为负时抛出 std::invalid_argument。
+
+调用示例：
+    omegay::common::Matrix m0;             // 0×0
+    omegay::common::Matrix m1(2, 3);       // 2 行 3 列，全 0
+
+注意：
+    本类不提供行列互换、转置等几何操作；BMS 只按列操作，故仅保留
+    列主序所需的接口。
+
+
+二.2 维度查询
+
+声明：
+    int  rows() const noexcept;
+    int  cols() const noexcept;
+    bool empty() const noexcept;
+
+功能：
+    rows()  返回行数。
+    cols()  返回列数。
+    empty() 当 rows()==0 或 cols()==0 时为 true。
+
+调用示例：
+    if (m.empty()) { /* ... */ }
+
+
+二.3 元素访问
+
+声明：
+    int&       operator()(int r, int c)       noexcept;
+    int        operator()(int r, int c) const noexcept;
+
+    int*       col(int c)       noexcept;
+    const int* col(int c) const noexcept;
+
+    const std::vector<int>& raw() const noexcept;
+    std::vector<int>&       raw()       noexcept;
+
+功能：
+    operator()(r, c)  访问第 r 行第 c 列的元素，r 从 0 起，c 从 0 起。
+    col(c)            返回指向第 c 列首元素的指针，长度为 rows()。
+    raw()             返回底层列主序存储的 vector<int>。
+
+行为说明：
+    operator() 不做边界检查；调用方保证 0 <= r < rows()、0 <= c < cols()。
+    col(c) 同样不做边界检查。
+
+列主序约定：
+    元素 (r, c) 位于 raw()[c * rows() + r]。
+    col(c)[r] 等价于 operator()(r, c)。
+
+调用示例：
+    omegay::common::Matrix m(3, 2);
+    m(0, 0) = 5;
+    m(2, 1) = 7;
+    int* p = m.col(1);        // p[2] == 7
+    const auto& v = m.raw();  // v.size() == 6
+
+
+二.4 列数调整
+
+声明：
+    void resize_cols(int new_cols);
+    void push_col(const int* values);
+
+功能：
+    resize_cols  修改列数。已有列保持不变；新增的列以 0 填充；
+                 删除的列直接丢弃。
+    push_col     在末尾追加一列，列内容从 values 拷贝 rows() 个 int。
+
+参数：
+    new_cols —— 新列数，必须 >= 0。
+    values   —— 指向至少 rows() 个 int 的缓冲区。
+
+异常：
+    new_cols 为负时抛出 std::invalid_argument。
+
+行为说明：
+    resize_cols 不会改变行数。
+    resize_cols 不保证保留指向旧列的指针或引用。
+    push_col 等价于 resize_cols(cols()+1) 后写入最后一列，
+    但只需一次扩容，效率更高。
+
+调用示例：
+    omegay::common::Matrix m(2, 1);
+    m(0, 0) = 1; m(1, 0) = 2;
+    int newcol[2] = {3, 4};
+    m.push_col(newcol);       // 现在 2×2
+    m.resize_cols(0);         // 清空所有列
+
+
+二.5 比较
+
+声明：
+    bool operator==(const Matrix&) const noexcept;
+    bool operator!=(const Matrix&) const noexcept;
+
+功能：
+    逐元素比较两个矩阵，行数、列数、元素全部相等才返回 true。
+
+注意：
+    本比较是"结构相等"，与 BMS 的序数大小比较无关。
+    BMS 的大小比较请用 notation::BMSFamilyNotation::compare。
+
+
+二.6 典型使用场景
+
+    - 表示 BMS 的序列 S：S(r, c) 为第 c 列第 r 行的值。
+    - 在记号模块内部作为中间结果容器，通过 resize_cols 增长。
+    - 把结果通过 matrix_to_string 交给 UI 显示。
+
+调用示例：
+    omegay::common::Matrix S(2, 3);
+    S(0, 0) = 0; S(1, 0) = 0;
+    S(0, 1) = 1; S(1, 1) = 1;
+    S(0, 2) = 2; S(1, 2) = 2;
+    // 等价于 BMS 文本 "(0,0)(1,1)(2,2)"
+
+
+====================================================================
+三、自由函数
+====================================================================
+
+三.1 parse_matrix
+
+声明：
+    omegay::common::Matrix
+    parse_matrix(std::string_view s, long& term);
+
+功能：
+    把 BMS 文本解析为矩阵。
+
+输入：
+    s    —— BMS 文本视图，形如 "(0,0)(1,1)[3]"。
+            允许在列之间、逗号之间出现空白字符（空格、制表、换行）。
+    term —— 引用参数；若文本中包含 "[n]"，则把 n 写入 term；
+            否则 term 保持原值不变。
+
+输出：
+    返回解析得到的 Matrix。
+    若无法解析出至少一列，返回 0×0 空矩阵。
+
+行为说明：
+
+    行数确定：
+        扫描第一遍，取所有 '(' 与 ')' 之间逗号数的最大值 + 1，
+        作为行数 nr。若没有任何列，返回空矩阵。
+
+    列解析：
+        逐字符扫描。'(' 开始新的一列；',' 行号加一；')' 结束
+        当前列并按 nr 行填充（不足行以 0 补齐，超过行则忽略）。
+
+    数字：
+        连续数字字符按十进制解析为整数；'-' 作为负号处理。
+        '[' 之后到 ']' 之前的连续数字写入 term。
+
+    容错：
+        非数字、非结构字符被忽略。
+        行数超过内部缓冲（64）的部分被忽略，避免越界。
+
+注意：
+
+    本函数不做 BMS 合法性检查，也不做标准形式检查。
+    非法输入不抛异常，尽量返回能解析出的部分。
+    重复出现的 "[n]" 只取第一次出现的值。
+
+调用示例：
+    long t = 2;
+    auto m1 = omegay::common::parse_matrix("(0,0)(1,1)[3]", t);
+    // m1 为 2×2，t == 3
+
+    long t2 = 2;
+    auto m2 = omegay::common::parse_matrix("(0,0)(1,1)", t2);
+    // m2 为 2×2，t2 保持 2
+
+    auto m3 = omegay::common::parse_matrix("", t2);
+    // m3 为空矩阵
+
+
+三.2 matrix_to_string
+
+声明：
+    std::string
+    matrix_to_string(const omegay::common::Matrix& m, long term = 0);
+
+功能：
+    把矩阵序列化为 BMS 文本。
+
+输入：
+    m    —— 待序列化的矩阵。
+    term —— 若 > 0，在末尾追加 "[term]"；否则不追加。
+
+输出：
+    返回 std::string。
+
+行为说明：
+
+    按列遍历，每列输出 "(v0,v1,...,v_{rows-1})"。
+    列之间无空格、无分隔符。
+    空矩阵返回空字符串 ""。
+    term 固定以十进制输出，不带前导零。
+
+调用示例：
+    omegay::common::Matrix m(2, 2);
+    m(0, 0) = 0; m(1, 0) = 0;
+    m(0, 1) = 1; m(1, 1) = 1;
+    auto s1 = omegay::common::matrix_to_string(m);
+    // s1 == "(0,0)(1,1)"
+    auto s2 = omegay::common::matrix_to_string(m, 3);
+    // s2 == "(0,0)(1,1)[3]"
+    auto s3 = omegay::common::matrix_to_string(omegay::common::Matrix{});
+    // s3 == ""
+
+
+====================================================================
+四、往返一致性
+====================================================================
+
+对任何由 parse_matrix 解析得到的矩阵 m 和 term t，
+若原始文本 s 不含非法字符、且列数不超过行数确定的范围，则：
+
+    matrix_to_string(m, t) 与 s 在语义上一致
+    （空白与列间多余字符被规范化，其余结构相同）
+
+解析空串或纯空白串得到 0×0 矩阵，
+matrix_to_string 对其返回空字符串 ""。
+
+
+====================================================================
+五、与 BMSFamilyNotation 的配合
+====================================================================
+
+本头文件只负责"矩阵 + 文本"，不涉及任何 BMS 数学语义。
+BMS 的展开、标准形式判定、序数分析由
+omegay::notation::BMSFamilyNotation 提供。
+
+典型流程：
+
+    long term = 2;
+    auto m = omegay::common::parse_matrix(input, term);
+    if (!omegay::notation::BMSFamilyNotation::is_standard(m))
+        return show_error("not standard");
+    auto r = omegay::notation::BMSFamilyNotation::expand(m, (int)term);
+    auto out = omegay::common::matrix_to_string(r);
+    // out 即为展开结果文本
+
+
+====================================================================
+六、头文件依赖
+====================================================================
+
+    <algorithm> <cctype> <cstddef> <stdexcept>
+    <string> <string_view> <vector>
+
+需要 C++17 或以上。
+不依赖 <windows.h>、不依赖 notation 层、不依赖其他项目头文件。
+
+
+====================================================================
+七、线程安全
+====================================================================
+
+本头文件提供的函数不修改全局状态。
+对同一个 Matrix 对象的并发读写需要外部同步；
+对不同 Matrix 对象的并发访问是安全的。
+
+
+====================================================================
+八、已知限制
+====================================================================
+
+1. parse_matrix 单列最多支持 64 行；超过部分被静默忽略。
+   如需更多行，需修改内部缓冲并同步更新本文件。
+2. parse_matrix 不做 BMS 合法性校验，非法输入可能产生
+   结构不完整但可表示的矩阵；调用方应自行判定标准形式。
+3. Matrix 不提供转置、切片等操作；BMS 只按列操作，
+   故未提供。若未来需要，应以新函数形式加入，不修改现有
+   签名，以免破坏调用点。
+4. term 以 long 传递，超出 long 范围的大数不受支持。

@@ -152,11 +152,13 @@
   <ItemGroup>
     <ClInclude Include="Expander.h" />
     <ClInclude Include="framework.h" />
+    <ClInclude Include="Header\common\Matrix.hpp" />
     <ClInclude Include="Header\common\mrssshare.hpp" />
     <ClInclude Include="Header\common\sequence.hpp" />
     <ClInclude Include="Header\common\utf8.hpp" />
     <ClInclude Include="Header\core\arena.hpp" />
     <ClInclude Include="Header\core\entry.hpp" />
+    <ClInclude Include="Header\notation\BMSFamily.hpp" />
     <ClInclude Include="Header\notation\empty.hpp" />
     <ClInclude Include="Header\notation\epsilon-y.hpp" />
     <ClInclude Include="Header\notation\MrSS121.hpp" />
