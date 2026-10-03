@@ -69,6 +69,9 @@
     <ClInclude Include="Header\notation\BMSFamily.hpp">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="Header\notation\upms.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Expander.cpp">
