@@ -11,10 +11,6 @@
 #include "Header/common/Matrix.hpp"
 
 namespace omegay::notation {
-
-    // =========================================================================
-    // detail 必须放在 BMSFamilyNotation 之前，否则会出现 C2653
-    // =========================================================================
     namespace detail {
 
         using common::Matrix;

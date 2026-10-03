@@ -5,6 +5,7 @@
 
 #include "Header/common/utf8.hpp"
 #include "Header/common/sequence.hpp"
+#include "Header/common/Matrix.hpp"                 // [BMS] parse_matrix / matrix_to_string
 #include "Header/core/arena.hpp"
 #include "Header/core/entry.hpp"
 #include "Header/notation/empty.hpp"
@@ -13,7 +14,7 @@
 #include "Header/notation/mrss121.hpp"
 #include "Header/notation/omega_y.hpp"
 #include "Header/notation/epsilon-y.hpp"
-//#include "Header/notation/BMSFamily.hpp"
+#include "Header/notation/BMSFamily.hpp"            // [BMS] BMSFamilyNotation
 #include <memory>
 #include <string>
 #include <vector>
@@ -24,6 +25,9 @@ using namespace omegay::common;
 using namespace omegay::notation;
 
 namespace {
+    // [BMS] 版本枚举别名，缩短调用写法
+    using Bms = omegay::notation::BMSFamilyNotation;
+
     constexpr int IDM_ABOUT = 1001;
     constexpr int IDM_EXIT = 1002;
     constexpr int IDM_HELP = 1003;
@@ -37,6 +41,7 @@ namespace {
     constexpr wchar_t kDefWindowClass[] = L"OmegaYDefPopup";
     constexpr int IDC_POPUP_DEF_EDIT = 5001;
     constexpr int IDC_POPUP_DEF_CLOSE = 5002;
+
     struct NotationEntry {
         const wchar_t* display_name;
         const char* id;
@@ -48,6 +53,54 @@ namespace {
         // 签名约定：std::string expand_string(std::string_view, int)
         std::string(*expand_text)(std::string_view, int) = nullptr;
     };
+
+    // [BMS] 通用实现：版本号作为参数。
+    // 所有数学判断（is_standard / expand）都在 notation 层完成，
+    // UI 层只做 common 层的文本/矩阵搬运，符合 CONTRIBUTING 的边界规则。
+    std::string bmsExpandTextWith(
+        Bms::Version ver, std::string_view text, int term)
+    {
+        long parsedTerm = term;                 // parse_matrix 需要 long&
+        omegay::common::Matrix m =
+            omegay::common::parse_matrix(text, parsedTerm);
+
+        if (m.empty())
+            return "（无法解析出任何列，请检查 BMS 文本格式）";
+
+        if (!omegay::notation::BMSFamilyNotation::is_standard(m, ver))
+            return "（非标准形式，BMS 拒绝展开）";
+
+        const int t = parsedTerm < 1 ? 1 : static_cast<int>(parsedTerm);
+
+        auto result = omegay::notation::BMSFamilyNotation::expand(m, t, ver);
+
+        // 结果不带 [n]：[] 是输入语法，不是结果语法
+        return omegay::common::matrix_to_string(result);
+    }
+
+    // [BMS] 每个版本一个转发函数，函数地址唯一，供 NotationEntry::expand_text 使用
+    std::string bmsExpandV1(std::string_view t, int n) { return bmsExpandTextWith(Bms::Version::V1, t, n); }
+    std::string bmsExpandV2(std::string_view t, int n) { return bmsExpandTextWith(Bms::Version::V2, t, n); }
+    std::string bmsExpandV21(std::string_view t, int n) { return bmsExpandTextWith(Bms::Version::V21, t, n); }
+    std::string bmsExpandV22(std::string_view t, int n) { return bmsExpandTextWith(Bms::Version::V22, t, n); }
+    std::string bmsExpandV23(std::string_view t, int n) { return bmsExpandTextWith(Bms::Version::V23, t, n); }
+    std::string bmsExpandV3(std::string_view t, int n) { return bmsExpandTextWith(Bms::Version::V3, t, n); }
+    std::string bmsExpandV31(std::string_view t, int n) { return bmsExpandTextWith(Bms::Version::V31, t, n); }
+    std::string bmsExpandV32(std::string_view t, int n) { return bmsExpandTextWith(Bms::Version::V32, t, n); }
+    std::string bmsExpandV33(std::string_view t, int n) { return bmsExpandTextWith(Bms::Version::V33, t, n); }
+    std::string bmsExpandV4(std::string_view t, int n) { return bmsExpandTextWith(Bms::Version::V4, t, n); }
+    inline bool isBmsTextEntry(const NotationEntry& e) {
+        return e.expand_text == &bmsExpandV1
+            || e.expand_text == &bmsExpandV2
+            || e.expand_text == &bmsExpandV21
+            || e.expand_text == &bmsExpandV22
+            || e.expand_text == &bmsExpandV23
+            || e.expand_text == &bmsExpandV3
+            || e.expand_text == &bmsExpandV31
+            || e.expand_text == &bmsExpandV32
+            || e.expand_text == &bmsExpandV33
+            || e.expand_text == &bmsExpandV4;
+    }
 
     [[nodiscard]] const std::vector<NotationEntry>& notationTable() {
         static const std::vector<NotationEntry> table = {
@@ -84,20 +137,75 @@ namespace {
             { L"MrSS1.2.1", "mrss121", &notation::Mrss121Notation::expand, &notation::Mrss121Notation::suffix,
               L"MrSS1.2.1（山脉结构序列）\n\n本版本只利用 1 层山脉结构。\n合法表达式形如 S = a1, a2, a3, ...，其中 a1 = 1，\nan 为 MrSS 表达式或有限非零序数。\n\n支持嵌套写法，例如：\n  1,(1,2),(1,2,3)", &notation::Mrss121Notation::expand_string },
 
-            { L"ω-Y sequence", "omega-y-sequence", &notation::OmegaYNotation::expand, &notation::OmegaYNotation::suffix,
-                L"ω-Y sequence\n\nω-Y sequence\n\n一个 ω − Y 序列是形如 ω − Y(a1, a2, . . . , an) 的序列。\nω − Y 序列山脉图的绘制方法如下：\n(1) 为每一行赋予一个行标，原序列的行标为 0。\n(2) 第 0 行中元素的父项为从该元素起，在该元素左边且小于该元素的第一个项。\n(3) 元素所对应的阶差项为该元素与其父项的差值，所有元素的阶差项构成阶差序列。特别地，如果某一项\n不存在父项，则其阶差项为空。\n(4) 各阶阶差序列中某元素的父项定义为阶差序列中第一个在它左边、小于它，并且其正下方的项是该元素正下方元素祖先项的项。\n(5) 逐阶计算阶差序列，直到某一阶阶差序列的所有项均为空为止。\n(6) 将各阶阶差序列从下到上写在原序列对应元素的正上方，并将各阶阶差序列中的每一项与其所对应的正 \n下方的项以及正下方项的父项相连。特别地，如果某一项不存在父项，则不将该项与其他项相连。连接阶差项与 \n其正下方元素的线称为右腿，而连接阶差项与其左下方的父项的连线称为左腿。每计算一次阶差序列，则其行 \n标增加 1。这样可以得到山脉图的前 n 行。\n(7) 对于山脉图某列顶端的元素来说，元素的父项关系为：从一个顶端元素出发，如果沿着它的左腿向下一步，再沿着右腿向正上方走到不超过 A 的行标（如果无路可走则不走），不断地重复这一过程，直到达到了另一个顶端元素。接下来从新得到的顶端元素出发重复上述操作，又得到另一个顶端元素。这样得到的所有顶端元 \n素，称为该元素的待定父项。\n(8) 每作一条分隔线之前，都要检查山脉图全部列的元素是否全为 1。如果不是的话，就从最低阶的分隔线开始作起，然后找到该条分隔线与其下方最近的同阶分隔线的山脉图（如果不包含其他的同阶分隔线，则考虑 全部的山脉图），对这些山脉图中包含的所有列的顶端元素计算阶差序列。如果这样的阶差序列不能够计算的话，就提高分隔线的阶次，重复计算阶差序列，直到能够计算阶差序列为止。每穿过一条 n 阶分隔线，则行标右加 ω^n。\n(9) 对新的山脉图不断重复上述操作，直到山脉图中所有的顶端项全为 1，则山脉图绘制结束。ω − Y 序列 的山脉图的行标总小于 ω^ω。\n在 ω − Y 序列的山脉图中定义如下概念：\n(1) 末列最上方的 1 左腿所指的元素称为根元素。\n(2) 根元素所在列称为根列。\n(3) 根列包含的所有元素称为根列元素。\n(4) 根列元素的作用区域为从这一根列元素出发（包含这一列），到在它正上方的根列元素（包含这一列，如果没有的话就到山脉图的顶端）之间的部分。如果某个根列元素的行标为 α，在它正上方的根列元素的行标为 β，那么它的作用范围为所有行标 γ 满足 α ≤ γ < β 的行。\n(5) 第 α 行和第 β 行 (α ≤ β) 的行差为满足 α + δ = β 的序数 δ 。\n(6) 轮廓边定义为：从一个根列元素出发，沿左腿向上一步（但不能超出这个根列元素的作用区域）之后， 沿右腿向下若干步（可以不向下，但同样不能超出这个根列元素的作用区域），随后重复这个过程直到无路可走。 能通过这样的操作经过的边，都是这个根列元素对应的（或者这个作用区域内的）轮廓边。\n(7) 非轮廓边定义为：经过了某个作用区域，但不符合这个作用区域内轮廓边的概念的边，称为这个作用区 域内的非轮廓边。\n\n(8) 填充边定义为：从一个根列元素出发，沿左腿向上走一行后，沿右腿向下走一行，随后重复这个过程直到无路可走。能通过这样的操作经过的边，称为这个根列元素对应的填充边。\nω − Y 序列山脉图的展开方法如下：\n(1) 将末列的各项减一。如果最上方的元素被减为零，则删去它相关的左腿和右腿。\n\n(2) 从最上方的根列元素开始，找到其作用区域。\n\n(3) 在这一根列元素作用区域内找到所有的轮廓边，并将轮廓边的端点及其所指的元素向右上方进行复制。 \n具体地，向右平移（末列位置 − 根列位置）的列数，然后向上平移至满足以下条件的位置：若平移前端点所指的元素与根列元素行差为 δ0 ，那么平移后对应端点所指的元素与末列最上方的元素行差也要为 δ0 。像这样，至所有的轮廊边和它们所指的元素都被复制到了新的位置上。\n\n(4) 如果末列最上方元素与根列元素的行差为 0，则在这一根列元素作用区域内找到所有的填充边，然后将它不断复制，并填补到轮廓边提升所产生的所有缝隙之中。特别地，当填充边被复制到跨过了 n 阶分隔线的位置上时，其左腿和右腿的行差需要为 ω^n−1 。\n(5) 在这一根列元素作用区域内找到所有的非轮廓边，并对这些边进行复制。非轮廓边左腿指向的元素都保持不动，而右腿向右或右上平移，向右平移的列数为（末列位置 − 根列位置）。如果这条非轮廓边右腿所指元素没有被这个作用区域内的轮廊边所指到，那么无需向上平移；如果有，那么向上平移到与末列最上方元素行差为 δ0 的位置，其中 δ0 为平移之前该元素与根列元素的行差。\n(6) 自上而下不断地对各个根列元素所对应的山脉图重复 (3) − (5) 的操作，直到山脉图的所有部分都完成复制。\n\n(7) 按照从上到下、从左到右的顺序将山脉图中的各个元素计算出来。如果该元素不是山脉图某一部分的顶端元素，则其取值等于该元素正上方的元素与其父项之和。\nω − Y 序列的取值定义如下： \n(1) ω − Y(∅) = 0。\n(2) 如果原序列的末项为 1，则它对应的序数为删去末尾的 1 之后余下的部分所对应的序数加 1。\n(3) 否则按照前述山脉图的展开方式对序列进行展开，展开后山脉图最下方的序列就是展开后的 ω − Y 序列。" },
-                { L"ε-Y", "epsilon-y", &notation::EpsilonYNotation::expand, &notation::EpsilonYNotation::suffix,
-                  L"ε-Y（1-Y）\n\nε-Y 即 1-Y 记号，等价于维度序列为 {1} 的 ω-Y 变体。\n"
-                  L"\n"
-                  L"极限表达式：\n"
-                  L"  1,2,3,4,5,...\n"
-                  L"\n"
-                  L"展开规则（1-Y / 维度 1）：\n"
-                  L"  与 ω-Y 的山脉图机制相同，但所有阶差分量的维度固定为 1。\n"
-                  L"  对末列最上方的 1 求根元素，将其作用区域内的轮廓边、填充边、\n"
-                  L"  非轮廓边按 ω-Y 的规则复制，再自上而下计算各元素取值。\n"
-                  L"  由于维度被限制为 1，展开不会引入新的高阶分量，\n"
-                  L"  因此 ε-Y 强于 0-Y，是 1-Y 的标准实现。" },
+              // [BMS] 每个版本一条独立记号：expand 置 nullptr，走 expand_text 文本入口
+              { L"BMS v1.0", "bms-v1",
+                nullptr, &notation::BMSFamilyNotation::suffix,
+                L"BMS v1.0（Bashicu Matrix System, Version 1）\n\n"
+                L"输入格式：BMS 文本，如 (0,0)(1,1)(2,2) 或 (0,0)(1,1)[3]。\n"
+                L"若文本含 [n]，则以 [n] 为准；否则用\"项数\"输入框。\n"
+                L"非标准形式会被拒绝展开。\"移除末项\"= 删除最后一列。",
+                &bmsExpandV1 },
+
+              { L"BMS v2.0", "bms-v2",
+                nullptr, &notation::BMSFamilyNotation::suffix,
+                L"BMS v2.0（Version 2.0）\n\n输入格式同 v1.0。",
+                &bmsExpandV2 },
+
+              { L"BMS v2.1", "bms-v21",
+                nullptr, &notation::BMSFamilyNotation::suffix,
+                L"BMS v2.1（Version 2.1）\n\n输入格式同 v1.0。",
+                &bmsExpandV21 },
+
+              { L"BMS v2.2", "bms-v22",
+                nullptr, &notation::BMSFamilyNotation::suffix,
+                L"BMS v2.2（Version 2.2）\n\n输入格式同 v1.0。",
+                &bmsExpandV22 },
+
+              { L"BMS v2.3", "bms-v23",
+                nullptr, &notation::BMSFamilyNotation::suffix,
+                L"BMS v2.3（Version 2.3）\n\n输入格式同 v1.0。",
+                &bmsExpandV23 },
+
+              { L"BMS v3.0", "bms-v3",
+                nullptr, &notation::BMSFamilyNotation::suffix,
+                L"BMS v3.0（Version 3.0）\n\n输入格式同 v1.0。",
+                &bmsExpandV3 },
+
+              { L"BMS v3.1", "bms-v31",
+                nullptr, &notation::BMSFamilyNotation::suffix,
+                L"BMS v3.1（Version 3.1）\n\n输入格式同 v1.0。",
+                &bmsExpandV31 },
+
+              { L"BMS v3.2", "bms-v32",
+                nullptr, &notation::BMSFamilyNotation::suffix,
+                L"BMS v3.2（Version 3.2）\n\n输入格式同 v1.0。",
+                &bmsExpandV32 },
+
+              { L"BMS v3.3", "bms-v33",
+                nullptr, &notation::BMSFamilyNotation::suffix,
+                L"BMS v3.3（Version 3.3）\n\n输入格式同 v1.0。",
+                &bmsExpandV33 },
+
+              { L"BMS v4.0", "bms-v4",
+                nullptr, &notation::BMSFamilyNotation::suffix,
+                L"BMS v4.0（Version 4.0，当前默认）\n\n输入格式同 v1.0。",
+                &bmsExpandV4 },
+
+              { L"ω-Y sequence", "omega-y-sequence", &notation::OmegaYNotation::expand, &notation::OmegaYNotation::suffix,
+                  L"ω-Y sequence\n\nω-Y sequence\n\n一个 ω − Y 序列是形如 ω − Y(a1, a2, . . . , an) 的序列。\nω − Y 序列山脉图的绘制方法如下：\n(1) 为每一行赋予一个行标，原序列的行标为 0。\n(2) 第 0 行中元素的父项为从该元素起，在该元素左边且小于该元素的第一个项。\n(3) 元素所对应的阶差项为该元素与其父项的差值，所有元素的阶差项构成阶差序列。特别地，如果某一项\n不存在父项，则其阶差项为空。\n(4) 各阶阶差序列中某元素的父项定义为阶差序列中第一个在它左边、小于它，并且其正下方的项是该元素正下方元素祖先项的项。\n(5) 逐阶计算阶差序列，直到某一阶阶差序列的所有项均为空为止。\n(6) 将各阶阶差序列从下到上写在原序列对应元素的正上方，并将各阶阶差序列中的每一项与其所对应的正 \n下方的项以及正下方项的父项相连。特别地，如果某一项不存在父项，则不将该项与其他项相连。连接阶差项与 \n其正下方元素的线称为右腿，而连接阶差项与其左下方的父项的连线称为左腿。每计算一次阶差序列，则其行 \n标增加 1。这样可以得到山脉图的前 n 行。\n(7) 对于山脉图某列顶端的元素来说，元素的父项关系为：从一个顶端元素出发，如果沿着它的左腿向下一步，再沿着右腿向正上方走到不超过 A 的行标（如果无路可走则不走），不断地重复这一过程，直到达到了另一个顶端元素。接下来从新得到的顶端元素出发重复上述操作，又得到另一个顶端元素。这样得到的所有顶端元 \n素，称为该元素的待定父项。\n(8) 每作一条分隔线之前，都要检查山脉图全部列的元素是否全为 1。如果不是的话，就从最低阶的分隔线开始作起，然后找到该条分隔线与其下方最近的同阶分隔线的山脉图（如果不包含其他的同阶分隔线，则考虑 全部的山脉图），对这些山脉图中包含的所有列的顶端元素计算阶差序列。如果这样的阶差序列不能够计算的话，就提高分隔线的阶次，重复计算阶差序列，直到能够计算阶差序列为止。每穿过一条 n 阶分隔线，则行标右加 ω^n。\n(9) 对新的山脉图不断重复上述操作，直到山脉图中所有的顶端项全为 1，则山脉图绘制结束。ω − Y 序列 的山脉图的行标总小于 ω^ω。\n在 ω − Y 序列的山脉图中定义如下概念：\n(1) 末列最上方的 1 左腿所指的元素称为根元素。\n(2) 根元素所在列称为根列。\n(3) 根列包含的所有元素称为根列元素。\n(4) 根列元素的作用区域为从这一根列元素出发（包含这一列），到在它正上方的根列元素（包含这一列，如果没有的话就到山脉图的顶端）之间的部分。如果某个根列元素的行标为 α，在它正上方的根列元素的行标为 β，那么它的作用范围为所有行标 γ 满足 α ≤ γ < β 的行。\n(5) 第 α 行和第 β 行 (α ≤ β) 的行差为满足 α + δ = β 的序数 δ 。\n(6) 轮廓边定义为：从一个根列元素出发，沿左腿向上一步（但不能超出这个根列元素的作用区域）之后， 沿右腿向下若干步（可以不向下，但同样不能超出这个根列元素的作用区域），随后重复这个过程直到无路可走。 能通过这样的操作经过的边，都是这个根列元素对应的（或者这个作用区域内的）轮廓边。\n(7) 非轮廓边定义为：经过了某个作用区域，但不符合这个作用区域内轮廓边的概念的边，称为这个作用区 域内的非轮廓边。\n\n(8) 填充边定义为：从一个根列元素出发，沿左腿向上走一行后，沿右腿向下走一行，随后重复这个过程直到无路可走。能通过这样的操作经过的边，称为这个根列元素对应的填充边。\nω − Y 序列山脉图的展开方法如下：\n(1) 将末列的各项减一。如果最上方的元素被减为零，则删去它相关的左腿和右腿。\n\n(2) 从最上方的根列元素开始，找到其作用区域。\n\n(3) 在这一根列元素作用区域内找到所有的轮廓边，并将轮廓边的端点及其所指的元素向右上方进行复制。 \n具体地，向右平移（末列位置 − 根列位置）的列数，然后向上平移至满足以下条件的位置：若平移前端点所指的元素与根列元素行差为 δ0 ，那么平移后对应端点所指的元素与末列最上方的元素行差也要为 δ0 。像这样，至所有的轮廊边和它们所指的元素都被复制到了新的位置上。\n\n(4) 如果末列最上方元素与根列元素的行差为 0，则在这一根列元素作用区域内找到所有的填充边，然后将它不断复制，并填补到轮廓边提升所产生的所有缝隙之中。特别地，当填充边被复制到跨过了 n 阶分隔线的位置上时，其左腿和右腿的行差需要为 ω^n−1 。\n(5) 在这一根列元素作用区域内找到所有的非轮廓边，并对这些边进行复制。非轮廓边左腿指向的元素都保持不动，而右腿向右或右上平移，向右平移的列数为（末列位置 − 根列位置）。如果这条非轮廓边右腿所指元素没有被这个作用区域内的轮廊边所指到，那么无需向上平移；如果有，那么向上平移到与末列最上方元素行差为 δ0 的位置，其中 δ0 为平移之前该元素与根列元素的行差。\n(6) 自上而下不断地对各个根列元素所对应的山脉图重复 (3) − (5) 的操作，直到山脉图的所有部分都完成复制。\n\n(7) 按照从上到下、从左到右的顺序将山脉图中的各个元素计算出来。如果该元素不是山脉图某一部分的顶端元素，则其取值等于该元素正上方的元素与其父项之和。\nω − Y 序列的取值定义如下： \n(1) ω − Y(∅) = 0。\n(2) 如果原序列的末项为 1，则它对应的序数为删去末尾的 1 之后余下的部分所对应的序数加 1。\n(3) 否则按照前述山脉图的展开方式对序列进行展开，展开后山脉图最下方的序列就是展开后的 ω − Y 序列。" },
+
+              { L"ε-Y", "epsilon-y", &notation::EpsilonYNotation::expand, &notation::EpsilonYNotation::suffix,
+                L"ε-Y（1-Y）\n\nε-Y 即 1-Y 记号，等价于维度序列为 {1} 的 ω-Y 变体。\n"
+                L"\n"
+                L"极限表达式：\n"
+                L"  1,2,3,4,5,...\n"
+                L"\n"
+                L"展开规则（1-Y / 维度 1）：\n"
+                L"  与 ω-Y 的山脉图机制相同，但所有阶差分量的维度固定为 1。\n"
+                L"  对末列最上方的 1 求根元素，将其作用区域内的轮廓边、填充边、\n"
+                L"  非轮廓边按 ω-Y 的规则复制，再自上而下计算各元素取值。\n"
+                L"  由于维度被限制为 1，展开不会引入新的高阶分量，\n"
+                L"  因此 ε-Y 强于 0-Y，是 1-Y 的标准实现。" },
         };
         return table;
     }
@@ -604,11 +712,24 @@ namespace {
                     }
 
                     text = entry.expand_text(utf8Seq, term);
+
+                    // [BMS] FS 语义分派：BMS 用"删除最后一列"，MrSS 用原有 pop_back
                     if (id == IDM_FS) {
-                        auto parsed = notation::Mrss121Notation::parse(text);
-                        if (parsed && parsed->size() > 1) {
-                            parsed->pop_back();
-                            text = notation::Mrss121Notation::to_string(*parsed);
+                        if (isBmsTextEntry(entry)) {
+                            long t = term;
+                            omegay::common::Matrix m =
+                                omegay::common::parse_matrix(text, t);
+                            if (m.cols() > 1) {
+                                m.resize_cols(m.cols() - 1);
+                                text = omegay::common::matrix_to_string(m);
+                            }
+                        }
+                        else {
+                            auto parsed = notation::Mrss121Notation::parse(text);
+                            if (parsed && parsed->size() > 1) {
+                                parsed->pop_back();
+                                text = notation::Mrss121Notation::to_string(*parsed);
+                            }
                         }
                     }
                 }
