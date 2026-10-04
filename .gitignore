@@ -363,3 +363,6 @@ MigrationBackup/
 FodyWeavers.xsd
 
 .vscode
+/_ton_check
+/_ton_selfcheck.cpp
+/_ton_selfcheck_cases.txt
