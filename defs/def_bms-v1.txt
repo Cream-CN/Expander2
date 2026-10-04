@@ -1,3 +1,0 @@
-BMS v1.0（Bashicu Matrix System, Version 1）
-
-输入格式：BMS 文本，如 (0,0)(1,1)(2,2) 或 (0,0)(1,1)[3]。
