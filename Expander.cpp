@@ -847,6 +847,7 @@ namespace {
                     L"曹知秋 记号提供给AI的定义使用《大数理论》的原文\n"
                     L"MrSS的定义来自 AAA滚木批发 (QQ3682911373)\n"
                     L"ε-Y的代码修改自Go men的代码"
+                    L"UPMS由test_alpha0定义"
                     L"BMS的代码修改自bmsmat，源仓库由Fish,kotetian,kyodaisuu"
                     L"请注意 代码系利用人工智能技术生成",
                     L"帮助", MB_OK | MB_ICONINFORMATION);
