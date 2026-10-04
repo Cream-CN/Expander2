@@ -17,6 +17,10 @@
 #ifndef IDC_STATIC
 #define IDC_STATIC				-1
 #endif
+
+// 记号定义文本资源 ID（见 Definitions.h，供 Expander.cpp 与 definitions.rc 共用）
+#include "Definitions.h"
+
 // 新对象的下一组默认值
 //
 #ifdef APSTUDIO_INVOKED
