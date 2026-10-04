@@ -1,5 +1,7 @@
 # EXPANDER
 
+# 本分支无限期停止更新。
+
 ## Cream-CN/expander2的一个C#分支，基于.NET10构建
 
 ## 法律提示
