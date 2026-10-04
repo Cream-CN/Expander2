@@ -1,3 +1,4 @@
+//Copyright(c) Cream-CN 2026
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
 #include <windows.h>
@@ -42,6 +43,9 @@ namespace {
     constexpr wchar_t kDefWindowClass[] = L"OmegaYDefPopup";
     constexpr int IDC_POPUP_DEF_EDIT = 5001;
     constexpr int IDC_POPUP_DEF_CLOSE = 5002;
+    constexpr wchar_t kLegalWindowClass[] = L"OmegaYLegal";
+    constexpr int IDC_LEGAL_EDIT = 6001;
+    HWND g_hLegalWindow = nullptr;
 
     struct NotationEntry {
         const wchar_t* display_name;
@@ -394,14 +398,16 @@ namespace {
         ::SendMessageW(ui->hRichDef, EM_SETSEL, 0, 0);
         ::SendMessageW(ui->hRichDef, EM_SCROLLCARET, 0, 0);
     }
-    void applyRichEdit10pt(HWND hRich) {
+    void applyRichEdit10pt(HWND hRich, const wchar_t* face = L"Microsoft YaHei UI") {
         const LONG sizeTwips = 10 * 20;
 
         CHARFORMAT2W cf{};
         cf.cbSize = sizeof(cf);
         cf.dwMask = CFM_SIZE | CFM_FACE;
         cf.yHeight = sizeTwips;
-        wcscpy_s(cf.szFaceName, L"Microsoft YaHei UI");
+        if (face != nullptr && face[0] != L'\0') {
+            wcscpy_s(cf.szFaceName, face);
+        }
 
         ::SendMessageW(hRich, EM_SETCHARFORMAT, SCF_ALL, reinterpret_cast<LPARAM>(&cf));
     }
@@ -513,6 +519,134 @@ namespace {
             ::ShowWindow(hPopup, SW_SHOW);
             ::UpdateWindow(hPopup);
         }
+    }
+
+    // 与 Resource.h 中 IDR_LICENSE_TEXT (131) 保持一致；
+    // 本文件不能 include Resource.h（其 IDM_* 宏与下方 constexpr 常量冲突）。
+    constexpr WORD kLicenseResourceId = 131;
+
+    // 从 RCDATA 资源 IDR_LICENSE_TEXT 读取 GPLv3 文本（UTF-8），转为宽字符
+    // 并统一为 RichEdit 需要的 CRLF 换行。
+    [[nodiscard]] std::wstring loadLicenseText(HINSTANCE hInst) {
+        HRSRC hRes = ::FindResourceW(
+            hInst, MAKEINTRESOURCEW(kLicenseResourceId), RT_RCDATA);
+        HGLOBAL hGlobal = hRes ? ::LoadResource(hInst, hRes) : nullptr;
+        const auto* data = hGlobal
+            ? static_cast<const char*>(::LockResource(hGlobal)) : nullptr;
+        const DWORD size = hRes ? ::SizeofResource(hInst, hRes) : 0;
+        if (!data || size == 0) return L"无法加载许可证文本资源。";
+
+        std::string_view utf8(data, size);
+        if (utf8.size() >= 3 &&
+            static_cast<unsigned char>(utf8[0]) == 0xEF &&
+            static_cast<unsigned char>(utf8[1]) == 0xBB &&
+            static_cast<unsigned char>(utf8[2]) == 0xBF) {
+            utf8.remove_prefix(3); // 跳过 UTF-8 BOM
+        }
+        std::wstring w = utf8_to_wstring(utf8);
+
+        std::wstring out;
+        out.reserve(w.size() + 64);
+        for (size_t i = 0; i < w.size(); ++i) {
+            if (w[i] == L'\r') {
+                if (i + 1 < w.size() && w[i + 1] == L'\n') ++i;
+                out += L"\r\n";
+            }
+            else if (w[i] == L'\n') out += L"\r\n";
+            else out += w[i];
+        }
+        return out;
+    }
+
+    LRESULT CALLBACK LegalWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+        switch (msg) {
+        case WM_CREATE: {
+            auto* cs = reinterpret_cast<CREATESTRUCTW*>(lParam);
+            auto* text = reinterpret_cast<std::wstring*>(cs->lpCreateParams);
+
+            HWND hRich = ::CreateWindowExW(
+                0, MSFTEDIT_CLASS, L"",
+                WS_CHILD | WS_VISIBLE | WS_BORDER | WS_VSCROLL | WS_HSCROLL |
+                ES_MULTILINE | ES_READONLY | ES_AUTOVSCROLL | ES_AUTOHSCROLL,
+                2, 2, 10, 10,
+                hwnd,
+                reinterpret_cast<HMENU>(static_cast<UINT_PTR>(IDC_LEGAL_EDIT)),
+                cs->hInstance, nullptr);
+
+            if (hRich && text) {
+                ::SetWindowTextW(hRich, text->c_str());
+                applyRichEdit10pt(hRich, L"Microsoft YaHei");
+                // 预格式化文本：清零 RichEdit 默认段落边距，并关闭自动换行
+                ::SendMessageW(hRich, EM_SETMARGINS,
+                    EC_LEFTMARGIN | EC_RIGHTMARGIN,
+                    MAKELPARAM(0, 0));
+                ::SendMessageW(hRich, EM_SETTARGETDEVICE, 0, 0);
+                ::SendMessageW(hRich, EM_SETSEL, 0, 0);
+            }
+            ::SetWindowLongPtrW(hwnd, GWLP_USERDATA,
+                reinterpret_cast<LONG_PTR>(hRich));
+            delete text;
+            break;
+        }
+        case WM_SIZE: {
+            HWND hRich = reinterpret_cast<HWND>(
+                ::GetWindowLongPtrW(hwnd, GWLP_USERDATA));
+            if (hRich) {
+                ::MoveWindow(hRich, 2, 2,
+                    LOWORD(lParam) - 4, HIWORD(lParam) - 4, TRUE);
+            }
+            break;
+        }
+        case WM_CLOSE:
+            ::DestroyWindow(hwnd);
+            break;
+        case WM_DESTROY:
+            ::SetWindowLongPtrW(hwnd, GWLP_USERDATA, 0);
+            g_hLegalWindow = nullptr;
+            break;
+        default:
+            return ::DefWindowProcW(hwnd, msg, wParam, lParam);
+        }
+        return 0;
+    }
+
+    void registerLegalClass(HINSTANCE hInst) {
+        static bool registered = false;
+        if (registered) return;
+
+        WNDCLASSW wc{};
+        wc.lpfnWndProc = LegalWndProc;
+        wc.hInstance = hInst;
+        wc.lpszClassName = kLegalWindowClass;
+        wc.hbrBackground = ::GetSysColorBrush(COLOR_WINDOW);
+        wc.hCursor = ::LoadCursorW(nullptr, IDC_ARROW);
+        ::RegisterClassW(&wc);
+        registered = true;
+    }
+
+    void showLegalWindow(HINSTANCE hInst, HWND hParent) {
+        if (::IsWindow(g_hLegalWindow)) {
+            ::ShowWindow(g_hLegalWindow, SW_RESTORE);
+            ::SetForegroundWindow(g_hLegalWindow);
+            return;
+        }
+
+        registerLegalClass(hInst);
+        auto* text = new std::wstring(loadLicenseText(hInst));
+
+        HWND hwnd = ::CreateWindowExW(
+            0, kLegalWindowClass, L"法律声明 - GNU GPLv3",
+            WS_OVERLAPPEDWINDOW,
+            CW_USEDEFAULT, CW_USEDEFAULT, 760, 640,
+            hParent, nullptr, hInst, text);
+
+        if (!hwnd) {
+            delete text;
+            return;
+        }
+        g_hLegalWindow = hwnd;
+        ::ShowWindow(hwnd, SW_SHOW);
+        ::UpdateWindow(hwnd);
     }
     void showEntryDemo(HWND hwnd, UiState* ui) {
         std::vector<int> seq;
@@ -713,7 +847,8 @@ namespace {
                     L"曹知秋 记号提供给AI的定义使用《大数理论》的原文\n"
                     L"MrSS的定义来自 AAA滚木批发 (QQ3682911373)\n"
                     L"ε-Y的代码修改自Go men的代码"
-                    L"请注意 代码系利用人工智能技术生成，我（和所有贡献者）不保证展开结果正确",
+                    L"BMS的代码修改自bmsmat，源仓库由Fish,kotetian,kyodaisuu"
+                    L"请注意 代码系利用人工智能技术生成",
                     L"帮助", MB_OK | MB_ICONINFORMATION);
                 break;
 
@@ -724,35 +859,12 @@ namespace {
                     L"关于", MB_OK | MB_ICONINFORMATION);
                 break;
 
-            case IDM_LEGAL:
-                ::MessageBoxW(hwnd,
-                    L"Unlicense 授权\n\n"
-                    L"This is free and unencumbered software released into the public domain.\n"
-                    L"\n"
-                    L"Anyone is free to copy, modify, publish, use, compile, sell, or\n"
-                    L"distribute this software, either in source code form or as a compiled\n"
-                    L"binary, for any purpose, commercial or non-commercial, and by any\n"
-                    L"means.\n"
-                    L"\n"
-                    L"In jurisdictions that recognize copyright laws, the author or authors\n"
-                    L"of this software dedicate any and all copyright interest in the\n"
-                    L"software to the public domain. We make this dedication for the benefit\n"
-                    L"of the public at large and to the detriment of our heirs and\n"
-                    L"successors. We intend this dedication to be an overt act of\n"
-                    L"relinquishment in perpetuity of all present and future rights to this\n"
-                    L"software under copyright law.\n"
-                    L"\n"
-                    L"THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND,\n"
-                    L"EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF\n"
-                    L"MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.\n"
-                    L"IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR\n"
-                    L"OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,\n"
-                    L"ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR\n"
-                    L"OTHER DEALINGS IN THE SOFTWARE.\n"
-                    L"\n"
-                    L"For more information, please refer to <https://unlicense.org/>\n",
-                    L"法律声明", MB_OK | MB_ICONINFORMATION);
+            case IDM_LEGAL: {
+                HINSTANCE hInst = reinterpret_cast<HINSTANCE>(
+                    ::GetWindowLongPtrW(hwnd, GWLP_HINSTANCE));
+                showLegalWindow(hInst, hwnd);
                 break;
+            }
 
             case IDM_EXIT:
                 ::PostQuitMessage(0);

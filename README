@@ -11,7 +11,8 @@
 ![Issues Total](https://img.shields.io/github/issues-search/cream-cn/expander2?query=repo%3Acream-cn%2Fexpander2&style=for-the-badge&logo=github&label=Issues&color=24292e)
 [![fork](https://gitee.com/Cream-CN/Expander2/badge/fork.svg?theme=dark)](https://gitee.com/Cream-CN/Expander2/members)
 ## 法律提示
-本软体使用Unlicense授权，但实际上，若您是中国大陆地区的人，您应当将其当作MIT看待，也就是保留署名
+本软体使用GNU 通用公共许可证版本3授权
+1.3.6.5版本和以前使用The Unlicense授权
 
 
 ## TODO

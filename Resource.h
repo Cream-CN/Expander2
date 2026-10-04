@@ -12,6 +12,7 @@
 #define IDI_EXPANDER			107
 #define IDI_SMALL				108
 #define IDC_EXPANDER			109
+#define IDR_LICENSE_TEXT		131
 #define IDC_MYICON				2
 #ifndef IDC_STATIC
 #define IDC_STATIC				-1

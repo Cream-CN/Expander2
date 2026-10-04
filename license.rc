@@ -1,0 +1,4 @@
+#include<windows.h>
+#include"Resource.h"
+
+IDR_LICENSE_TEXT RCDATA "LICENSE"

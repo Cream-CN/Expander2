@@ -1,3 +1,5 @@
+//copyriht(c) Fish,kotetian,kyodaisuu 2018-2026
+//Cream-CN Changed
 #ifndef OMEGAY_NOTATION_BMS_FAMILY_HPP
 #define OMEGAY_NOTATION_BMS_FAMILY_HPP
 
