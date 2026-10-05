@@ -19,8 +19,8 @@
 命名空间分层
 
     omegay
-    ├── common
-    └── notation
+    ├── common // 通用工具：UTF-8 转换、序列解析与格式化
+    └── notation // 数学记号：每种记号一个独立编译单元
 
 规则：
 
@@ -28,7 +28,7 @@
 
     notation 可以依赖 common，但不得反向依赖。
 
-    记号与记号之间不得互相 #include，避免耦合。类的继承除外。
+    记号与记号之间不得互相 #include，避免耦合。
 
     omegay::common 接口
 
@@ -96,7 +96,7 @@ seq_to_string 契约：
 
 3.1 记号模块的标准形态
 
-    每个记号应位于独立头文件 Header/notation/<name>.hpp，并在命名空间 omegay::notation 中提供以下静态成员约定：
+    每个记号（当前仅 EmptyNotation）应位于独立头文件 Header/notation/<name>.hpp，并在命名空间 omegay::notation 中提供以下静态成员约定：
 
     namespace omegay::notation {
 
@@ -130,6 +130,8 @@ term < 1：调用方（UI 层）有责任先行校验；expand 本身不保证�
 异常：expand 不应抛出异常。若记号内部逻辑可能失败，应返回空 vector 或保持输入不变。
 
 性能：对微型项目不设硬性要求，但应避免 O(n²) 以上的无谓拷贝。
+
+当前 EmptyNotation 行为：expand 原样返回 seq（忽略 term），suffix() 返回空串。这是占位实现，后续版本将替换。
 
 3.2 FS / FSalter 语义
 
@@ -191,9 +193,12 @@ UI 层不得直接操作 std::vector<int> 的数学含义（例如自行实现"�
 [ ] 空序列、term < 1、非法 token 的行为是否与本文档一致？
 [ ] 若修改了任何签名，是否同步更新了本文档与调用点？
 
+附：当前唯一记号的实现位置
+
+Header/notation/empty.hpp — EmptyNotation 定义
+
 Expander.cpp — 唯一调用点（IDM_FS / IDM_FSALTER 分支）
 
-新增记号可以复用已有库，也可以用自订库，但必须在Dev分支协调完毕才可添加PR
-
+新增记号时，请模仿 EmptyNotation 的文件结构与接口形态，并在本文档 3.1 表格中追加一行。
 
 2026/09/25 版本二 version1.3
