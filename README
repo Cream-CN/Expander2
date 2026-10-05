@@ -1,19 +1,18 @@
 # EXPANDER
-[![star](https://gitee.com/Cream-CN/Expander2/badge/star.svg?theme=dark)](https://gitee.com/Cream-CN/Expander2/stargazers)
-![GitHub Stars](https://img.shields.io/github/stars/cream-cn/expander2?style=for-the-badge&logo=github&label=Stars&color=24292e)
+![GitHub Stars](https://img.shields.io/github/stars/cream-cn/expander2?style=for-the-badge&logo=github&label=Stars&color=24292e&branch=dev)
 
 ![C](https://img.shields.io/badge/C-00599C?style=for-the-badge&logo=c&logoColor=white)
 ![C++](https://img.shields.io/badge/C++-00599C?style=for-the-badge&logo=c%2B%2B&logoColor=white)
 
-![Branch](https://img.shields.io/badge/Branch-Master-24292e?style=for-the-badge&logo=github&logoColor=white)
-![GitHub Stars](https://img.shields.io/github/stars/cream-cn/expander2?style=for-the-badge&logo=github&label=Stars&color=24292e)
-![GitHub Forks](https://img.shields.io/github/forks/cream-cn/expander2?style=for-the-badge&logo=github&label=Forks&color=24292e)
-![Issues Total](https://img.shields.io/github/issues-search/cream-cn/expander2?query=repo%3Acream-cn%2Fexpander2&style=for-the-badge&logo=github&label=Issues&color=24292e)
-[![fork](https://gitee.com/Cream-CN/Expander2/badge/fork.svg?theme=dark)](https://gitee.com/Cream-CN/Expander2/members)
+![Branch](https://img.shields.io/badge/Branch-dev-24292e?style=for-the-badge&logo=github&logoColor=white)
+![GitHub Stars](https://img.shields.io/github/stars/cream-cn/expander2?style=for-the-badge&logo=github&label=Stars&color=24292e&branch=dev)
+![GitHub Forks](https://img.shields.io/github/forks/cream-cn/expander2?style=for-the-badge&logo=github&label=Forks&color=24292e&branch=dev)
+![Issues Total](https://img.shields.io/github/issues-search/cream-cn/expander2?query=repo%3Acream-cn%2Fexpander2&style=for-the-badge&logo=github&label=Issues&color=24292e&branch=dev)
 ## 法律提示
 本软体使用GNU 通用公共许可证版本3授权
 1.3.6.5版本和以前使用The Unlicense授权
 
+**开发分支**
 
 ## TODO
 缺省

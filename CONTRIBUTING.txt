@@ -131,8 +131,6 @@ term < 1：调用方（UI 层）有责任先行校验；expand 本身不保证�
 
 性能：对微型项目不设硬性要求，但应避免 O(n²) 以上的无谓拷贝。
 
-当前 EmptyNotation 行为：expand 原样返回 seq（忽略 term），suffix() 返回空串。这是占位实现，后续版本将替换。
-
 3.2 FS / FSalter 语义
 
 UI 层的"移除末项 / 保留末项"按钮，不属于记号接口，而是调用方对展开结果的后处理：
@@ -181,7 +179,7 @@ UI 层不得直接操作 std::vector<int> 的数学含义（例如自行实现"�
 新增记号 只增文件、只增调用分支，不动现有接口
 修改 common 函数签名 破坏性变更，需同步更新所有调用点与本文档
 修改 expand 语义 需在 CONTRIBUTING.md 或 CHANGELOG 中注明
-删除任何 [[nodiscard]] 不允许
+删除任何 [[nodiscard]] 不允许，除非你发现它的返回值被丢弃了。
 
 贡献者检查清单
 
@@ -198,7 +196,5 @@ UI 层不得直接操作 std::vector<int> 的数学含义（例如自行实现"�
 Header/notation/empty.hpp — EmptyNotation 定义
 
 Expander.cpp — 唯一调用点（IDM_FS / IDM_FSALTER 分支）
-
-新增记号时，请模仿 EmptyNotation 的文件结构与接口形态，并在本文档 3.1 表格中追加一行。
 
 2026/09/25 版本二 version1.3
