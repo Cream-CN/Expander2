@@ -22,6 +22,7 @@
 #include <string_view>
 #include <vector>
 #include <cstdint>
+#include <unordered_map>
 
 using namespace omegay;
 using namespace omegay::common;
@@ -52,12 +53,15 @@ namespace {
         const char* id;
         std::vector<int>(*expand)(const std::vector<int>&, int);
         std::string(*suffix)();
-        const wchar_t* definition;
+        // 定义文本的键。空表示无定义。文本从资源 "def_<def_key>" 懒加载，
+        // 见 DefinitionStore。约定通常直接等于 id。
+        const char* def_key;
 
         // 可选的文本展开入口。若不为空，UI 会优先用它处理输入文本，
         // 签名约定：std::string expand_string(std::string_view, int)
         std::string(*expand_text)(std::string_view, int) = nullptr;
     };
+
     std::string bmsExpandTextWith(
         Bms::Version ver, std::string_view text, int term)
     {
@@ -86,6 +90,7 @@ namespace {
     std::string bmsExpandV32(std::string_view t, int n) { return bmsExpandTextWith(Bms::Version::V32, t, n); }
     std::string bmsExpandV33(std::string_view t, int n) { return bmsExpandTextWith(Bms::Version::V33, t, n); }
     std::string bmsExpandV4(std::string_view t, int n) { return bmsExpandTextWith(Bms::Version::V4, t, n); }
+
     inline bool isBmsTextEntry(const NotationEntry& e) {
         return e.expand_text == &bmsExpandV1
             || e.expand_text == &bmsExpandV2
@@ -184,122 +189,206 @@ namespace {
         return out;
     }
 
+    // ---- 定义文本懒加载存储 ----
+    //
+    // 资源名 = L"def_" + def_key，类型 RT_RCDATA，内容 UTF-8。
+    // 找不到时返回占位符"（暂无定义）"。
+    class DefinitionStore {
+    public:
+        static DefinitionStore& instance() {
+            static DefinitionStore s;
+            return s;
+        }
+
+        [[nodiscard]] const std::wstring& get(const char* key) {
+            if (key == nullptr || key[0] == '\0') return missing_;
+
+            auto it = cache_.find(key);
+            if (it != cache_.end()) return it->second;
+
+            std::wstring text = loadResource(key);
+            if (text.empty()) text = missing_;
+
+            return cache_.emplace(key, std::move(text)).first->second;
+        }
+
+    private:
+        DefinitionStore() : missing_(L"（暂无定义）") {}
+        DefinitionStore(const DefinitionStore&) = delete;
+        DefinitionStore& operator=(const DefinitionStore&) = delete;
+
+        [[nodiscard]] static std::wstring loadResource(const char* key) {
+            std::wstring name = L"def_";
+            name += utf8_to_wstring(key);
+
+            HINSTANCE hInst = ::GetModuleHandleW(nullptr);
+            HRSRC hRes = ::FindResourceW(hInst, name.c_str(), RT_RCDATA);
+            if (hRes == nullptr) return {};
+
+            HGLOBAL hG = ::LoadResource(hInst, hRes);
+            const char* data =
+                hG ? static_cast<const char*>(::LockResource(hG)) : nullptr;
+            const DWORD size = ::SizeofResource(hInst, hRes);
+            if (data == nullptr || size == 0) return {};
+
+            std::string_view utf8(data, size);
+            if (utf8.size() >= 3 &&
+                static_cast<unsigned char>(utf8[0]) == 0xEF &&
+                static_cast<unsigned char>(utf8[1]) == 0xBB &&
+                static_cast<unsigned char>(utf8[2]) == 0xBF) {
+                utf8.remove_prefix(3); // 跳过 UTF-8 BOM
+            }
+
+            std::wstring w = utf8_to_wstring(utf8);
+
+            // 统一换行到 CRLF，供 RichEdit 显示
+            std::wstring out;
+            out.reserve(w.size() + 64);
+            for (std::size_t i = 0; i < w.size(); ++i) {
+                if (w[i] == L'\r') {
+                    if (i + 1 < w.size() && w[i + 1] == L'\n') ++i;
+                    out += L"\r\n";
+                }
+                else if (w[i] == L'\n') {
+                    out += L"\r\n";
+                }
+                else {
+                    out += w[i];
+                }
+            }
+            return out;
+        }
+
+        std::unordered_map<std::string, std::wstring> cache_;
+        std::wstring missing_;
+    };
+
+    // 拼装"【名称】\r\n\r\n + 定义正文"
+    [[nodiscard]] std::wstring formatDefinition(const NotationEntry& entry) {
+        std::wstring text;
+        text += L"【";
+        text += entry.display_name;
+        text += L"】\r\n\r\n";
+        text += DefinitionStore::instance().get(entry.def_key);
+        return text;
+    }
+
     [[nodiscard]] const std::vector<NotationEntry>& notationTable() {
         static const std::vector<NotationEntry> table = {
-            { L"空记号", "empty", &notation::EmptyNotation::expand, &notation::EmptyNotation::suffix,
-              L"空记号（empty）\n\n返回输入序列" },
+            { L"空记号", "empty",
+              &notation::EmptyNotation::expand,
+              &notation::EmptyNotation::suffix,
+              "empty" },
 
-            { L"PPS", "pps", &notation::PPSNotation::expand, &notation::PPSNotation::suffix,
-              L"PPS🎄\n\n定义：PPS1\nParented Predecessor Sequence 1\n\n极限表达式：0,1,2,3,4,5,......\n记末项的值为 x，坏根为第 x 项，坏根的值为 b，末项是序列中的第 y 项，并令 L = y - x\n展开：\n1.如果末项是 0，则它是后继序数\n2.末项之前的部分保持不变\n3.替换末项：如果末项和坏根之间(两边都不含) 存在一项，它的值等于 b，那么将末项的值换成 b；否则\n将末项的值减 1\n4.递归生成其他项(第 i + L 项的值由第 i 项确定)：对任意的 i > x，如果第 i 项的值大于等于 x，那么第 i + L\n项的值等于第 i 项的值 + L，否则第 i + L 项的值等于第 i 项的值\n5.基本列[n] 为展开到第 y + n * L - 1 项。" },
+            { L"PPS", "pps",
+              &notation::PPSNotation::expand,
+              &notation::PPSNotation::suffix,
+              "pps" },
 
-            { L"PPS4", "pps4", &notation::PPS4Notation::expand, &notation::PPS4Notation::suffix,
-              L"PPS4\n\nPPS 的第四版本\n定义：PPS 4\nParented Predecessor Sequence 4\n极限表达式：0,1,2,3,....\n坏根：列标是 (末项的值) 的项（首项的列标是 1）；如果末项是 0，则表示后继序数 \n记此时末项的列标减末项的值为 L，坏根的值为 b，末项的值为 x、列标为 y\n末项展开：\n> 如果末项和坏根之间 (两边都不含) 存在一项，它的值等于 b，那么是弱展开，否则是强展开；弱展开：将末项的值换成 b；\n> 强展开：在第 b 列和第 x 列 (都不含) 之间找到最右侧的值小于等于 b 的项，将末项的值换为这个项的列标；如果找不到，则等同弱展开\n其他项展开：对任意的 i>y-L，如果第 i 项的值大于等于 x，那么第 i+L 项的值等于第 i 项的值 +L，否则第 i+L 项的值等于第 i 项的值\n基本列 [n] 为展开到第 y+nL-1 项" },
+            { L"PPS4", "pps4",
+              &notation::PPS4Notation::expand,
+              &notation::PPS4Notation::suffix,
+              "pps4" },
 
-            { L"Weak PPS4", "wpps4", &notation::WPPS4Notation::expand, &notation::WPPS4Notation::suffix,
-              L"Weak PPS4\n\nPPS4 的弱化版本。" },
+            { L"Weak PPS4", "wpps4",
+              &notation::WPPS4Notation::expand,
+              &notation::WPPS4Notation::suffix,
+              "wpps4" },
 
-            { L"Third PPS4", "tpps4", &notation::TPPS4Notation::expand, &notation::TPPS4Notation::suffix,
-              L"Third PPS4\n\nPPS4 的第三型变体。" },
+            { L"Third PPS4", "tpps4",
+              &notation::TPPS4Notation::expand,
+              &notation::TPPS4Notation::suffix,
+              "tpps4" },
 
-            { L"Ex. Weak PPS4", "ewpps4", &notation::EWPPS4Notation::expand, &notation::EWPPS4Notation::suffix,
-              L"Ex. Weak PPS4\n\n扩展弱 PPS4。" },
+            { L"Ex. Weak PPS4", "ewpps4",
+              &notation::EWPPS4Notation::expand,
+              &notation::EWPPS4Notation::suffix,
+              "ewpps4" },
 
-            { L"Second PPS4", "spps4", &notation::SecondPPS4Notation::expand, &notation::SecondPPS4Notation::suffix,
-              L"Second PPS4\n\nPPS4 的第二型变体。" },
+            { L"Second PPS4", "spps4",
+              &notation::SecondPPS4Notation::expand,
+              &notation::SecondPPS4Notation::suffix,
+              "spps4" },
 
-            { L"2-pps4", "2-pps4", &notation::PPS2Notation::expand, &notation::PPS2Notation::suffix,
-              L"2-pps4\n\n2-PPS4 。" },
+            { L"2-pps4", "2-pps4",
+              &notation::PPS2Notation::expand,
+              &notation::PPS2Notation::suffix,
+              "2-pps4" },
 
-            { L"ω-Y (medium)", "omega-y-medium", &notation::OmegaYMediumNotation::expand, &notation::OmegaYMediumNotation::suffix,
-              L"ω-Y (medium)\n\nω-Y Medium Magma Style" },
+            { L"ω-Y (medium)", "omega-y-medium",
+              &notation::OmegaYMediumNotation::expand,
+              &notation::OmegaYMediumNotation::suffix,
+              "omega-y-medium" },
 
-            { L"ω-Y (strong)", "omega-y-strong", &notation::OmegaYStrongNotation::expand, &notation::OmegaYStrongNotation::suffix,
-              L"ω-Y (strong)\n\nω-Y Strong Magam Style" },
+            { L"ω-Y (strong)", "omega-y-strong",
+              &notation::OmegaYStrongNotation::expand,
+              &notation::OmegaYStrongNotation::suffix,
+              "omega-y-strong" },
 
-            { L"MrSS1.2.1", "mrss121", &notation::Mrss121Notation::expand, &notation::Mrss121Notation::suffix,
-              L"MrSS1.2.1（山脉结构序列）\n\n本版本只利用 1 层山脉结构。\n合法表达式形如 S = a1, a2, a3, ...，其中 a1 = 1，\nan 为 MrSS 表达式或有限非零序数。\n\n支持嵌套写法，例如：\n  1,(1,2),(1,2,3)", &notation::Mrss121Notation::expand_string },
+            { L"MrSS1.2.1", "mrss121",
+              &notation::Mrss121Notation::expand,
+              &notation::Mrss121Notation::suffix,
+              "mrss121",
+              &notation::Mrss121Notation::expand_string },
 
               // [BMS] 每个版本一条独立记号：expand 置 nullptr，走 expand_text 文本入口
               { L"BMS v1.0", "bms-v1",
                 nullptr, &notation::BMSFamilyNotation::suffix,
-                L"BMS v1.0（Bashicu Matrix System, Version 1）\n\n"
-                L"输入格式：BMS 文本，如 (0,0)(1,1)(2,2) 或 (0,0)(1,1)[3]。\n"
-                L"若文本含 [n]，则以 [n] 为准；否则用\"项数\"输入框。\n"
-                L"非标准形式会被拒绝展开。\"移除末项\"= 删除最后一列。",
-                &bmsExpandV1 },
+                "bms-v1", &bmsExpandV1 },
 
               { L"BMS v2.0", "bms-v2",
                 nullptr, &notation::BMSFamilyNotation::suffix,
-                L"BMS v2.0（Version 2.0）\n\n输入格式同 v1.0。",
-                &bmsExpandV2 },
+                "bms-v2", &bmsExpandV2 },
 
               { L"BMS v2.1", "bms-v21",
                 nullptr, &notation::BMSFamilyNotation::suffix,
-                L"BMS v2.1（Version 2.1）\n\n输入格式同 v1.0。",
-                &bmsExpandV21 },
+                "bms-v21", &bmsExpandV21 },
 
               { L"BMS v2.2", "bms-v22",
                 nullptr, &notation::BMSFamilyNotation::suffix,
-                L"BMS v2.2（Version 2.2）\n\n输入格式同 v1.0。",
-                &bmsExpandV22 },
+                "bms-v22", &bmsExpandV22 },
 
               { L"BMS v2.3", "bms-v23",
                 nullptr, &notation::BMSFamilyNotation::suffix,
-                L"BMS v2.3（Version 2.3）\n\n输入格式同 v1.0。",
-                &bmsExpandV23 },
+                "bms-v23", &bmsExpandV23 },
 
               { L"BMS v3.0", "bms-v3",
                 nullptr, &notation::BMSFamilyNotation::suffix,
-                L"BMS v3.0（Version 3.0）\n\n输入格式同 v1.0。",
-                &bmsExpandV3 },
+                "bms-v3", &bmsExpandV3 },
 
               { L"BMS v3.1", "bms-v31",
                 nullptr, &notation::BMSFamilyNotation::suffix,
-                L"BMS v3.1（Version 3.1）\n\n输入格式同 v1.0。",
-                &bmsExpandV31 },
+                "bms-v31", &bmsExpandV31 },
 
               { L"BMS v3.2", "bms-v32",
                 nullptr, &notation::BMSFamilyNotation::suffix,
-                L"BMS v3.2（Version 3.2）\n\n输入格式同 v1.0。",
-                &bmsExpandV32 },
+                "bms-v32", &bmsExpandV32 },
 
               { L"BMS v3.3", "bms-v33",
                 nullptr, &notation::BMSFamilyNotation::suffix,
-                L"BMS v3.3（Version 3.3）\n\n输入格式同 v1.0。",
-                &bmsExpandV33 },
+                "bms-v33", &bmsExpandV33 },
 
               { L"BMS v4.0", "bms-v4",
                 nullptr, &notation::BMSFamilyNotation::suffix,
-                L"BMS v4.0（Version 4.0，当前默认）\n\n输入格式同 v1.0。",
-                &bmsExpandV4 },
+                "bms-v4", &bmsExpandV4 },
 
-              { L"ω-Y sequence", "omega-y-sequence", &notation::OmegaYNotation::expand, &notation::OmegaYNotation::suffix,
-                  L"ω-Y sequence\n\nω-Y sequence\n\n一个 ω − Y 序列是形如 ω − Y(a1, a2, . . . , an) 的序列。\nω − Y 序列山脉图的绘制方法如下：\n(1) 为每一行赋予一个行标，原序列的行标为 0。\n(2) 第 0 行中元素的父项为从该元素起，在该元素左边且小于该元素的第一个项。\n(3) 元素所对应的阶差项为该元素与其父项的差值，所有元素的阶差项构成阶差序列。特别地，如果某一项\n不存在父项，则其阶差项为空。\n(4) 各阶阶差序列中某元素的父项定义为阶差序列中第一个在它左边、小于它，并且其正下方的项是该元素正下方元素祖先项的项。\n(5) 逐阶计算阶差序列，直到某一阶阶差序列的所有项均为空为止。\n(6) 将各阶阶差序列从下到上写在原序列对应元素的正上方，并将各阶阶差序列中的每一项与其所对应的正 \n下方的项以及正下方项的父项相连。特别地，如果某一项不存在父项，则不将该项与其他项相连。连接阶差项与 \n其正下方元素的线称为右腿，而连接阶差项与其左下方的父项的连线称为左腿。每计算一次阶差序列，则其行 \n标增加 1。这样可以得到山脉图的前 n 行。\n(7) 对于山脉图某列顶端的元素来说，元素的父项关系为：从一个顶端元素出发，如果沿着它的左腿向下一步，再沿着右腿向正上方走到不超过 A 的行标（如果无路可走则不走），不断地重复这一过程，直到达到了另一个顶端元素。接下来从新得到的顶端元素出发重复上述操作，又得到另一个顶端元素。这样得到的所有顶端元 \n素，称为该元素的待定父项。\n(8) 每作一条分隔线之前，都要检查山脉图全部列的元素是否全为 1。如果不是的话，就从最低阶的分隔线开始作起，然后找到该条分隔线与其下方最近的同阶分隔线的山脉图（如果不包含其他的同阶分隔线，则考虑 全部的山脉图），对这些山脉图中包含的所有列的顶端元素计算阶差序列。如果这样的阶差序列不能够计算的话，就提高分隔线的阶次，重复计算阶差序列，直到能够计算阶差序列为止。每穿过一条 n 阶分隔线，则行标右加 ω^n。\n(9) 对新的山脉图不断重复上述操作，直到山脉图中所有的顶端项全为 1，则山脉图绘制结束。ω − Y 序列 的山脉图的行标总小于 ω^ω。\n在 ω − Y 序列的山脉图中定义如下概念：\n(1) 末列最上方的 1 左腿所指的元素称为根元素。\n(2) 根元素所在列称为根列。\n(3) 根列包含的所有元素称为根列元素。\n(4) 根列元素的作用区域为从这一根列元素出发（包含这一列），到在它正上方的根列元素（包含这一列，如果没有的话就到山脉图的顶端）之间的部分。如果某个根列元素的行标为 α，在它正上方的根列元素的行标为 β，那么它的作用范围为所有行标 γ 满足 α ≤ γ < β 的行。\n(5) 第 α 行和第 β 行 (α ≤ β) 的行差为满足 α + δ = β 的序数 δ 。\n(6) 轮廓边定义为：从一个根列元素出发，沿左腿向上一步（但不能超出这个根列元素的作用区域）之后， 沿右腿向下若干步（可以不向下，但同样不能超出这个根列元素的作用区域），随后重复这个过程直到无路可走。 能通过这样的操作经过的边，都是这个根列元素对应的（或者这个作用区域内的）轮廓边。\n(7) 非轮廓边定义为：经过了某个作用区域，但不符合这个作用区域内轮廓边的概念的边，称为这个作用区 域内的非轮廓边。\n\n(8) 填充边定义为：从一个根列元素出发，沿左腿向上走一行后，沿右腿向下走一行，随后重复这个过程直到无路可走。能通过这样的操作经过的边，称为这个根列元素对应的填充边。\nω − Y 序列山脉图的展开方法如下：\n(1) 将末列的各项减一。如果最上方的元素被减为零，则删去它相关的左腿和右腿。\n\n(2) 从最上方的根列元素开始，找到其作用区域。\n\n(3) 在这一根列元素作用区域内找到所有的轮廓边，并将轮廓边的端点及其所指的元素向右上方进行复制。 \n具体地，向右平移（末列位置 − 根列位置）的列数，然后向上平移至满足以下条件的位置：若平移前端点所指的元素与根列元素行差为 δ0 ，那么平移后对应端点所指的元素与末列最上方的元素行差也要为 δ0 。像这样，至所有的轮廊边和它们所指的元素都被复制到了新的位置上。\n\n(4) 如果末列最上方元素与根列元素的行差为 0，则在这一根列元素作用区域内找到所有的填充边，然后将它不断复制，并填补到轮廓边提升所产生的所有缝隙之中。特别地，当填充边被复制到跨过了 n 阶分隔线的位置上时，其左腿和右腿的行差需要为 ω^n−1 。\n(5) 在这一根列元素作用区域内找到所有的非轮廓边，并对这些边进行复制。非轮廓边左腿指向的元素都保持不动，而右腿向右或右上平移，向右平移的列数为（末列位置 − 根列位置）。如果这条非轮廓边右腿所指元素没有被这个作用区域内的轮廊边所指到，那么无需向上平移；如果有，那么向上平移到与末列最上方元素行差为 δ0 的位置，其中 δ0 为平移之前该元素与根列元素的行差。\n(6) 自上而下不断地对各个根列元素所对应的山脉图重复 (3) − (5) 的操作，直到山脉图的所有部分都完成复制。\n\n(7) 按照从上到下、从左到右的顺序将山脉图中的各个元素计算出来。如果该元素不是山脉图某一部分的顶端元素，则其取值等于该元素正上方的元素与其父项之和。\nω − Y 序列的取值定义如下： \n(1) ω − Y(∅) = 0。\n(2) 如果原序列的末项为 1，则它对应的序数为删去末尾的 1 之后余下的部分所对应的序数加 1。\n(3) 否则按照前述山脉图的展开方式对序列进行展开，展开后山脉图最下方的序列就是展开后的 ω − Y 序列。" },
+              { L"ω-Y sequence", "omega-y-sequence",
+                &notation::OmegaYNotation::expand,
+                &notation::OmegaYNotation::suffix,
+                "omega-y-sequence" },
 
-              { L"ε-Y", "epsilon-y", &notation::EpsilonYNotation::expand, &notation::EpsilonYNotation::suffix,
-                L"ε-Y（1-Y）\n\nε-Y 即 1-Y 记号，等价于维度序列为 {1} 的 ω-Y 变体。\n"
-                L"\n"
-                L"极限表达式：\n"
-                L"  1,2,3,4,5,...\n"
-                L"\n"
-                L"展开规则（1-Y / 维度 1）：\n"
-                L"  与 ω-Y 的山脉图机制相同，但所有阶差分量的维度固定为 1。\n"
-                L"  对末列最上方的 1 求根元素，将其作用区域内的轮廓边、填充边、\n"
-                L"  非轮廓边按 ω-Y 的规则复制，再自上而下计算各元素取值。\n"
-                L"  由于维度被限制为 1，展开不会引入新的高阶分量，\n"
-                L"  因此 ε-Y 强于 0-Y，是 1-Y 的标准实现。" },
+              { L"ε-Y", "epsilon-y",
+                &notation::EpsilonYNotation::expand,
+                &notation::EpsilonYNotation::suffix,
+                "epsilon-y" },
 
               { L"UPMS", "upms",
                 nullptr, &notation::UPMSNotation::suffix,
-                L"UPMS（User-defined Primitive Matrix System）\n\n"
-                L"输入格式：省略尾随零的矩阵文本，例如 (0)(1)(2,1)\n"
-                L"或显式补零的 (0,0)(1,0)(2,1)。\n"
-                L"若文本含 [n] 则以 [n] 为准（后续版本再加）；否则用\"项数\"输入框。\n"
-                L"找不到坏根的表达式会被拒绝。\"移除末项\"= 删除最后一列。",
-                &upmsExpandText },
+                "upms", &upmsExpandText },
         };
         return table;
     }
+
     struct MenuDeleter { void operator()(HMENU m)  const noexcept { if (m) ::DestroyMenu(m); } };
     struct BrushDeleter { void operator()(HBRUSH b) const noexcept { if (b) ::DeleteObject(b); } };
     using MenuPtr = std::unique_ptr<std::remove_pointer_t<HMENU>, MenuDeleter>;
@@ -387,12 +476,7 @@ namespace {
         if (!ui->hRichDef) return;
         if (index < 0 || index >= static_cast<int>(table.size())) return;
 
-        std::wstring text;
-        text += L"【";
-        text += table[index].display_name;
-        text += L"】\r\n\r\n";
-        text += table[index].definition ? table[index].definition : L"（暂无定义）";
-
+        const std::wstring text = formatDefinition(table[index]);
         ::SetWindowTextW(ui->hRichDef, text.c_str());
 
         ::SendMessageW(ui->hRichDef, EM_SETSEL, 0, 0);
@@ -413,11 +497,7 @@ namespace {
     }
 
     void fillPopupDefinition(HWND hRich, const NotationEntry& entry) {
-        std::wstring text;
-        text += L"【";
-        text += entry.display_name;
-        text += L"】\r\n\r\n";
-        text += entry.definition ? entry.definition : L"（暂无定义）";
+        const std::wstring text = formatDefinition(entry);
         applyRichEdit10pt(hRich);
 
         ::SetWindowTextW(hRich, text.c_str());
@@ -520,7 +600,13 @@ namespace {
             ::UpdateWindow(hPopup);
         }
     }
+
+    // 与 Resource.h 中 IDR_LICENSE_TEXT (131) 保持一致；
+    // 本文件不能 include Resource.h（其 IDM_* 宏与下方 constexpr 常量冲突）。
     constexpr WORD kLicenseResourceId = 131;
+
+    // 从 RCDATA 资源 IDR_LICENSE_TEXT 读取 GPLv3 文本（UTF-8），转为宽字符
+    // 并统一为 RichEdit 需要的 CRLF 换行。
     [[nodiscard]] std::wstring loadLicenseText(HINSTANCE hInst) {
         HRSRC hRes = ::FindResourceW(
             hInst, MAKEINTRESOURCEW(kLicenseResourceId), RT_RCDATA);
@@ -570,6 +656,7 @@ namespace {
             if (hRich && text) {
                 ::SetWindowTextW(hRich, text->c_str());
                 applyRichEdit10pt(hRich, L"Microsoft YaHei");
+                // 预格式化文本：清零 RichEdit 默认段落边距，并关闭自动换行
                 ::SendMessageW(hRich, EM_SETMARGINS,
                     EC_LEFTMARGIN | EC_RIGHTMARGIN,
                     MAKELPARAM(0, 0));
@@ -720,7 +807,7 @@ namespace {
                 10, mh + 10, 150, 20,
                 hwnd, nullptr, hInst, nullptr);
 
-            ui->hEditSeq = ::CreateWindowExW(0, L"EDIT", L"",
+            ui->hEditSeq = ::CreateWindowExW(0, L"EDIT", L"1,2,3",
                 WS_CHILD | WS_VISIBLE | WS_BORDER | ES_LEFT,
                 10, mh + 30, 200, 20,
                 hwnd, nullptr, hInst, nullptr);
@@ -743,7 +830,7 @@ namespace {
             ui->hComboNotation = ::CreateWindowExW(
                 0, L"COMBOBOX", nullptr,
                 WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST | WS_VSCROLL,
-                60, mh + 85, 220, 200,
+                100, mh + 85, 220, 200,
                 hwnd,
                 reinterpret_cast<HMENU>(static_cast<UINT_PTR>(IDC_NOTATION_COMBO)),
                 hInst, nullptr);
@@ -756,16 +843,16 @@ namespace {
                 ::SendMessageW(ui->hComboNotation, CB_SETCURSEL, 0, 0);
             }
 
-            /*ui->hBtnFS = ::CreateWindowExW(0, L"BUTTON", L"移除末项",
+            ui->hBtnFS = ::CreateWindowExW(0, L"BUTTON", L"移除末项",
                 WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
                 10, mh + 115, 120, 25,
                 hwnd,
                 reinterpret_cast<HMENU>(static_cast<UINT_PTR>(IDM_FS)),
-                hInst, nullptr);*/
+                hInst, nullptr);
 
-            ui->hBtnFSalter = ::CreateWindowExW(0, L"BUTTON", L"展开",
+            ui->hBtnFSalter = ::CreateWindowExW(0, L"BUTTON", L"保留末项",
                 WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
-                10, mh + 115, 200, 25,
+                140, mh + 115, 120, 25,
                 hwnd,
                 reinterpret_cast<HMENU>(static_cast<UINT_PTR>(IDM_FSALTER)),
                 hInst, nullptr);
