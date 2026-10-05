@@ -1,5 +1,3 @@
-以下为这四个头文件编写“调用时文档”，即面向使用者的接口说明与调用示例，纯文本形式。
-
 ====================================================================
 文件：sequence.hpp
 命名空间：omegay::common
@@ -180,7 +178,7 @@ wstring_to_utf8(utf8_to_wstring(s)) == s
 本头文件仅适用于 Windows。
 
 已定义 WIN32_LEAN_AND_MEAN 与 NOMINMAX，避免引入多余 Windows 头
-并防止 min/max 宏污染。
+并防止 min/max 宏污染。                                         //微软是怎么在MFC里面也不undef这两个b东西的
 
 字符串长度以 int 传给系统 API，超长字符串（>2GB）不在支持范围。
 
