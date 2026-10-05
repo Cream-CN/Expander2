@@ -53,7 +53,7 @@ namespace {
         const char* id;
         std::vector<int>(*expand)(const std::vector<int>&, int);
         std::string(*suffix)();
-        // 定义文本的键。空表示无定义。文本从资源 "def_<def_key>" 懒加载，
+        // 定义文本的键。空表示无定义。文本从内置表懒加载，
         // 见 DefinitionStore。约定通常直接等于 id。
         const char* def_key;
 
@@ -189,10 +189,12 @@ namespace {
         return out;
     }
 
-    // ---- 定义文本懒加载存储 ----
+    // ---- 定义文本内置存储 ----
     //
-    // 资源名 = L"def_" + def_key，类型 RT_RCDATA，内容 UTF-8。
-    // 找不到时返回占位符"（暂无定义）"。
+    // 文本不再从 RT_RCDATA 资源读取，而是写死在本文件的 builtin 表中。
+    // key 与 notationTable() 里的 def_key 一一对应。
+    // 换行统一用 \r\n，供 RichEdit 显示。
+    // 找不到 key 时返回空串，由 get() 回退到"（暂无定义）"。
     class DefinitionStore {
     public:
         static DefinitionStore& instance() {
@@ -206,7 +208,7 @@ namespace {
             auto it = cache_.find(key);
             if (it != cache_.end()) return it->second;
 
-            std::wstring text = loadResource(key);
+            std::wstring text = loadBuiltin(key);
             if (text.empty()) text = missing_;
 
             return cache_.emplace(key, std::move(text)).first->second;
@@ -217,46 +219,81 @@ namespace {
         DefinitionStore(const DefinitionStore&) = delete;
         DefinitionStore& operator=(const DefinitionStore&) = delete;
 
-        [[nodiscard]] static std::wstring loadResource(const char* key) {
-            std::wstring name = L"def_";
-            name += utf8_to_wstring(key);
+        [[nodiscard]] static std::wstring loadBuiltin(const char* key) {
+            static const std::unordered_map<std::string, std::wstring> builtin = {
+                { "empty", L"空记号的定义。\r\n"
+                           L"\r\n"
+                           L"（在此填写 EmptyNotation 的定义正文。）\r\n" },
 
-            HINSTANCE hInst = ::GetModuleHandleW(nullptr);
-            HRSRC hRes = ::FindResourceW(hInst, name.c_str(), RT_RCDATA);
-            if (hRes == nullptr) return {};
+                { "pps", L"PPS 的定义。\r\n"
+                         L"\r\n"
+                         L"（在此填写 PPSNotation 的定义正文。）\r\n" },
 
-            HGLOBAL hG = ::LoadResource(hInst, hRes);
-            const char* data =
-                hG ? static_cast<const char*>(::LockResource(hG)) : nullptr;
-            const DWORD size = ::SizeofResource(hInst, hRes);
-            if (data == nullptr || size == 0) return {};
+                { "pps4", L"PPS4 的定义。\r\n"
+                          L"\r\n"
+                          L"（在此填写 PPS4Notation 的定义正文。）\r\n" },
 
-            std::string_view utf8(data, size);
-            if (utf8.size() >= 3 &&
-                static_cast<unsigned char>(utf8[0]) == 0xEF &&
-                static_cast<unsigned char>(utf8[1]) == 0xBB &&
-                static_cast<unsigned char>(utf8[2]) == 0xBF) {
-                utf8.remove_prefix(3); // 跳过 UTF-8 BOM
-            }
+                { "wpps4", L"Weak PPS4 的定义。\r\n"
+                           L"\r\n"
+                           L"（在此填写 WPPS4Notation 的定义正文。）\r\n" },
 
-            std::wstring w = utf8_to_wstring(utf8);
+                { "tpps4", L"Third PPS4 的定义。\r\n"
+                           L"\r\n"
+                           L"（在此填写 TPPS4Notation 的定义正文。）\r\n" },
 
-            // 统一换行到 CRLF，供 RichEdit 显示
-            std::wstring out;
-            out.reserve(w.size() + 64);
-            for (std::size_t i = 0; i < w.size(); ++i) {
-                if (w[i] == L'\r') {
-                    if (i + 1 < w.size() && w[i + 1] == L'\n') ++i;
-                    out += L"\r\n";
-                }
-                else if (w[i] == L'\n') {
-                    out += L"\r\n";
-                }
-                else {
-                    out += w[i];
-                }
-            }
-            return out;
+                { "ewpps4", L"Ex. Weak PPS4 的定义。\r\n"
+                            L"\r\n"
+                            L"（在此填写 EWPPS4Notation 的定义正文。）\r\n" },
+
+                { "spps4", L"Second PPS4 的定义。\r\n"
+                           L"\r\n"
+                           L"（在此填写 SecondPPS4Notation 的定义正文。）\r\n" },
+
+                { "2-pps4", L"2-pps4 的定义。\r\n"
+                            L"\r\n"
+                            L"（在此填写 PPS2Notation 的定义正文。）\r\n" },
+
+                { "omega-y-medium", L"ω-Y (medium) 的定义。\r\n"
+                                    L"\r\n"
+                                    L"（在此填写 OmegaYMediumNotation 的定义正文。）\r\n" },
+
+                { "omega-y-strong", L"ω-Y (strong) 的定义。\r\n"
+                                    L"\r\n"
+                                    L"（在此填写 OmegaYStrongNotation 的定义正文。）\r\n" },
+
+                { "mrss121", L"MrSS1.2.1 的定义。\r\n"
+                             L"\r\n"
+                             L"（在此填写 Mrss121Notation 的定义正文。）\r\n" },
+
+                { "bms-v1",  L"BMS v1.0 的定义。\r\n\r\n（在此填写定义正文。）\r\n" },
+                { "bms-v2",  L"BMS v2.0 的定义。\r\n\r\n（在此填写定义正文。）\r\n" },
+                { "bms-v21", L"BMS v2.1 的定义。\r\n\r\n（在此填写定义正文。）\r\n" },
+                { "bms-v22", L"BMS v2.2 的定义。\r\n\r\n（在此填写定义正文。）\r\n" },
+                { "bms-v23", L"BMS v2.3 的定义。\r\n\r\n（在此填写定义正文。）\r\n" },
+                { "bms-v3",  L"BMS v3.0 的定义。\r\n\r\n（在此填写定义正文。）\r\n" },
+                { "bms-v31", L"BMS v3.1 的定义。\r\n\r\n（在此填写定义正文。）\r\n" },
+                { "bms-v32", L"BMS v3.2 的定义。\r\n\r\n（在此填写定义正文。）\r\n" },
+                { "bms-v33", L"BMS v3.3 的定义。\r\n\r\n（在此填写定义正文。）\r\n" },
+                { "bms-v4",  L"BMS v4.0 的定义。\r\n\r\n（在此填写定义正文。）\r\n" },
+
+                { "omega-y-sequence", L"ω-Y sequence 的定义。\r\n"
+                                      L"\r\n"
+                                      L"（在此填写 OmegaYNotation 的定义正文。）\r\n" },
+
+                { "epsilon-y", L"ε-Y 的定义。\r\n"
+                               L"\r\n"
+                               L"（在此填写 EpsilonYNotation 的定义正文。）\r\n" },
+
+                { "upms", L"UPMS 的定义。\r\n"
+                          L"\r\n"
+                          L"（在此填写 UPMSNotation 的定义正文。）\r\n" },
+            };
+
+            if (key == nullptr || key[0] == '\0') return {};
+
+            auto it = builtin.find(key);
+            if (it == builtin.end()) return {};
+            return it->second;
         }
 
         std::unordered_map<std::string, std::wstring> cache_;
@@ -601,41 +638,15 @@ namespace {
         }
     }
 
-    // 与 Resource.h 中 IDR_LICENSE_TEXT (131) 保持一致；
-    // 本文件不能 include Resource.h（其 IDM_* 宏与下方 constexpr 常量冲突）。
-    constexpr WORD kLicenseResourceId = 131;
-
-    // 从 RCDATA 资源 IDR_LICENSE_TEXT 读取 GPLv3 文本（UTF-8），转为宽字符
-    // 并统一为 RichEdit 需要的 CRLF 换行。
-    [[nodiscard]] std::wstring loadLicenseText(HINSTANCE hInst) {
-        HRSRC hRes = ::FindResourceW(
-            hInst, MAKEINTRESOURCEW(kLicenseResourceId), RT_RCDATA);
-        HGLOBAL hGlobal = hRes ? ::LoadResource(hInst, hRes) : nullptr;
-        const auto* data = hGlobal
-            ? static_cast<const char*>(::LockResource(hGlobal)) : nullptr;
-        const DWORD size = hRes ? ::SizeofResource(hInst, hRes) : 0;
-        if (!data || size == 0) return L"无法加载许可证文本资源。";
-
-        std::string_view utf8(data, size);
-        if (utf8.size() >= 3 &&
-            static_cast<unsigned char>(utf8[0]) == 0xEF &&
-            static_cast<unsigned char>(utf8[1]) == 0xBB &&
-            static_cast<unsigned char>(utf8[2]) == 0xBF) {
-            utf8.remove_prefix(3); // 跳过 UTF-8 BOM
-        }
-        std::wstring w = utf8_to_wstring(utf8);
-
-        std::wstring out;
-        out.reserve(w.size() + 64);
-        for (size_t i = 0; i < w.size(); ++i) {
-            if (w[i] == L'\r') {
-                if (i + 1 < w.size() && w[i + 1] == L'\n') ++i;
-                out += L"\r\n";
-            }
-            else if (w[i] == L'\n') out += L"\r\n";
-            else out += w[i];
-        }
-        return out;
+    // 内置 GPLv3 文本。不再从 RT_RCDATA 资源读取。
+    // 换行统一用 \r\n，供 RichEdit 显示。
+    [[nodiscard]] std::wstring loadLicenseText(HINSTANCE /*hInst*/) {
+        return
+            L"GNU GENERAL PUBLIC LICENSE\r\n"
+            L"Version 3, 29 June 2007\r\n"
+            L"\r\n"
+            L"（此处为 GPLv3 全文占位。可将完整文本粘贴到此字符串中，\r\n"
+            L"换行请使用 \\r\\n。）\r\n";
     }
 
     LRESULT CALLBACK LegalWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
