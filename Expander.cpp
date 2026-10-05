@@ -3,7 +3,7 @@
 #define NOMINMAX
 #include <windows.h>
 #include <richedit.h>
-
+#include "Resource.h"
 #include "Header/common/utf8.hpp"
 #include "Header/common/sequence.hpp"
 #include "Header/common/Matrix.hpp"
@@ -31,21 +31,29 @@ using namespace omegay::notation;
 namespace {
     using Bms = omegay::notation::BMSFamilyNotation;
 
-    constexpr int IDM_ABOUT = 1001;
-    constexpr int IDM_EXIT = 1002;
+    // ⚠️ 改名以避免与 Resource.h 中的宏冲突
+    // Resource.h: #define IDM_ABOUT 104
+    // Resource.h: #define IDM_EXIT  105
+    constexpr int IDM_APP_ABOUT = 1001;
+    constexpr int IDM_APP_EXIT = 1002;
+
     constexpr int IDM_HELP = 1003;
     constexpr int IDM_LEGAL = 1004;
     constexpr int IDM_FS = 101;
     constexpr int IDM_FSALTER = 102;
     constexpr int IDM_ENTRY_DEMO = 103;
+
     constexpr int IDC_NOTATION_COMBO = 2001;
     constexpr int IDM_DEFINITION_BASE = 3000;
     constexpr int IDC_DEFINITION_EDIT = 4001;
+
     constexpr wchar_t kDefWindowClass[] = L"OmegaYDefPopup";
     constexpr int IDC_POPUP_DEF_EDIT = 5001;
     constexpr int IDC_POPUP_DEF_CLOSE = 5002;
+
     constexpr wchar_t kLegalWindowClass[] = L"OmegaYLegal";
     constexpr int IDC_LEGAL_EDIT = 6001;
+
     HWND g_hLegalWindow = nullptr;
 
     struct NotationEntry {
@@ -103,8 +111,6 @@ namespace {
             || e.expand_text == &bmsExpandV33
             || e.expand_text == &bmsExpandV4;
     }
-
-    // ---- UPMS 文本 ⇄ Matrix（省略尾随零的写法） ----
     [[nodiscard]] omegay::common::Matrix
         parseUpmsText(std::string_view s) {
         std::vector<std::vector<int>> cols;
@@ -188,13 +194,6 @@ namespace {
             return "（后继形展开为空矩阵，或未能定位坏根）";
         return out;
     }
-
-    // ---- 定义文本内置存储 ----
-    //
-    // 文本不再从 RT_RCDATA 资源读取，而是写死在本文件的 builtin 表中。
-    // key 与 notationTable() 里的 def_key 一一对应。
-    // 换行统一用 \r\n，供 RichEdit 显示。
-    // 找不到 key 时返回空串，由 get() 回退到"（暂无定义）"。
     class DefinitionStore {
     public:
         static DefinitionStore& instance() {
@@ -220,80 +219,79 @@ namespace {
         DefinitionStore& operator=(const DefinitionStore&) = delete;
 
         [[nodiscard]] static std::wstring loadBuiltin(const char* key) {
-            static const std::unordered_map<std::string, std::wstring> builtin = {
-                { "empty", L"空记号的定义。\r\n"
-                           L"\r\n"
-                           L"（在此填写 EmptyNotation 的定义正文。）\r\n" },
-
-                { "pps", L"PPS 的定义。\r\n"
-                         L"\r\n"
-                         L"（在此填写 PPSNotation 的定义正文。）\r\n" },
-
-                { "pps4", L"PPS4 的定义。\r\n"
-                          L"\r\n"
-                          L"（在此填写 PPS4Notation 的定义正文。）\r\n" },
-
-                { "wpps4", L"Weak PPS4 的定义。\r\n"
-                           L"\r\n"
-                           L"（在此填写 WPPS4Notation 的定义正文。）\r\n" },
-
-                { "tpps4", L"Third PPS4 的定义。\r\n"
-                           L"\r\n"
-                           L"（在此填写 TPPS4Notation 的定义正文。）\r\n" },
-
-                { "ewpps4", L"Ex. Weak PPS4 的定义。\r\n"
-                            L"\r\n"
-                            L"（在此填写 EWPPS4Notation 的定义正文。）\r\n" },
-
-                { "spps4", L"Second PPS4 的定义。\r\n"
-                           L"\r\n"
-                           L"（在此填写 SecondPPS4Notation 的定义正文。）\r\n" },
-
-                { "2-pps4", L"2-pps4 的定义。\r\n"
-                            L"\r\n"
-                            L"（在此填写 PPS2Notation 的定义正文。）\r\n" },
-
-                { "omega-y-medium", L"ω-Y (medium) 的定义。\r\n"
-                                    L"\r\n"
-                                    L"（在此填写 OmegaYMediumNotation 的定义正文。）\r\n" },
-
-                { "omega-y-strong", L"ω-Y (strong) 的定义。\r\n"
-                                    L"\r\n"
-                                    L"（在此填写 OmegaYStrongNotation 的定义正文。）\r\n" },
-
-                { "mrss121", L"MrSS1.2.1 的定义。\r\n"
-                             L"\r\n"
-                             L"（在此填写 Mrss121Notation 的定义正文。）\r\n" },
-
-                { "bms-v1",  L"BMS v1.0 的定义。\r\n\r\n（在此填写定义正文。）\r\n" },
-                { "bms-v2",  L"BMS v2.0 的定义。\r\n\r\n（在此填写定义正文。）\r\n" },
-                { "bms-v21", L"BMS v2.1 的定义。\r\n\r\n（在此填写定义正文。）\r\n" },
-                { "bms-v22", L"BMS v2.2 的定义。\r\n\r\n（在此填写定义正文。）\r\n" },
-                { "bms-v23", L"BMS v2.3 的定义。\r\n\r\n（在此填写定义正文。）\r\n" },
-                { "bms-v3",  L"BMS v3.0 的定义。\r\n\r\n（在此填写定义正文。）\r\n" },
-                { "bms-v31", L"BMS v3.1 的定义。\r\n\r\n（在此填写定义正文。）\r\n" },
-                { "bms-v32", L"BMS v3.2 的定义。\r\n\r\n（在此填写定义正文。）\r\n" },
-                { "bms-v33", L"BMS v3.3 的定义。\r\n\r\n（在此填写定义正文。）\r\n" },
-                { "bms-v4",  L"BMS v4.0 的定义。\r\n\r\n（在此填写定义正文。）\r\n" },
-
-                { "omega-y-sequence", L"ω-Y sequence 的定义。\r\n"
-                                      L"\r\n"
-                                      L"（在此填写 OmegaYNotation 的定义正文。）\r\n" },
-
-                { "epsilon-y", L"ε-Y 的定义。\r\n"
-                               L"\r\n"
-                               L"（在此填写 EpsilonYNotation 的定义正文。）\r\n" },
-
-                { "upms", L"UPMS 的定义。\r\n"
-                          L"\r\n"
-                          L"（在此填写 UPMSNotation 的定义正文。）\r\n" },
+            // 1) 把 def_key 映射到 .rc 里的资源 ID
+            static const std::unordered_map<std::string, int> keyToId = {
+                { "empty",            IDR_DEF_EMPTY },
+                { "pps",              IDR_DEF_PPS },
+                { "pps4",             IDR_DEF_PPS4 },
+                { "wpps4",            IDR_DEF_WPPS4 },
+                { "tpps4",            IDR_DEF_TPPS4 },
+                { "ewpps4",           IDR_DEF_EWPPS4 },
+                { "spps4",            IDR_DEF_SPPS4 },
+                { "2-pps4",           IDR_DEF_2PPS4 },
+                { "omega-y-medium",   IDR_DEF_OMEGA_Y_MEDIUM },
+                { "omega-y-strong",   IDR_DEF_OMEGA_Y_STRONG },
+                { "mrss121",          IDR_DEF_MRSS121 },
+                { "bms-v1",           IDR_DEF_BMS_V1 },
+                { "bms-v2",           IDR_DEF_BMS_V2 },
+                { "bms-v21",          IDR_DEF_BMS_V21 },
+                { "bms-v22",          IDR_DEF_BMS_V22 },
+                { "bms-v23",          IDR_DEF_BMS_V23 },
+                { "bms-v3",           IDR_DEF_BMS_V3 },
+                { "bms-v31",          IDR_DEF_BMS_V31 },
+                { "bms-v32",          IDR_DEF_BMS_V32 },
+                { "bms-v33",          IDR_DEF_BMS_V33 },
+                { "bms-v4",           IDR_DEF_BMS_V4 },
+                { "omega-y-sequence", IDR_DEF_OMEGA_Y_SEQUENCE },
+                { "epsilon-y",        IDR_DEF_EPSILON_Y },
+                { "upms",             IDR_DEF_UPMS },
             };
 
             if (key == nullptr || key[0] == '\0') return {};
 
-            auto it = builtin.find(key);
-            if (it == builtin.end()) return {};
-            return it->second;
+            auto it = keyToId.find(key);
+            if (it == keyToId.end()) return {};
+            const int resId = it->second;
+
+            // 2) 从当前模块的 RT_RCDATA 里找
+            HINSTANCE hInst = ::GetModuleHandleW(nullptr);
+
+            HRSRC hRes = ::FindResourceW(
+                hInst, MAKEINTRESOURCEW(resId), RT_RCDATA);
+            if (!hRes) return {};
+
+            const DWORD size = ::SizeofResource(hInst, hRes);
+            if (size == 0) return {};
+
+            HGLOBAL hData = ::LoadResource(hInst, hRes);
+            if (!hData) return {};
+
+            const void* bytes = ::LockResource(hData);
+            if (!bytes) return {};
+
+            // 3) 按 UTF-8 解码成宽字符
+            const char* p = static_cast<const char*>(bytes);
+            std::size_t len = size;
+
+            // 跳过可能的 UTF-8 BOM
+            if (len >= 3 &&
+                static_cast<unsigned char>(p[0]) == 0xEF &&
+                static_cast<unsigned char>(p[1]) == 0xBB &&
+                static_cast<unsigned char>(p[2]) == 0xBF) {
+                p += 3;
+                len -= 3;
+            }
+            if (len == 0) return {};
+
+            const int wlen = ::MultiByteToWideChar(
+                CP_UTF8, 0, p, static_cast<int>(len), nullptr, 0);
+            if (wlen <= 0) return {};
+
+            std::wstring out(static_cast<std::size_t>(wlen), L'\0');
+            ::MultiByteToWideChar(
+                CP_UTF8, 0, p, static_cast<int>(len),
+                out.data(), wlen);
+            return out;
         }
 
         std::unordered_map<std::string, std::wstring> cache_;
@@ -448,7 +446,7 @@ namespace {
         HMENU hMenu = ::CreateMenu();
 
         HMENU hFile = ::CreatePopupMenu();
-        ::AppendMenuW(hFile, MF_STRING, IDM_EXIT, L"退出(&X)");
+        ::AppendMenuW(hFile, MF_STRING, IDM_APP_EXIT, L"退出(&X)");
         ::AppendMenuW(hMenu, MF_POPUP,
             reinterpret_cast<UINT_PTR>(hFile), L"文件(&F)");
         HMENU hDef = ::CreatePopupMenu();
@@ -471,7 +469,7 @@ namespace {
 
         HMENU hHelp = ::CreatePopupMenu();
         ::AppendMenuW(hHelp, MF_STRING, IDM_HELP, L"帮助(&H)...");
-        ::AppendMenuW(hHelp, MF_STRING, IDM_ABOUT, L"关于(&A)...");
+        ::AppendMenuW(hHelp, MF_STRING, IDM_APP_ABOUT, L"关于(&A)...");
         ::AppendMenuW(hHelp, MF_STRING, IDM_LEGAL, L"法律声明(&L)...");
         ::AppendMenuW(hMenu, MF_POPUP,
             reinterpret_cast<UINT_PTR>(hHelp), L"帮助(&H)");
@@ -854,16 +852,16 @@ namespace {
                 ::SendMessageW(ui->hComboNotation, CB_SETCURSEL, 0, 0);
             }
 
-            ui->hBtnFS = ::CreateWindowExW(0, L"BUTTON", L"移除末项",
+            /*ui->hBtnFS = ::CreateWindowExW(0, L"BUTTON", L"移除末项",
                 WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
                 10, mh + 115, 120, 25,
                 hwnd,
                 reinterpret_cast<HMENU>(static_cast<UINT_PTR>(IDM_FS)),
-                hInst, nullptr);
+                hInst, nullptr);*/
 
-            ui->hBtnFSalter = ::CreateWindowExW(0, L"BUTTON", L"保留末项",
+            ui->hBtnFSalter = ::CreateWindowExW(0, L"BUTTON", L"展开",
                 WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
-                140, mh + 115, 120, 25,
+                10, mh + 115, 200, 25,
                 hwnd,
                 reinterpret_cast<HMENU>(static_cast<UINT_PTR>(IDM_FSALTER)),
                 hInst, nullptr);
@@ -944,7 +942,7 @@ namespace {
                     L"帮助", MB_OK | MB_ICONINFORMATION);
                 break;
 
-            case IDM_ABOUT:
+            case IDM_APP_ABOUT:
                 ::MessageBoxW(hwnd,
                     L"ω-Y 展开器\n\n"
                     L"By Cream-CN\n",
@@ -958,7 +956,7 @@ namespace {
                 break;
             }
 
-            case IDM_EXIT:
+            case IDM_APP_EXIT:
                 ::PostQuitMessage(0);
                 break;
 

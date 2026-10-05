@@ -175,6 +175,7 @@
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Expander.rc" />
+    <ResourceCompile Include="license.rc" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="Expander.ico" />
