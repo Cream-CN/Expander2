@@ -520,13 +520,7 @@ namespace {
             ::UpdateWindow(hPopup);
         }
     }
-
-    // 与 Resource.h 中 IDR_LICENSE_TEXT (131) 保持一致；
-    // 本文件不能 include Resource.h（其 IDM_* 宏与下方 constexpr 常量冲突）。
     constexpr WORD kLicenseResourceId = 131;
-
-    // 从 RCDATA 资源 IDR_LICENSE_TEXT 读取 GPLv3 文本（UTF-8），转为宽字符
-    // 并统一为 RichEdit 需要的 CRLF 换行。
     [[nodiscard]] std::wstring loadLicenseText(HINSTANCE hInst) {
         HRSRC hRes = ::FindResourceW(
             hInst, MAKEINTRESOURCEW(kLicenseResourceId), RT_RCDATA);
@@ -576,7 +570,6 @@ namespace {
             if (hRich && text) {
                 ::SetWindowTextW(hRich, text->c_str());
                 applyRichEdit10pt(hRich, L"Microsoft YaHei");
-                // 预格式化文本：清零 RichEdit 默认段落边距，并关闭自动换行
                 ::SendMessageW(hRich, EM_SETMARGINS,
                     EC_LEFTMARGIN | EC_RIGHTMARGIN,
                     MAKELPARAM(0, 0));
@@ -727,7 +720,7 @@ namespace {
                 10, mh + 10, 150, 20,
                 hwnd, nullptr, hInst, nullptr);
 
-            ui->hEditSeq = ::CreateWindowExW(0, L"EDIT", L"1,2,3",
+            ui->hEditSeq = ::CreateWindowExW(0, L"EDIT", L"",
                 WS_CHILD | WS_VISIBLE | WS_BORDER | ES_LEFT,
                 10, mh + 30, 200, 20,
                 hwnd, nullptr, hInst, nullptr);
@@ -750,7 +743,7 @@ namespace {
             ui->hComboNotation = ::CreateWindowExW(
                 0, L"COMBOBOX", nullptr,
                 WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST | WS_VSCROLL,
-                100, mh + 85, 220, 200,
+                60, mh + 85, 220, 200,
                 hwnd,
                 reinterpret_cast<HMENU>(static_cast<UINT_PTR>(IDC_NOTATION_COMBO)),
                 hInst, nullptr);
@@ -763,16 +756,16 @@ namespace {
                 ::SendMessageW(ui->hComboNotation, CB_SETCURSEL, 0, 0);
             }
 
-            ui->hBtnFS = ::CreateWindowExW(0, L"BUTTON", L"移除末项",
+            /*ui->hBtnFS = ::CreateWindowExW(0, L"BUTTON", L"移除末项",
                 WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
                 10, mh + 115, 120, 25,
                 hwnd,
                 reinterpret_cast<HMENU>(static_cast<UINT_PTR>(IDM_FS)),
-                hInst, nullptr);
+                hInst, nullptr);*/
 
-            ui->hBtnFSalter = ::CreateWindowExW(0, L"BUTTON", L"保留末项",
+            ui->hBtnFSalter = ::CreateWindowExW(0, L"BUTTON", L"展开",
                 WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
-                140, mh + 115, 120, 25,
+                10, mh + 115, 200, 25,
                 hwnd,
                 reinterpret_cast<HMENU>(static_cast<UINT_PTR>(IDM_FSALTER)),
                 hInst, nullptr);
