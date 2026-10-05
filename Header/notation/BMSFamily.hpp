@@ -306,8 +306,12 @@ namespace omegay::notation {
 
             const int R = row + 1;
             Matrix SA(R, p + 1);
+            // 复制 S 的前 p+1 列作为初始 SA。
+            // 注意：第 p 列必须用 S 的真实值，不能用理想值 i，
+            // 否则等于把待检验的偏差列替换掉，标准式会被误判为非标准。
             for (int i = 0; i <= p; ++i)
-                for (int j = 0; j < R; ++j) SA(j, i) = i;
+                for (int j = 0; j < R; ++j)
+                    SA(j, i) = S(j, i);
 
             std::vector<int> C(static_cast<std::size_t>(R) * (static_cast<std::size_t>(nc) * 2 + 4), 0);
             for (int i = 0; i < R; ++i) C[i + R] = 1;
@@ -482,7 +486,13 @@ namespace omegay::notation {
             long num = term < 1 ? 1 : term;
 
             std::vector<int> Delta(static_cast<std::size_t>(nr), 0);
-            std::vector<int> C(static_cast<std::size_t>(nr) * (static_cast<std::size_t>(n) + 3), 0);
+            // C 参考实现里 C 的大小是 nr * num * (nc+1)：
+            // getBadSequence 会写到 (k+1) 列，k 最大到 bad-1 ≤ n，
+            // 后续 copyBadSequence 会写到 m 列，m ≤ bad ≤ n。
+            // 因此按 num*(n+1) 开列数，覆盖所有写点。
+            const long cap_cols = num * (n + 1) + 2;
+            std::vector<int> C(static_cast<std::size_t>(nr) *
+                static_cast<std::size_t>(cap_cols), 0);
             for (int r = 0; r < nr; ++r) C[r + nr] = 1;
 
             const int bad = detail::getBadSequence(S, Delta, C, static_cast<int>(ver), n, nr);
