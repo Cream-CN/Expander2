@@ -976,9 +976,9 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int nCmdShow) {
     if (!::RegisterClassW(&wc)) return 0;
 
     HWND hwnd = ::CreateWindowExW(
-        0, L"OmegaY", L"ω-Y 展开器 (重构中)",
+        0, L"OmegaY", L"Expander",
         WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX,
-        CW_USEDEFAULT, CW_USEDEFAULT, 400, 400,
+        CW_USEDEFAULT, CW_USEDEFAULT, 400, 250,
         nullptr, nullptr, hInstance, nullptr);
     if (!hwnd) return 0;
 
