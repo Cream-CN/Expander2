@@ -3,7 +3,7 @@
 #define NOMINMAX
 #include <windows.h>
 #include <richedit.h>
-#include "Resource.h"
+
 #include "Header/common/utf8.hpp"
 #include "Header/common/sequence.hpp"
 #include "Header/common/Matrix.hpp"
@@ -22,7 +22,7 @@
 #include <string_view>
 #include <vector>
 #include <cstdint>
-#include <unordered_map>
+#include "Resource.h"
 
 using namespace omegay;
 using namespace omegay::common;
@@ -31,29 +31,20 @@ using namespace omegay::notation;
 namespace {
     using Bms = omegay::notation::BMSFamilyNotation;
 
-    // ⚠️ 改名以避免与 Resource.h 中的宏冲突
-    // Resource.h: #define IDM_ABOUT 104
-    // Resource.h: #define IDM_EXIT  105
-    constexpr int IDM_APP_ABOUT = 1001;
-    constexpr int IDM_APP_EXIT = 1002;
-
+    /*constexpr int IDM_ABOUT = 1001;
+    constexpr int IDM_EXIT = 1002;*/
     constexpr int IDM_HELP = 1003;
     constexpr int IDM_LEGAL = 1004;
     constexpr int IDM_FS = 101;
     constexpr int IDM_FSALTER = 102;
     constexpr int IDM_ENTRY_DEMO = 103;
-
     constexpr int IDC_NOTATION_COMBO = 2001;
     constexpr int IDM_DEFINITION_BASE = 3000;
-    constexpr int IDC_DEFINITION_EDIT = 4001;
-
     constexpr wchar_t kDefWindowClass[] = L"OmegaYDefPopup";
     constexpr int IDC_POPUP_DEF_EDIT = 5001;
     constexpr int IDC_POPUP_DEF_CLOSE = 5002;
-
     constexpr wchar_t kLegalWindowClass[] = L"OmegaYLegal";
     constexpr int IDC_LEGAL_EDIT = 6001;
-
     HWND g_hLegalWindow = nullptr;
 
     struct NotationEntry {
@@ -61,9 +52,7 @@ namespace {
         const char* id;
         std::vector<int>(*expand)(const std::vector<int>&, int);
         std::string(*suffix)();
-        // 定义文本的键。空表示无定义。文本从内置表懒加载，
-        // 见 DefinitionStore。约定通常直接等于 id。
-        const char* def_key;
+        int definition_resource_id;
 
         // 可选的文本展开入口。若不为空，UI 会优先用它处理输入文本，
         // 签名约定：std::string expand_string(std::string_view, int)
@@ -98,7 +87,6 @@ namespace {
     std::string bmsExpandV32(std::string_view t, int n) { return bmsExpandTextWith(Bms::Version::V32, t, n); }
     std::string bmsExpandV33(std::string_view t, int n) { return bmsExpandTextWith(Bms::Version::V33, t, n); }
     std::string bmsExpandV4(std::string_view t, int n) { return bmsExpandTextWith(Bms::Version::V4, t, n); }
-
     inline bool isBmsTextEntry(const NotationEntry& e) {
         return e.expand_text == &bmsExpandV1
             || e.expand_text == &bmsExpandV2
@@ -111,6 +99,8 @@ namespace {
             || e.expand_text == &bmsExpandV33
             || e.expand_text == &bmsExpandV4;
     }
+
+    // ---- UPMS 文本 ⇄ Matrix（省略尾随零的写法） ----
     [[nodiscard]] omegay::common::Matrix
         parseUpmsText(std::string_view s) {
         std::vector<std::vector<int>> cols;
@@ -194,232 +184,117 @@ namespace {
             return "（后继形展开为空矩阵，或未能定位坏根）";
         return out;
     }
-    class DefinitionStore {
-    public:
-        static DefinitionStore& instance() {
-            static DefinitionStore s;
-            return s;
-        }
-
-        [[nodiscard]] const std::wstring& get(const char* key) {
-            if (key == nullptr || key[0] == '\0') return missing_;
-
-            auto it = cache_.find(key);
-            if (it != cache_.end()) return it->second;
-
-            std::wstring text = loadBuiltin(key);
-            if (text.empty()) text = missing_;
-
-            return cache_.emplace(key, std::move(text)).first->second;
-        }
-
-    private:
-        DefinitionStore() : missing_(L"（暂无定义）") {}
-        DefinitionStore(const DefinitionStore&) = delete;
-        DefinitionStore& operator=(const DefinitionStore&) = delete;
-
-        [[nodiscard]] static std::wstring loadBuiltin(const char* key) {
-            // 1) 把 def_key 映射到 .rc 里的资源 ID
-            static const std::unordered_map<std::string, int> keyToId = {
-                { "empty",            IDR_DEF_EMPTY },
-                { "pps",              IDR_DEF_PPS },
-                { "pps4",             IDR_DEF_PPS4 },
-                { "wpps4",            IDR_DEF_WPPS4 },
-                { "tpps4",            IDR_DEF_TPPS4 },
-                { "ewpps4",           IDR_DEF_EWPPS4 },
-                { "spps4",            IDR_DEF_SPPS4 },
-                { "2-pps4",           IDR_DEF_2PPS4 },
-                { "omega-y-medium",   IDR_DEF_OMEGA_Y_MEDIUM },
-                { "omega-y-strong",   IDR_DEF_OMEGA_Y_STRONG },
-                { "mrss121",          IDR_DEF_MRSS121 },
-                { "bms-v1",           IDR_DEF_BMS_V1 },
-                { "bms-v2",           IDR_DEF_BMS_V2 },
-                { "bms-v21",          IDR_DEF_BMS_V21 },
-                { "bms-v22",          IDR_DEF_BMS_V22 },
-                { "bms-v23",          IDR_DEF_BMS_V23 },
-                { "bms-v3",           IDR_DEF_BMS_V3 },
-                { "bms-v31",          IDR_DEF_BMS_V31 },
-                { "bms-v32",          IDR_DEF_BMS_V32 },
-                { "bms-v33",          IDR_DEF_BMS_V33 },
-                { "bms-v4",           IDR_DEF_BMS_V4 },
-                { "omega-y-sequence", IDR_DEF_OMEGA_Y_SEQUENCE },
-                { "epsilon-y",        IDR_DEF_EPSILON_Y },
-                { "upms",             IDR_DEF_UPMS },
-            };
-
-            if (key == nullptr || key[0] == '\0') return {};
-
-            auto it = keyToId.find(key);
-            if (it == keyToId.end()) return {};
-            const int resId = it->second;
-
-            // 2) 从当前模块的 RT_RCDATA 里找
-            HINSTANCE hInst = ::GetModuleHandleW(nullptr);
-
-            HRSRC hRes = ::FindResourceW(
-                hInst, MAKEINTRESOURCEW(resId), RT_RCDATA);
-            if (!hRes) return {};
-
-            const DWORD size = ::SizeofResource(hInst, hRes);
-            if (size == 0) return {};
-
-            HGLOBAL hData = ::LoadResource(hInst, hRes);
-            if (!hData) return {};
-
-            const void* bytes = ::LockResource(hData);
-            if (!bytes) return {};
-
-            // 3) 按 UTF-8 解码成宽字符
-            const char* p = static_cast<const char*>(bytes);
-            std::size_t len = size;
-
-            // 跳过可能的 UTF-8 BOM
-            if (len >= 3 &&
-                static_cast<unsigned char>(p[0]) == 0xEF &&
-                static_cast<unsigned char>(p[1]) == 0xBB &&
-                static_cast<unsigned char>(p[2]) == 0xBF) {
-                p += 3;
-                len -= 3;
-            }
-            if (len == 0) return {};
-
-            const int wlen = ::MultiByteToWideChar(
-                CP_UTF8, 0, p, static_cast<int>(len), nullptr, 0);
-            if (wlen <= 0) return {};
-
-            std::wstring out(static_cast<std::size_t>(wlen), L'\0');
-            ::MultiByteToWideChar(
-                CP_UTF8, 0, p, static_cast<int>(len),
-                out.data(), wlen);
-            return out;
-        }
-
-        std::unordered_map<std::string, std::wstring> cache_;
-        std::wstring missing_;
-    };
-
-    // 拼装"【名称】\r\n\r\n + 定义正文"
-    [[nodiscard]] std::wstring formatDefinition(const NotationEntry& entry) {
-        std::wstring text;
-        text += L"【";
-        text += entry.display_name;
-        text += L"】\r\n\r\n";
-        text += DefinitionStore::instance().get(entry.def_key);
-        return text;
-    }
 
     [[nodiscard]] const std::vector<NotationEntry>& notationTable() {
         static const std::vector<NotationEntry> table = {
             { L"空记号", "empty",
-              &notation::EmptyNotation::expand,
-              &notation::EmptyNotation::suffix,
-              "empty" },
+              &notation::EmptyNotation::expand, &notation::EmptyNotation::suffix,
+              IDR_DEF_EMPTY },
 
             { L"PPS", "pps",
-              &notation::PPSNotation::expand,
-              &notation::PPSNotation::suffix,
-              "pps" },
+              &notation::PPSNotation::expand, &notation::PPSNotation::suffix,
+              IDR_DEF_PPS },
 
             { L"PPS4", "pps4",
-              &notation::PPS4Notation::expand,
-              &notation::PPS4Notation::suffix,
-              "pps4" },
+              &notation::PPS4Notation::expand, &notation::PPS4Notation::suffix,
+              IDR_DEF_PPS4 },
 
             { L"Weak PPS4", "wpps4",
-              &notation::WPPS4Notation::expand,
-              &notation::WPPS4Notation::suffix,
-              "wpps4" },
+              &notation::WPPS4Notation::expand, &notation::WPPS4Notation::suffix,
+              IDR_DEF_WPPS4 },
 
             { L"Third PPS4", "tpps4",
-              &notation::TPPS4Notation::expand,
-              &notation::TPPS4Notation::suffix,
-              "tpps4" },
+              &notation::TPPS4Notation::expand, &notation::TPPS4Notation::suffix,
+              IDR_DEF_TPPS4 },
 
             { L"Ex. Weak PPS4", "ewpps4",
-              &notation::EWPPS4Notation::expand,
-              &notation::EWPPS4Notation::suffix,
-              "ewpps4" },
+              &notation::EWPPS4Notation::expand, &notation::EWPPS4Notation::suffix,
+              IDR_DEF_EWPPS4 },
 
             { L"Second PPS4", "spps4",
-              &notation::SecondPPS4Notation::expand,
-              &notation::SecondPPS4Notation::suffix,
-              "spps4" },
+              &notation::SecondPPS4Notation::expand, &notation::SecondPPS4Notation::suffix,
+              IDR_DEF_SPPS4 },
 
             { L"2-pps4", "2-pps4",
-              &notation::PPS2Notation::expand,
-              &notation::PPS2Notation::suffix,
-              "2-pps4" },
+              &notation::PPS2Notation::expand, &notation::PPS2Notation::suffix,
+              IDR_DEF_2PPS4 },
 
             { L"ω-Y (medium)", "omega-y-medium",
-              &notation::OmegaYMediumNotation::expand,
-              &notation::OmegaYMediumNotation::suffix,
-              "omega-y-medium" },
+              &notation::OmegaYMediumNotation::expand, &notation::OmegaYMediumNotation::suffix,
+              IDR_DEF_OMEGA_Y_MEDIUM },
 
             { L"ω-Y (strong)", "omega-y-strong",
-              &notation::OmegaYStrongNotation::expand,
-              &notation::OmegaYStrongNotation::suffix,
-              "omega-y-strong" },
+              &notation::OmegaYStrongNotation::expand, &notation::OmegaYStrongNotation::suffix,
+              IDR_DEF_OMEGA_Y_STRONG },
 
             { L"MrSS1.2.1", "mrss121",
-              &notation::Mrss121Notation::expand,
-              &notation::Mrss121Notation::suffix,
-              "mrss121",
+              &notation::Mrss121Notation::expand, &notation::Mrss121Notation::suffix,
+              IDR_DEF_MRSS121,
               &notation::Mrss121Notation::expand_string },
 
               // [BMS] 每个版本一条独立记号：expand 置 nullptr，走 expand_text 文本入口
               { L"BMS v1.0", "bms-v1",
                 nullptr, &notation::BMSFamilyNotation::suffix,
-                "bms-v1", &bmsExpandV1 },
+                IDR_DEF_BMS_V1,
+                &bmsExpandV1 },
 
               { L"BMS v2.0", "bms-v2",
                 nullptr, &notation::BMSFamilyNotation::suffix,
-                "bms-v2", &bmsExpandV2 },
+                IDR_DEF_BMS_V2,
+                &bmsExpandV2 },
 
               { L"BMS v2.1", "bms-v21",
                 nullptr, &notation::BMSFamilyNotation::suffix,
-                "bms-v21", &bmsExpandV21 },
+                IDR_DEF_BMS_V21,
+                &bmsExpandV21 },
 
               { L"BMS v2.2", "bms-v22",
                 nullptr, &notation::BMSFamilyNotation::suffix,
-                "bms-v22", &bmsExpandV22 },
+                IDR_DEF_BMS_V22,
+                &bmsExpandV22 },
 
               { L"BMS v2.3", "bms-v23",
                 nullptr, &notation::BMSFamilyNotation::suffix,
-                "bms-v23", &bmsExpandV23 },
+                IDR_DEF_BMS_V23,
+                &bmsExpandV23 },
 
               { L"BMS v3.0", "bms-v3",
                 nullptr, &notation::BMSFamilyNotation::suffix,
-                "bms-v3", &bmsExpandV3 },
+                IDR_DEF_BMS_V3,
+                &bmsExpandV3 },
 
               { L"BMS v3.1", "bms-v31",
                 nullptr, &notation::BMSFamilyNotation::suffix,
-                "bms-v31", &bmsExpandV31 },
+                IDR_DEF_BMS_V31,
+                &bmsExpandV31 },
 
               { L"BMS v3.2", "bms-v32",
                 nullptr, &notation::BMSFamilyNotation::suffix,
-                "bms-v32", &bmsExpandV32 },
+                IDR_DEF_BMS_V32,
+                &bmsExpandV32 },
 
               { L"BMS v3.3", "bms-v33",
                 nullptr, &notation::BMSFamilyNotation::suffix,
-                "bms-v33", &bmsExpandV33 },
+                IDR_DEF_BMS_V33,
+                &bmsExpandV33 },
 
               { L"BMS v4.0", "bms-v4",
                 nullptr, &notation::BMSFamilyNotation::suffix,
-                "bms-v4", &bmsExpandV4 },
+                IDR_DEF_BMS_V4,
+                &bmsExpandV4 },
 
               { L"ω-Y sequence", "omega-y-sequence",
-                &notation::OmegaYNotation::expand,
-                &notation::OmegaYNotation::suffix,
-                "omega-y-sequence" },
+                &notation::OmegaYNotation::expand, &notation::OmegaYNotation::suffix,
+                IDR_DEF_OMEGA_Y_SEQUENCE },
 
               { L"ε-Y", "epsilon-y",
-                &notation::EpsilonYNotation::expand,
-                &notation::EpsilonYNotation::suffix,
-                "epsilon-y" },
+                &notation::EpsilonYNotation::expand, &notation::EpsilonYNotation::suffix,
+                IDR_DEF_EPSILON_Y },
 
               { L"UPMS", "upms",
                 nullptr, &notation::UPMSNotation::suffix,
-                "upms", &upmsExpandText },
+                IDR_DEF_UPMS,
+                &upmsExpandText },
         };
         return table;
     }
@@ -435,20 +310,40 @@ namespace {
         HWND hBtnFS{};
         HWND hBtnFSalter{};
         HWND hComboNotation{};
-        HWND hRichDef{};
         BrushPtr background;
     };
 
     [[nodiscard]] UiState* getUi(HWND h) {
         return reinterpret_cast<UiState*>(::GetWindowLongPtrW(h, GWLP_USERDATA));
     }
+
+    [[nodiscard]] std::wstring loadDefinitionText(HINSTANCE hInst, int resId) {
+        HRSRC hRes = ::FindResourceW(
+            hInst, MAKEINTRESOURCEW(resId), RT_RCDATA);
+        HGLOBAL hGlobal = hRes ? ::LoadResource(hInst, hRes) : nullptr;
+        const auto* data = hGlobal
+            ? static_cast<const char*>(::LockResource(hGlobal)) : nullptr;
+        const DWORD size = hRes ? ::SizeofResource(hInst, hRes) : 0;
+        if (!data || size == 0) return L"正在修复";
+
+        std::string_view utf8(data, size);
+        if (utf8.size() >= 3 &&
+            static_cast<unsigned char>(utf8[0]) == 0xEF &&
+            static_cast<unsigned char>(utf8[1]) == 0xBB &&
+            static_cast<unsigned char>(utf8[2]) == 0xBF) {
+            utf8.remove_prefix(3); // 跳过 UTF-8 BOM
+        }
+        return utf8_to_wstring(utf8);
+    }
+
     [[nodiscard]] HMENU createMenuBar() {
         HMENU hMenu = ::CreateMenu();
 
         HMENU hFile = ::CreatePopupMenu();
-        ::AppendMenuW(hFile, MF_STRING, IDM_APP_EXIT, L"退出(&X)");
+        ::AppendMenuW(hFile, MF_STRING, IDM_EXIT, L"退出(&X)");
         ::AppendMenuW(hMenu, MF_POPUP,
             reinterpret_cast<UINT_PTR>(hFile), L"文件(&F)");
+
         HMENU hDef = ::CreatePopupMenu();
         {
             const auto& table = notationTable();
@@ -469,13 +364,14 @@ namespace {
 
         HMENU hHelp = ::CreatePopupMenu();
         ::AppendMenuW(hHelp, MF_STRING, IDM_HELP, L"帮助(&H)...");
-        ::AppendMenuW(hHelp, MF_STRING, IDM_APP_ABOUT, L"关于(&A)...");
+        ::AppendMenuW(hHelp, MF_STRING, IDM_ABOUT, L"关于(&A)...");
         ::AppendMenuW(hHelp, MF_STRING, IDM_LEGAL, L"法律声明(&L)...");
         ::AppendMenuW(hMenu, MF_POPUP,
             reinterpret_cast<UINT_PTR>(hHelp), L"帮助(&H)");
 
         return hMenu;
     }
+
     [[nodiscard]] bool readSeqAndTerm(
         HWND hwnd, UiState* ui,
         std::vector<int>& outSeq, int& outTerm)
@@ -506,17 +402,7 @@ namespace {
         }
         return true;
     }
-    void showDefinition(UiState* ui, int index) {
-        const auto& table = notationTable();
-        if (!ui->hRichDef) return;
-        if (index < 0 || index >= static_cast<int>(table.size())) return;
 
-        const std::wstring text = formatDefinition(table[index]);
-        ::SetWindowTextW(ui->hRichDef, text.c_str());
-
-        ::SendMessageW(ui->hRichDef, EM_SETSEL, 0, 0);
-        ::SendMessageW(ui->hRichDef, EM_SCROLLCARET, 0, 0);
-    }
     void applyRichEdit10pt(HWND hRich, const wchar_t* face = L"Microsoft YaHei UI") {
         const LONG sizeTwips = 10 * 20;
 
@@ -531,10 +417,14 @@ namespace {
         ::SendMessageW(hRich, EM_SETCHARFORMAT, SCF_ALL, reinterpret_cast<LPARAM>(&cf));
     }
 
-    void fillPopupDefinition(HWND hRich, const NotationEntry& entry) {
-        const std::wstring text = formatDefinition(entry);
-        applyRichEdit10pt(hRich);
+    void fillPopupDefinition(HWND hRich, const NotationEntry& entry, HINSTANCE hInst) {
+        std::wstring text;
+        text += L"【";
+        text += entry.display_name;
+        text += L"】\r\n\r\n";
+        text += loadDefinitionText(hInst, entry.definition_resource_id);
 
+        applyRichEdit10pt(hRich);
         ::SetWindowTextW(hRich, text.c_str());
         applyRichEdit10pt(hRich);
 
@@ -570,7 +460,7 @@ namespace {
 
             const auto& table = notationTable();
             if (index >= 0 && index < static_cast<int>(table.size())) {
-                fillPopupDefinition(hRich, table[index]);
+                fillPopupDefinition(hRich, table[index], hInst);
             }
             (void)hClose;
             break;
@@ -636,15 +526,36 @@ namespace {
         }
     }
 
-    // 内置 GPLv3 文本。不再从 RT_RCDATA 资源读取。
-    // 换行统一用 \r\n，供 RichEdit 显示。
-    [[nodiscard]] std::wstring loadLicenseText(HINSTANCE /*hInst*/) {
-        return
-            L"GNU GENERAL PUBLIC LICENSE\r\n"
-            L"Version 3, 29 June 2007\r\n"
-            L"\r\n"
-            L"（此处为 GPLv3 全文占位。可将完整文本粘贴到此字符串中，\r\n"
-            L"换行请使用 \\r\\n。）\r\n";
+    constexpr WORD kLicenseResourceId = 131;
+    [[nodiscard]] std::wstring loadLicenseText(HINSTANCE hInst) {
+        HRSRC hRes = ::FindResourceW(
+            hInst, MAKEINTRESOURCEW(kLicenseResourceId), RT_RCDATA);
+        HGLOBAL hGlobal = hRes ? ::LoadResource(hInst, hRes) : nullptr;
+        const auto* data = hGlobal
+            ? static_cast<const char*>(::LockResource(hGlobal)) : nullptr;
+        const DWORD size = hRes ? ::SizeofResource(hInst, hRes) : 0;
+        if (!data || size == 0) return L"无法加载许可证文本资源。";
+
+        std::string_view utf8(data, size);
+        if (utf8.size() >= 3 &&
+            static_cast<unsigned char>(utf8[0]) == 0xEF &&
+            static_cast<unsigned char>(utf8[1]) == 0xBB &&
+            static_cast<unsigned char>(utf8[2]) == 0xBF) {
+            utf8.remove_prefix(3); // 跳过 UTF-8 BOM
+        }
+        std::wstring w = utf8_to_wstring(utf8);
+
+        std::wstring out;
+        out.reserve(w.size() + 64);
+        for (size_t i = 0; i < w.size(); ++i) {
+            if (w[i] == L'\r') {
+                if (i + 1 < w.size() && w[i + 1] == L'\n') ++i;
+                out += L"\r\n";
+            }
+            else if (w[i] == L'\n') out += L"\r\n";
+            else out += w[i];
+        }
+        return out;
     }
 
     LRESULT CALLBACK LegalWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
@@ -665,7 +576,6 @@ namespace {
             if (hRich && text) {
                 ::SetWindowTextW(hRich, text->c_str());
                 applyRichEdit10pt(hRich, L"Microsoft YaHei");
-                // 预格式化文本：清零 RichEdit 默认段落边距，并关闭自动换行
                 ::SendMessageW(hRich, EM_SETMARGINS,
                     EC_LEFTMARGIN | EC_RIGHTMARGIN,
                     MAKELPARAM(0, 0));
@@ -737,6 +647,7 @@ namespace {
         ::ShowWindow(hwnd, SW_SHOW);
         ::UpdateWindow(hwnd);
     }
+
     void showEntryDemo(HWND hwnd, UiState* ui) {
         std::vector<int> seq;
         int term = 0;
@@ -796,6 +707,7 @@ namespace {
         ::MessageBoxW(hwnd, msg.c_str(), L"Entry 演示",
             MB_OK | MB_ICONINFORMATION);
     }
+
     LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         switch (msg) {
         case WM_CREATE: {
@@ -816,7 +728,7 @@ namespace {
                 10, mh + 10, 150, 20,
                 hwnd, nullptr, hInst, nullptr);
 
-            ui->hEditSeq = ::CreateWindowExW(0, L"EDIT", L"1,2,3",
+            ui->hEditSeq = ::CreateWindowExW(0, L"EDIT", L"",
                 WS_CHILD | WS_VISIBLE | WS_BORDER | ES_LEFT,
                 10, mh + 30, 200, 20,
                 hwnd, nullptr, hInst, nullptr);
@@ -839,7 +751,7 @@ namespace {
             ui->hComboNotation = ::CreateWindowExW(
                 0, L"COMBOBOX", nullptr,
                 WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST | WS_VSCROLL,
-                100, mh + 85, 220, 200,
+                60, mh + 85, 220, 200,
                 hwnd,
                 reinterpret_cast<HMENU>(static_cast<UINT_PTR>(IDC_NOTATION_COMBO)),
                 hInst, nullptr);
@@ -852,29 +764,12 @@ namespace {
                 ::SendMessageW(ui->hComboNotation, CB_SETCURSEL, 0, 0);
             }
 
-            /*ui->hBtnFS = ::CreateWindowExW(0, L"BUTTON", L"移除末项",
-                WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
-                10, mh + 115, 120, 25,
-                hwnd,
-                reinterpret_cast<HMENU>(static_cast<UINT_PTR>(IDM_FS)),
-                hInst, nullptr);*/
-
             ui->hBtnFSalter = ::CreateWindowExW(0, L"BUTTON", L"展开",
                 WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
                 10, mh + 115, 200, 25,
                 hwnd,
                 reinterpret_cast<HMENU>(static_cast<UINT_PTR>(IDM_FSALTER)),
                 hInst, nullptr);
-            ui->hRichDef = ::CreateWindowExW(
-                0, MSFTEDIT_CLASS, L"",
-                WS_CHILD | WS_VISIBLE | WS_BORDER | WS_VSCROLL |
-                ES_MULTILINE | ES_READONLY | ES_AUTOVSCROLL,
-                10, mh + 150, 360, 110,
-                hwnd,
-                reinterpret_cast<HMENU>(static_cast<UINT_PTR>(IDC_DEFINITION_EDIT)),
-                hInst, nullptr);
-            applyRichEdit10pt(ui->hRichDef);
-            showDefinition(ui, 0);
 
             break;
         }
@@ -912,10 +807,9 @@ namespace {
 
             const int id = LOWORD(wParam);
             const auto& table = notationTable();
+
             if (id == IDC_NOTATION_COMBO && HIWORD(wParam) == CBN_SELCHANGE) {
-                int sel = static_cast<int>(
-                    ::SendMessageW(ui->hComboNotation, CB_GETCURSEL, 0, 0));
-                showDefinition(ui, sel);
+                // 定义显示框已移除；切换记号仅更新当前选择
                 break;
             }
             if (id >= IDM_DEFINITION_BASE &&
@@ -942,7 +836,7 @@ namespace {
                     L"帮助", MB_OK | MB_ICONINFORMATION);
                 break;
 
-            case IDM_APP_ABOUT:
+            case IDM_ABOUT:
                 ::MessageBoxW(hwnd,
                     L"ω-Y 展开器\n\n"
                     L"By Cream-CN\n",
@@ -956,7 +850,7 @@ namespace {
                 break;
             }
 
-            case IDM_APP_EXIT:
+            case IDM_EXIT:
                 ::PostQuitMessage(0);
                 break;
 
