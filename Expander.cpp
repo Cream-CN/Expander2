@@ -1,4 +1,4 @@
-//Copyright(c) Cream-CN 2026
+﻿//Copyright(c) Cream-CN 2026
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
 #include <windows.h>
