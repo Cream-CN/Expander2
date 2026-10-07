@@ -59,5 +59,6 @@
 #define IDR_DEF_OMEGA_Y_SEQUENCE   20021
 #define IDR_DEF_EPSILON_Y          20022
 #define IDR_DEF_UPMS               20023
+#define IDR_DEF_GY				   20024
 
 

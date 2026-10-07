@@ -17,6 +17,7 @@
 #include "Header/notation/epsilon-y.hpp"
 #include "Header/notation/BMSFamily.hpp"
 #include "Header/notation/upms.hpp"
+#include "Header/notation/gy.hpp"
 #include <memory>
 #include <string>
 #include <string_view>
@@ -295,6 +296,9 @@ namespace {
                 nullptr, &notation::UPMSNotation::suffix,
                 IDR_DEF_UPMS,
                 &upmsExpandText },
+            { L"G-Y", "g-y",
+                &notation::GYNotation::expand, &notation::GYNotation::suffix,
+                IDR_DEF_GY },
         };
         return table;
     }

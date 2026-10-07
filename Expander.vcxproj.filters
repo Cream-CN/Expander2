@@ -77,6 +77,9 @@
     <ClCompile Include="Expander.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="Header\Notation\gy.hpp">
+      <Filter>头文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Expander.rc">
