@@ -172,6 +172,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Expander.cpp" />
+    <ClCompile Include="Header\Notation\gy.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Expander.rc" />
