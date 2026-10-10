@@ -68,10 +68,10 @@ namespace {
             omegay::common::parse_matrix(text, parsedTerm);
 
         if (m.empty())
-            return "（无法解析出任何列，请检查 BMS 文本格式）";
+            return "解析失败，请确认你没有使用全角括号，逗号";
 
         if (!omegay::notation::BMSFamilyNotation::is_standard(m, ver))
-            return "（非标准形式，BMS 拒绝展开）";
+            return "输入的矩阵为非标准表达式";
 
         const int t = parsedTerm < 1 ? 1 : static_cast<int>(parsedTerm);
 
@@ -177,12 +177,12 @@ namespace {
     std::string upmsExpandText(std::string_view text, int term) {
         const auto m = parseUpmsText(text);
         if (m.empty())
-            return "（无法解析出任何列，请检查 UPMS 文本格式）";
+            return "解析失败，请确认你没有使用全角括号，逗号";
 
         const auto result = omegay::notation::UPMSNotation::expand(m, term);
         const auto out = formatUpmsText(result);
         if (out.empty())
-            return "（后继形展开为空矩阵，或未能定位坏根）";
+            return "后继形展开为空矩阵，或未能定位坏根";
         return out;
     }
 
@@ -232,8 +232,6 @@ namespace {
               &notation::Mrss121Notation::expand, &notation::Mrss121Notation::suffix,
               IDR_DEF_MRSS121,
               &notation::Mrss121Notation::expand_string },
-
-              // [BMS] 每个版本一条独立记号：expand 置 nullptr，走 expand_text 文本入口
               { L"BMS v1.0", "bms-v1",
                 nullptr, &notation::BMSFamilyNotation::suffix,
                 IDR_DEF_BMS_V1,
@@ -328,7 +326,7 @@ namespace {
         const auto* data = hGlobal
             ? static_cast<const char*>(::LockResource(hGlobal)) : nullptr;
         const DWORD size = hRes ? ::SizeofResource(hInst, hRes) : 0;
-        if (!data || size == 0) return L"正在修复";
+        if (!data || size == 0) return L"暂缺，有提供的联系作者邮箱";
 
         std::string_view utf8(data, size);
         if (utf8.size() >= 3 &&
@@ -638,7 +636,7 @@ namespace {
         auto* text = new std::wstring(loadLicenseText(hInst));
 
         HWND hwnd = ::CreateWindowExW(
-            0, kLegalWindowClass, L"法律声明 - GNU GPLv3",
+            0, kLegalWindowClass, L"法律声明",
             WS_OVERLAPPEDWINDOW,
             CW_USEDEFAULT, CW_USEDEFAULT, 760, 640,
             hParent, nullptr, hInst, text);
@@ -829,13 +827,13 @@ namespace {
             case IDM_HELP:
                 ::MessageBoxW(hwnd,
                     L"代码署名\n"
-                    L"Hypcos 部分记号的代码修改自notation-explorer\n"
-                    L"SmileLee-lyx 部分记号的代码修改自 NER\n"
+                    L"部分记号的代码修改自hypcos的notation-explorer\n"
+                    L"部分记号的代码修改自笑姐姐(SmileLee-lyx)的NER\n"
                     L"曹知秋 记号提供给AI的定义使用《大数理论》的原文\n"
                     L"MrSS的定义来自 AAA滚木批发 (QQ3682911373)\n"
                     L"ε-Y的代码修改自Go men的代码"
-                    L"UPMS由test_alpha0定义"
-                    L"BMS的代码修改自bmsmat，源仓库由Fish,kotetian,kyodaisuu"
+                    L"UPMS由test_alpha0定义\n"
+                    L"BMS的代码修改自bmsmat，源仓库由Fish,kotetian,kyodaisuu提交\n"
                     L"请注意 代码系利用人工智能技术生成",
                     L"帮助", MB_OK | MB_ICONINFORMATION);
                 break;
@@ -883,12 +881,12 @@ namespace {
                         term = std::stoi(wstring_to_utf8(bufTerm));
                     }
                     catch (...) {
-                        ::MessageBoxW(hwnd, L"项数必须是整数", L"错误",
+                        ::MessageBoxW(hwnd, L"项数必须是整数，\n所以说你为什么要这样输入", L"错误",
                             MB_OK | MB_ICONERROR);
                         break;
                     }
                     if (term < 1) {
-                        ::MessageBoxW(hwnd, L"项数必须为正整数", L"错误",
+                        ::MessageBoxW(hwnd, L"项数必须为正整数，\n你难道要尝试向内存反方向写入序列吗", L"错误",
                             MB_OK | MB_ICONERROR);
                         break;
                     }
