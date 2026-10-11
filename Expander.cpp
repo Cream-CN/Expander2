@@ -100,8 +100,6 @@ namespace {
             || e.expand_text == &bmsExpandV33
             || e.expand_text == &bmsExpandV4;
     }
-
-    // ---- UPMS 文本 ⇄ Matrix（省略尾随零的写法） ----
     [[nodiscard]] omegay::common::Matrix
         parseUpmsText(std::string_view s) {
         std::vector<std::vector<int>> cols;
@@ -117,7 +115,6 @@ namespace {
             int  cur = 0;
             bool neg = false;
             bool in_num = false;
-
             while (i < n && s[i] != ')') {
                 const char c = s[i];
                 if (c >= '0' && c <= '9') {
@@ -326,7 +323,7 @@ namespace {
         const auto* data = hGlobal
             ? static_cast<const char*>(::LockResource(hGlobal)) : nullptr;
         const DWORD size = hRes ? ::SizeofResource(hInst, hRes) : 0;
-        if (!data || size == 0) return L"暂缺，有提供的联系作者邮箱";
+        if (!data || size == 0) return L"暂缺，有提供的联系作者邮箱creamgoogologycn@outlook.com";
 
         std::string_view utf8(data, size);
         if (utf8.size() >= 3 &&
@@ -367,7 +364,7 @@ namespace {
         HMENU hHelp = ::CreatePopupMenu();
         ::AppendMenuW(hHelp, MF_STRING, IDM_HELP, L"帮助(&H)...");
         ::AppendMenuW(hHelp, MF_STRING, IDM_ABOUT, L"关于(&A)...");
-        ::AppendMenuW(hHelp, MF_STRING, IDM_LEGAL, L"法律声明(&L)...");
+        ::AppendMenuW(hHelp, MF_STRING, IDM_LEGAL, L"许可证(&L)...");
         ::AppendMenuW(hMenu, MF_POPUP,
             reinterpret_cast<UINT_PTR>(hHelp), L"帮助(&H)");
 
@@ -536,7 +533,7 @@ namespace {
         const auto* data = hGlobal
             ? static_cast<const char*>(::LockResource(hGlobal)) : nullptr;
         const DWORD size = hRes ? ::SizeofResource(hInst, hRes) : 0;
-        if (!data || size == 0) return L"无法加载许可证文本资源。";
+        if (!data || size == 0) return L"Failed Load LICENSE";
 
         std::string_view utf8(data, size);
         if (utf8.size() >= 3 &&
@@ -725,7 +722,7 @@ namespace {
                 ::GetWindowLongPtrW(hwnd, GWLP_HINSTANCE));
             constexpr int mh = 25;
 
-            ::CreateWindowExW(0, L"STATIC", L"序列 (用逗号分隔):",
+            ::CreateWindowExW(0, L"STATIC", L"表达式",
                 WS_CHILD | WS_VISIBLE | SS_LEFT,
                 10, mh + 10, 150, 20,
                 hwnd, nullptr, hInst, nullptr);
@@ -811,7 +808,6 @@ namespace {
             const auto& table = notationTable();
 
             if (id == IDC_NOTATION_COMBO && HIWORD(wParam) == CBN_SELCHANGE) {
-                // 定义显示框已移除；切换记号仅更新当前选择
                 break;
             }
             if (id >= IDM_DEFINITION_BASE &&
@@ -840,7 +836,7 @@ namespace {
 
             case IDM_ABOUT:
                 ::MessageBoxW(hwnd,
-                    L"ω-Y 展开器\n\n"
+                    L"展开器\n\n"
                     L"By Cream-CN\n",
                     L"关于", MB_OK | MB_ICONINFORMATION);
                 break;
