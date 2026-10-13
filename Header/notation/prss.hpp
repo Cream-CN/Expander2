@@ -10,7 +10,6 @@ namespace omegay::notation {
         [[nodiscard]] static std::vector<int> expand(const std::vector<int>& seq, int term) {
             if (seq.empty()) return {};
             if (term <= 0) return seq;
-
             std::vector<int> result = seq;
             int k = static_cast<int>(result.size()) - 1;
             if (result[k] == 0) {
@@ -24,7 +23,6 @@ namespace omegay::notation {
                     break;
                 }
             }
-
             if (i == -1) {
                 int ak = result[k];
                 result.pop_back();
@@ -42,10 +40,8 @@ namespace omegay::notation {
                 result.push_back(ai);
                 result.insert(result.end(), hash2.begin(), hash2.end());
             }
-
             return result;
         }
-
         [[nodiscard]] static std::string suffix() {
             return " [PrSS]";
         }

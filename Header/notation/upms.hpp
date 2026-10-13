@@ -16,24 +16,14 @@ namespace omegay::notation {
 
     struct UPMSNotation {
         static constexpr const char* kName = "UPMS";
-
-        // 对矩阵 m 执行 term 项展开。
-        //   - 若 m 的最后一列全为 0（后继形）→ 返回去掉最后一列的矩阵。
-        //   - 若无法定位坏根 → 返回空矩阵。
-        //   - 否则返回 G + B + Bh_1 + ... + Bh_term。
-        // 结果矩阵的行数与输入一致。
         [[nodiscard]] static omegay::common::Matrix
             expand(const omegay::common::Matrix& m, int term);
 
         [[nodiscard]] static std::string suffix() { return {}; }
     };
-
-    // ---------------------------------------------------------------------
-    // 内部实现细节；不对外暴露。
-    // ---------------------------------------------------------------------
     namespace detail {
 
-        // 内部统一用「列列表」表示矩阵：cols[c][r] 是第 c 列第 r 行的值。
+        //cols[c][r] 是第 c 列第 r 行的值。
         using Cols = std::vector<std::vector<int>>;
 
         inline int col_count(const Cols& c) noexcept {
@@ -49,17 +39,13 @@ namespace omegay::notation {
         int  get_b_parent(const Cols& m, int col_index, int b, AncestorCache& cache);
         std::set<int> get_a_ancestors(const Cols& m, int col_index, int a,
             AncestorCache& cache);
-
-        // ---- get_b_parent -----------------------------------------------------
         inline int get_b_parent(const Cols& m, int col_index, int b,
             AncestorCache& cache) {
             const int nr = row_count(m);
             const int row_idx = b - 1;
             if (row_idx >= nr) return -1;
-
             const int c = m[col_index][row_idx];
             const auto ancestors = get_a_ancestors(m, col_index, b - 1, cache);
-
             int best_col = -1;
             for (int anc : ancestors) {
                 if (anc >= col_index) continue;
@@ -67,8 +53,6 @@ namespace omegay::notation {
             }
             return best_col;
         }
-
-        // ---- get_a_ancestors --------------------------------------------------
         inline std::set<int> get_a_ancestors(const Cols& m, int col_index, int a,
             AncestorCache& cache) {
             const auto key = std::make_pair(col_index, a);
@@ -101,13 +85,10 @@ namespace omegay::notation {
             cache.emplace(key, ancestors);
             return ancestors;
         }
-
-        // ---- find_bad_root ----------------------------------------------------
         struct BadRoot {
             int root_col;
             int t;
         };
-
         inline std::optional<BadRoot>
             find_bad_root(const Cols& m, AncestorCache& cache) {
             const int nc = col_count(m);
@@ -124,8 +105,6 @@ namespace omegay::notation {
             if (root < 0) return std::nullopt;
             return BadRoot{ root, t };
         }
-
-        // ---- compute_delta ----------------------------------------------------
         inline std::vector<int>
             compute_delta(const Cols& m, int root_col, int t) {
             const int nr = row_count(m);
@@ -138,8 +117,6 @@ namespace omegay::notation {
             }
             return delta;
         }
-
-        // ---- compute_upms_verification_roots ---------------------------------
         struct VrCache {
             std::map<std::pair<int, int>, int> map;
             void set(int c, int r, int v) { map[{c, r}] = v; }
@@ -304,8 +281,6 @@ namespace omegay::notation {
             }
             return vr;
         }
-
-        // ---- generate_bh_upms -------------------------------------------------
         inline Cols generate_bh_upms(const Cols& B, const std::vector<int>& delta,
             int t, int h, int root_col,
             const VrCache& vr) {
@@ -321,8 +296,6 @@ namespace omegay::notation {
             }
             return result;
         }
-
-        // ---- 列列表 → Matrix --------------------------------------------------
         inline omegay::common::Matrix cols_to_matrix(const Cols& cols) {
             if (cols.empty()) return omegay::common::Matrix{};
             const int nr = row_count(cols);
@@ -335,10 +308,6 @@ namespace omegay::notation {
         }
 
     } // namespace detail
-
-    // ---------------------------------------------------------------------
-    // 公共接口实现
-    // ---------------------------------------------------------------------
     inline omegay::common::Matrix
         UPMSNotation::expand(const omegay::common::Matrix& m, int term) {
         using namespace detail;
@@ -352,7 +321,7 @@ namespace omegay::notation {
             for (int r = 0; r < m.rows(); ++r) cols[c][r] = m(r, c);
         }
 
-        // ---- 后继形：末列全 0 ⇒ 去掉末列 ----
+        // 后继型
         bool last_all_zero = true;
         for (int v : cols.back()) {
             if (v != 0) { last_all_zero = false; break; }
@@ -362,7 +331,7 @@ namespace omegay::notation {
             return cols_to_matrix(cols);
         }
 
-        // ---- 定位坏根 ----
+        // 找坏根
         AncestorCache cache;
         const auto bad = find_bad_root(cols, cache);
         if (!bad) return omegay::common::Matrix{};
