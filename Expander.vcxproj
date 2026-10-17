@@ -150,6 +150,7 @@
     </Xdcmake>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="Errors.h" />
     <ClInclude Include="Expander.h" />
     <ClInclude Include="framework.h" />
     <ClInclude Include="Header\common\Matrix.hpp" />
