@@ -78,14 +78,9 @@ namespace omegay::common {
 
     // 解析形如 "(0,0)(1,1)[3]" 的 BMS 表达式。
     // 返回值为矩阵；若出现 "[n]"，则将 n 写入 term；否则 term 保持原值。
-    //
-    // 与 C 参考实现 getMatrix() 对齐的关键点：
-    //   - 每遇到 '('、','、')' 都要把"当前格子已开始读数字"标记复位，
-    //     否则上一列的残留值会被当作本列前缀参与累加。
-    //   - cur[] 显式清零，杜绝栈上脏值。
     inline Matrix parse_matrix(std::string_view s, long& term) {
         // 第一次扫描：确定行数 nr。
-        int nr = 0;
+        int nr = 0, cur_rows = 0;
         {
             bool in_paren = false;
             int  row_cnt = 0;
@@ -98,13 +93,16 @@ namespace omegay::common {
                     in_paren = false;
                 }
             }
+            (void)cur_rows;
         }
         if (nr <= 0) return Matrix{};
 
         // 第二次扫描：逐列填充。
         std::vector<int> flat;
-        int  cur[64] = { 0 };
+        int  cur[64];
         int  row = 0;
+        int  sign = 1;
+        bool neg = false;
         bool has_digit = false;
 
         auto flush_col = [&]() {
@@ -113,18 +111,17 @@ namespace omegay::common {
                 flat.push_back(v);
             }
             row = 0;
-            has_digit = false;
             };
 
         for (std::size_t i = 0; i < s.size(); ++i) {
             const char ch = s[i];
             if (ch == '(') {
                 row = 0;
-                has_digit = false;
+                has_digit = false;  // 进入新列，重置“当前行是否已开始累积”标志
             }
             else if (ch == ',') {
                 ++row;
-                has_digit = false;
+                has_digit = false;  // 换到下一行，重置标志，避免上一行的 has_digit 残留
             }
             else if (ch == ')') {
                 ++row;
@@ -142,12 +139,14 @@ namespace omegay::common {
                 break;
             }
             else if (std::isdigit(static_cast<unsigned char>(ch))) {
-                if (row >= 64) continue;
-                if (!has_digit) {
-                    cur[row] = 0;
-                    has_digit = true;
-                }
+                if (row >= 128) continue;             // 忽略越界行（与原实现一致：被裁剪）
+                if (!has_digit) { cur[row] = 0; has_digit = true; neg = false; sign = 1; }
+                if (neg) sign = -1;
                 cur[row] = cur[row] * 10 + (ch - '0');
+                (void)sign;
+            }
+            else if (ch == '-') {
+                if (row < 64 && !has_digit) { cur[row] = 0; has_digit = true; neg = true; }
             }
             else if (ch == ' ' || ch == '\t' || ch == '\n' || ch == '\r') {
                 // skip
