@@ -191,10 +191,23 @@ UI 层不得直接操作 std::vector<int> 的数学含义（例如自行实现"�
 [ ] 空序列、term < 1、非法 token 的行为是否与本文档一致？
 [ ] 若修改了任何签名，是否同步更新了本文档与调用点？
 
-附：当前唯一记号的实现位置
+附：当前记号实现位置
 
-Header/notation/empty.hpp — EmptyNotation 定义
+每个记号独立位于 Header/notation/<name>.hpp，并提供 omegay::notation 下的
+XxxNotation（kName / expand / suffix）。当前已包含：
 
-Expander.cpp — 唯一调用点（IDM_FS / IDM_FSALTER 分支）
+    empty.hpp          — EmptyNotation
+    pps1.hpp           — PPS / PPS4 系列
+    PPS-family.hpp     — PPS 家族
+    Omega-YMagma.hpp   — ω-Y (medium/strong)
+    mrss121.hpp        — MrSS1.2.1
+    omega_y.hpp        — ω-Y sequence
+    epsilon-y.hpp      — ε-Y (1-Y)
+    BMSFamily.hpp      — BMS 家族
+    upms.hpp           — UPMS
+    gy.hpp             — G-Y
+    xy-v3.hpp          — X-Y V3（维度参数 [1,0,1]，新增，逻辑移植自 X-Y.js）
+
+Expander.cpp — 唯一调用点（IDM_FS / IDM_FSALTER 分支，经 notationTable() 分派）
 
 2026/09/25 版本二 version1.3

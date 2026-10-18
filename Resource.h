@@ -60,5 +60,6 @@
 #define IDR_DEF_EPSILON_Y          20022
 #define IDR_DEF_UPMS               20023
 #define IDR_DEF_GY				   20024
+#define IDR_DEF_XY_V3			   20025
 
 

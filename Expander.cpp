@@ -18,6 +18,7 @@
 #include "Header/notation/BMSFamily.hpp"
 #include "Header/notation/upms.hpp"
 #include "Header/notation/gy.hpp"
+#include "Header/notation/xy-v3.hpp"
 #include <memory>
 #include <string>
 #include <string_view>
@@ -297,6 +298,9 @@ namespace {
             { L"G-Y", "g-y",
                 &notation::GYNotation::expand, &notation::GYNotation::suffix,
                 IDR_DEF_GY },
+            { L"X-Y V3", "xy-v3",
+                &notation::XYV3Notation::expand, &notation::XYV3Notation::suffix,
+                IDR_DEF_XY_V3 },
         };
         return table;
     }

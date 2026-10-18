@@ -168,6 +168,7 @@
     <ClInclude Include="Header\notation\PPS-family.hpp" />
     <ClInclude Include="Header\notation\prss.hpp" />
     <ClInclude Include="Header\notation\upms.hpp" />
+    <ClInclude Include="Header\notation\xy-v3.hpp" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="targetver.h" />
   </ItemGroup>

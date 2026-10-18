@@ -72,6 +72,9 @@
     <ClInclude Include="Header\notation\upms.hpp">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="Header\notation\xy-v3.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
     <ClInclude Include="Errors.h">
       <Filter>头文件</Filter>
     </ClInclude>
