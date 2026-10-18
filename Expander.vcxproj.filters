@@ -15,6 +15,9 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Definitions.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
     <ClInclude Include="framework.h">
       <Filter>头文件</Filter>
     </ClInclude>
@@ -76,6 +79,12 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="Errors.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Header\notation\xy-v1.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Header\notation\xy-v2.hpp">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

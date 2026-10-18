@@ -150,6 +150,7 @@
     </Xdcmake>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="Definitions.h" />
     <ClInclude Include="Errors.h" />
     <ClInclude Include="Expander.h" />
     <ClInclude Include="framework.h" />
@@ -168,6 +169,8 @@
     <ClInclude Include="Header\notation\PPS-family.hpp" />
     <ClInclude Include="Header\notation\prss.hpp" />
     <ClInclude Include="Header\notation\upms.hpp" />
+    <ClInclude Include="Header\notation\xy-v1.hpp" />
+    <ClInclude Include="Header\notation\xy-v2.hpp" />
     <ClInclude Include="Header\notation\xy-v3.hpp" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="targetver.h" />

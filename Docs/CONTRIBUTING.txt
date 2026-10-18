@@ -180,6 +180,45 @@ UI 层不得直接操作 std::vector<int> 的数学含义（例如自行实现"�
 修改 common 函数签名 破坏性变更，需同步更新所有调用点与本文档
 修改 expand 语义 需在 CONTRIBUTING.md 或 CHANGELOG 中注明
 删除任何 [[nodiscard]] 不允许，除非你发现它的返回值被丢弃了。
+新增/修改定义文本 只编辑 defs/*.txt，并重新运行 tools/gen_definitions.py
+
+记号定义文本（Definition Text）
+
+“定义(&D)”菜单展示的记号原文不再作为 RCDATA 资源由 rc.exe 编译。原因是 rc.exe
+会把 UTF-8 无 BOM 的源文件按本地代码页（ANSI/GBK）误读，导致中文在首尾乱码；
+且资源脚本里的 “\n” 只是字面字符、不会变成真正的换行。现在定义文本改为由 C++
+标头编译进程序，完全绕过 rc.exe。
+
+目录与文件
+
+    defs/<name>.txt             定义文本的唯一权威源（UTF-8，每个记号一个文件）
+    Definitions.h               由生成器从 defs/ 生成的标头（请勿手工编辑）
+    tools/gen_definitions.py    生成器
+
+命名约定：defs/ 下的文件名与 Resource.h 中的 IDR_DEF_* 宏一一对应，映射关系维护在
+生成器的 FILENAME_TO_ID 表里。例如 def_pps.txt → IDR_DEF_PPS。
+
+新增或修改一条定义：
+
+    1. 编辑或新建 defs/<name>.txt，直接用真实换行书写，不要写 “\n”。
+    2. 运行 python tools/gen_definitions.py 重新生成 Definitions.h。
+    3. 若这是此前不存在的记号，还需要：
+       - 在 Resource.h 追加对应的 IDR_DEF_* 宏；
+       - 在 defs/ 放入定义文件，并在生成器 FILENAME_TO_ID 中登记；
+       - 在 Expander.cpp 的 notationTable() 中追加条目。
+    4. 重新构建项目。
+
+关键约定：
+
+    - Definitions.h 输出为 UTF-8 with BOM，确保未开 /utf-8 的配置（如 Debug|Win32）
+      也能被 MSVC 按 UTF-8 识别，中文定义不乱码。
+    - 定义文本在标头中以原始字符串字面量 R"DEFTXT(...)DEFTXT" 保存，字节原样保留，
+      换行即真换行（不再有 \n 不转义的问题）。
+    - 加载路径：Expander.cpp 的 loadDefinitionText() → expander_defs::lookup(resId)
+      → omegay::common::utf8_to_wstring()。Resource.h 中的 IDR_DEF_* 现在只作为
+      查表键使用，对应的 RCDATA 资源已从 Expander.rc 移除。
+    - 未收录原文的记号（例如暂无原文的 G-Y、X-Y V1/V2/V3）在“定义”菜单中显示
+      “暂缺，有提供的联系作者邮箱”，属预期行为。
 
 贡献者检查清单
 
@@ -190,6 +229,7 @@ UI 层不得直接操作 std::vector<int> 的数学含义（例如自行实现"�
 [ ] expand 是否仍为纯函数、不抛异常？
 [ ] 空序列、term < 1、非法 token 的行为是否与本文档一致？
 [ ] 若修改了任何签名，是否同步更新了本文档与调用点？
+[ ] 若改动/新增了 defs/*.txt，是否重新运行 tools/gen_definitions.py 并一并提交 Definitions.h？
 
 附：当前记号实现位置
 

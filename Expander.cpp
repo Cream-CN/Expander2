@@ -27,6 +27,7 @@
 #include <vector>
 #include <cstdint>
 #include "Resource.h"
+#include "Definitions.h"   // 记号定义文本由标头编译进程序，绕过 rc.exe
 
 using namespace omegay;
 using namespace omegay::common;
@@ -331,22 +332,11 @@ namespace {
         return reinterpret_cast<UiState*>(::GetWindowLongPtrW(h, GWLP_USERDATA));
     }
 
-    [[nodiscard]] std::wstring loadDefinitionText(HINSTANCE hInst, int resId) {
-        HRSRC hRes = ::FindResourceW(
-            hInst, MAKEINTRESOURCEW(resId), RT_RCDATA);
-        HGLOBAL hGlobal = hRes ? ::LoadResource(hInst, hRes) : nullptr;
-        const auto* data = hGlobal
-            ? static_cast<const char*>(::LockResource(hGlobal)) : nullptr;
-        const DWORD size = hRes ? ::SizeofResource(hInst, hRes) : 0;
-        if (!data || size == 0) return L"暂缺，有提供的联系作者邮箱";
-
-        std::string_view utf8(data, size);
-        if (utf8.size() >= 3 &&
-            static_cast<unsigned char>(utf8[0]) == 0xEF &&
-            static_cast<unsigned char>(utf8[1]) == 0xBB &&
-            static_cast<unsigned char>(utf8[2]) == 0xBF) {
-            utf8.remove_prefix(3); // 跳过 UTF-8 BOM
-        }
+    [[nodiscard]] std::wstring loadDefinitionText(HINSTANCE, int resId) {
+        // 定义文本不再经过 rc.exe 的资源编译：直接从 Definitions.h 标头查表，
+        // 规避 rc.exe 对 UTF-8 源文件的编码误读(首尾乱码)与 \n 不转义的问题。
+        std::string_view utf8 = expander_defs::lookup(resId);
+        if (utf8.empty()) return L"暂缺，有提供的联系作者邮箱";
         return utf8_to_wstring(utf8);
     }
 
