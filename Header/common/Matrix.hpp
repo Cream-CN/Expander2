@@ -117,9 +117,11 @@ namespace omegay::common {
             const char ch = s[i];
             if (ch == '(') {
                 row = 0;
+                has_digit = false;  // 进入新列，重置“当前行是否已开始累积”标志
             }
             else if (ch == ',') {
                 ++row;
+                has_digit = false;  // 换到下一行，重置标志，避免上一行的 has_digit 残留
             }
             else if (ch == ')') {
                 ++row;

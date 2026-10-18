@@ -493,14 +493,14 @@ namespace omegay::notation {
             }
 
             const long nn = n + static_cast<long>(bad) * num;
-            S.resize_cols(static_cast<int>(nn) + 1);
+            S.resize_cols(static_cast<int>(nn));  // 参考 oneStep 中 *nc = nn：结果共 nn 列
 
             // copyBadSequence 的第 5 个参数是 long&（会被修改），
             // 而这里的 n 是 const long，不能直接传，必须用非 const 副本。
             long nCopy = n;
             detail::copyBadSequence(S, Delta, C, static_cast<int>(ver), nCopy, nn, nr, bad);
 
-            S.resize_cols(static_cast<int>(nn) + 1);
+            S.resize_cols(static_cast<int>(nn));
             return S;
         }
 
