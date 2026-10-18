@@ -1,0 +1,4 @@
+UPMS（User-defined Primitive Matrix System）
+
+输入格式：省略尾随零的矩阵文本，例如 (0)(1)(2,1)
+或显式补零的 (0,0)(1,0)(2,1)。
