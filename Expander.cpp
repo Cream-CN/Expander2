@@ -370,8 +370,8 @@ namespace {
                     static_cast<UINT_PTR>(IDM_DEFINITION_BASE + i),
                     label.c_str());
             }
-            ::AppendMenuW(hDef, MF_SEPARATOR, 0, nullptr);
-            ::AppendMenuW(hDef, MF_STRING, IDM_ENTRY_DEMO, L"Entry 演示(&E)...");
+            //::AppendMenuW(hDef, MF_SEPARATOR, 0, nullptr);
+            //::AppendMenuW(hDef, MF_STRING, IDM_ENTRY_DEMO, L"Entry 演示(&E)...");
         }
         ::AppendMenuW(hMenu, MF_POPUP,
             reinterpret_cast<UINT_PTR>(hDef), L"定义(&D)");
@@ -662,7 +662,7 @@ namespace {
         ::UpdateWindow(hwnd);
     }
 
-    void showEntryDemo(HWND hwnd, UiState* ui) {
+    /*void showEntryDemo(HWND hwnd, UiState* ui) {
         std::vector<int> seq;
         int term = 0;
         if (!readSeqAndTerm(hwnd, ui, seq, term)) return;
@@ -720,7 +720,7 @@ namespace {
 
         ::MessageBoxW(hwnd, msg.c_str(), L"Entry 演示",
             MB_OK | MB_ICONINFORMATION);
-    }
+    }*/
 
     LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         switch (msg) {
@@ -869,9 +869,9 @@ namespace {
                 ::PostQuitMessage(0);
                 break;
 
-            case IDM_ENTRY_DEMO:
+            /*case IDM_ENTRY_DEMO:
                 showEntryDemo(hwnd, ui);
-                break;
+                break;*/
 
             case IDM_FS:
             case IDM_FSALTER: {
