@@ -15,66 +15,72 @@ constexpr std::string_view kDef_IDR_DEF_2PPS4 = R"DEFTXT(
 2-PPS4 。
 )DEFTXT";
 
+constexpr std::string_view kDef_IDR_DEF_BLP = R"DEFTXT(
+
+)DEFTXT";
+
 constexpr std::string_view kDef_IDR_DEF_BMS_V1 = R"DEFTXT(
-Bashicu矩阵 版本1
-定义暂缺
-良定义性：证伪
+BMS v1.0（Bashicu Matrix System, Version 1）
+
+输入格式：BMS 文本，如 (0,0)(1,1)(2,2) 或 (0,0)(1,1)[3]。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_BMS_V2 = R"DEFTXT(
-Bashicu矩阵 版本2
-定义暂缺
-良定义性：证伪
+BMS v2.0（Version 2.0）
+
+输入格式同 v1.0。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_BMS_V21 = R"DEFTXT(
-Bashicu矩阵 版本2.1
-定义暂缺
-良定义性：未知
+BMS v2.1（Version 2.1）
+
+输入格式同 v1.0。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_BMS_V22 = R"DEFTXT(
-Bashicu矩阵 版本2.2
-定义暂缺
-良定义性：未知
+BMS v2.2（Version 2.2）
+
+输入格式同 v1.0。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_BMS_V23 = R"DEFTXT(
-Bashicu矩阵 版本2.3
-定义暂缺
-良定义性：未知
+BMS v2.3（Version 2.3）
+
+输入格式同 v1.0。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_BMS_V3 = R"DEFTXT(
-Bashicu矩阵 版本3
-定义暂缺
-良定义性：证伪
+BMS v3.0（Version 3.0）
+
+输入格式同 v1.0。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_BMS_V31 = R"DEFTXT(
-Bashicu矩阵 版本3.1
-定义暂缺
-良定义性：未知
+BMS v3.1（Version 3.1）
+
+输入格式同 v1.0。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_BMS_V32 = R"DEFTXT(
-Bashicu矩阵 版本3.2
-定义暂缺
-良定义性：未知
+BMS v3.2（Version 3.2）
+
+输入格式同 v1.0。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_BMS_V33 = R"DEFTXT(
-Bashicu矩阵 版本3.3
-IBMS 较为理想的无提升BMS
-定义暂缺
-良定义性：有争议
+BMS v3.3（Version 3.3）
+
+输入格式同 v1.0。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_BMS_V4 = R"DEFTXT(
-Bashicu矩阵 版本4
-良定义性：证明
-    论文：arXiv:2307.04606v3 [math.LO] 11 Oct 2024
-    名字：Well-Orderedness of the Bashicu Matrix System
+BMS v4.0（Version 4.0，当前默认）
+
+输入格式同 v1.0。
+)DEFTXT";
+
+constexpr std::string_view kDef_IDR_DEF_DEN1 = R"DEFTXT(
+DEN1（Defective embedding notation）
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_EMPTY = R"DEFTXT(
@@ -84,7 +90,19 @@ constexpr std::string_view kDef_IDR_DEF_EMPTY = R"DEFTXT(
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_EPSILON_Y = R"DEFTXT(
-ε-Y
+ε-Y（1-Y）
+
+ε-Y 即 1-Y 记号，等价于维度序列为 {1} 的 ω-Y 变体。
+
+极限表达式：
+  1,2,3,4,5,...
+
+展开规则（1-Y / 维度 1）：
+  与 ω-Y 的山脉图机制相同，但所有阶差分量的维度固定为 1。
+  对末列最上方的 1 求根元素，将其作用区域内的轮廓边、填充边、
+  非轮廓边按 ω-Y 的规则复制，再自上而下计算各元素取值。
+  由于维度被限制为 1，展开不会引入新的高阶分量，
+  因此 ε-Y 强于 0-Y，是 1-Y 的标准实现。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_EWPPS4 = R"DEFTXT(
@@ -93,8 +111,19 @@ Ex. Weak PPS4
 扩展弱 PPS4。
 )DEFTXT";
 
+constexpr std::string_view kDef_IDR_DEF_IBLP = R"DEFTXT(
+
+)DEFTXT";
+
 constexpr std::string_view kDef_IDR_DEF_MRSS121 = R"DEFTXT(
-MrSS1.2.1
+MrSS1.2.1（山脉结构序列）
+
+本版本只利用 1 层山脉结构。
+合法表达式形如 S = a1, a2, a3, ...，其中 a1 = 1，
+an 为 MrSS 表达式或有限非零序数。
+
+支持嵌套写法，例如：
+  1,(1,2),(1,2,3)
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_OMEGA_Y_MEDIUM = R"DEFTXT(
@@ -206,7 +235,10 @@ PPS4 的第三型变体。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_UPMS = R"DEFTXT(
-UPMS
+UPMS（User-defined Primitive Matrix System）
+
+输入格式：省略尾随零的矩阵文本，例如 (0)(1)(2,1)
+或显式补零的 (0,0)(1,0)(2,1)。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_WPPS4 = R"DEFTXT(
@@ -218,6 +250,7 @@ PPS4 的弱化版本。
 struct Entry { int id; std::string_view utf8; };
 constexpr Entry kTable[] = {
     { IDR_DEF_2PPS4, kDef_IDR_DEF_2PPS4 },
+    { IDR_DEF_BLP, kDef_IDR_DEF_BLP },
     { IDR_DEF_BMS_V1, kDef_IDR_DEF_BMS_V1 },
     { IDR_DEF_BMS_V2, kDef_IDR_DEF_BMS_V2 },
     { IDR_DEF_BMS_V21, kDef_IDR_DEF_BMS_V21 },
@@ -228,9 +261,11 @@ constexpr Entry kTable[] = {
     { IDR_DEF_BMS_V32, kDef_IDR_DEF_BMS_V32 },
     { IDR_DEF_BMS_V33, kDef_IDR_DEF_BMS_V33 },
     { IDR_DEF_BMS_V4, kDef_IDR_DEF_BMS_V4 },
+    { IDR_DEF_DEN1, kDef_IDR_DEF_DEN1 },
     { IDR_DEF_EMPTY, kDef_IDR_DEF_EMPTY },
     { IDR_DEF_EPSILON_Y, kDef_IDR_DEF_EPSILON_Y },
     { IDR_DEF_EWPPS4, kDef_IDR_DEF_EWPPS4 },
+    { IDR_DEF_IBLP, kDef_IDR_DEF_IBLP },
     { IDR_DEF_MRSS121, kDef_IDR_DEF_MRSS121 },
     { IDR_DEF_OMEGA_Y_MEDIUM, kDef_IDR_DEF_OMEGA_Y_MEDIUM },
     { IDR_DEF_OMEGA_Y_SEQUENCE, kDef_IDR_DEF_OMEGA_Y_SEQUENCE },

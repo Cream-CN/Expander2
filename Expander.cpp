@@ -21,6 +21,9 @@
 #include "Header/notation/xy-v1.hpp"
 #include "Header/notation/xy-v2.hpp"
 #include "Header/notation/xy-v3.hpp"
+#include "Header/notation/den1.hpp"
+#include "Header/notation/blp.hpp"
+#include "Header/notation/iblp.hpp"
 #include <memory>
 #include <string>
 #include <string_view>
@@ -62,6 +65,11 @@ namespace {
         // 可选的文本展开入口。若不为空，UI 会优先用它处理输入文本，
         // 签名约定：std::string expand_string(std::string_view, int)
         std::string(*expand_text)(std::string_view, int) = nullptr;
+
+        // 可选的 FS_alter（较长）文本展开入口。
+        // 非空时，FS 使用 expand_text、FS_alter 使用本入口，两者均由记号自身实现，
+        // UI 不再对 FS 结果做通用截断（DEN1 / blp / iblp 即属此类）。
+        std::string(*expand_text_alter)(std::string_view, int) = nullptr;
     };
 
     std::string bmsExpandTextWith(
@@ -310,6 +318,24 @@ namespace {
             { L"X-Y V3", "xy-v3",
                 &notation::XYV3Notation::expand, &notation::XYV3Notation::suffix,
                 IDR_DEF_XY_V3 },
+
+            { L"DEN1", "den1",
+                nullptr, &notation::Den1Notation::suffix,
+                IDR_DEF_DEN1,
+                &notation::Den1Notation::expand_text,
+                &notation::Den1Notation::expand_text_alter },
+
+            { L"blp", "blp",
+                nullptr, &notation::BlpNotation::suffix,
+                IDR_DEF_BLP,
+                &notation::BlpNotation::expand_text,
+                &notation::BlpNotation::expand_text_alter },
+
+            { L"iblp", "iblp",
+                nullptr, &notation::IblpNotation::suffix,
+                IDR_DEF_IBLP,
+                &notation::IblpNotation::expand_text,
+                &notation::IblpNotation::expand_text_alter },
         };
         return table;
     }
@@ -834,7 +860,9 @@ namespace {
                     L"曹知秋 记号提供给AI的定义使用《大数理论》的原文\n"
                     L"MrSS的定义来自 AAA滚木批发 (QQ3682911373)\n"
                     L"ε-Y,X-Y的代码修改自Go men的代码gomen520/gomen520.github.io"
+                    L"Den的代码修改自SmileLee/ne-rewritten"
                     L"UPMS由test_alpha0定义\n"
+                    L"\n"
                     L"BMS的代码修改自bmsmat，源仓库由Fish,kotetian,kyodaisuu提交\n"
                     L"请注意 代码系利用人工智能技术生成",
                     L"帮助", MB_OK | MB_ICONINFORMATION);
@@ -899,34 +927,40 @@ namespace {
                         break;
                     }
 
-                    text = entry.expand_text(utf8Seq, term);
+                    if (entry.expand_text_alter && id == IDM_FSALTER) {
+                        // 记号自带 FS_alter（较长）展开：直接使用，不做通用截断
+                        text = entry.expand_text_alter(utf8Seq, term);
+                    }
+                    else {
+                        text = entry.expand_text(utf8Seq, term);
 
-                    // [FS 语义分派]
-                    //   BMS  → 删除最后一列（BMS 标准文本）
-                    //   UPMS → 删除最后一列（省略尾随零文本）
-                    //   MrSS → pop_back（向量语义）
-                    if (id == IDM_FS) {
-                        if (isBmsTextEntry(entry)) {
-                            long t = term;
-                            omegay::common::Matrix m =
-                                omegay::common::parse_matrix(text, t);
-                            if (m.cols() > 1) {
-                                m.resize_cols(m.cols() - 1);
-                                text = omegay::common::matrix_to_string(m);
+                        // [FS 语义分派]（仅 IDM_FS 且记号未自带 FS 语义时截断）
+                        //   BMS  → 删除最后一列（BMS 标准文本）
+                        //   UPMS → 删除最后一列（省略尾随零文本）
+                        //   MrSS → pop_back（向量语义）
+                        if (id == IDM_FS && !entry.expand_text_alter) {
+                            if (isBmsTextEntry(entry)) {
+                                long t = term;
+                                omegay::common::Matrix m =
+                                    omegay::common::parse_matrix(text, t);
+                                if (m.cols() > 1) {
+                                    m.resize_cols(m.cols() - 1);
+                                    text = omegay::common::matrix_to_string(m);
+                                }
                             }
-                        }
-                        else if (entry.expand_text == &upmsExpandText) {
-                            auto m = parseUpmsText(text);
-                            if (m.cols() > 1) {
-                                m.resize_cols(m.cols() - 1);
-                                text = formatUpmsText(m);
+                            else if (entry.expand_text == &upmsExpandText) {
+                                auto m = parseUpmsText(text);
+                                if (m.cols() > 1) {
+                                    m.resize_cols(m.cols() - 1);
+                                    text = formatUpmsText(m);
+                                }
                             }
-                        }
-                        else {
-                            auto parsed = notation::Mrss121Notation::parse(text);
-                            if (parsed && parsed->size() > 1) {
-                                parsed->pop_back();
-                                text = notation::Mrss121Notation::to_string(*parsed);
+                            else {
+                                auto parsed = notation::Mrss121Notation::parse(text);
+                                if (parsed && parsed->size() > 1) {
+                                    parsed->pop_back();
+                                    text = notation::Mrss121Notation::to_string(*parsed);
+                                }
                             }
                         }
                     }

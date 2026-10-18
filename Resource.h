@@ -63,5 +63,8 @@
 #define IDR_DEF_XY_V3			   20025
 #define IDR_DEF_XY_V1			   20026
 #define IDR_DEF_XY_V2			   20027
+#define IDR_DEF_DEN1			   20028
+#define IDR_DEF_BLP				   20029
+#define IDR_DEF_IBLP				   20030
 
 

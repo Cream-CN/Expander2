@@ -87,6 +87,18 @@
     <ClInclude Include="Header\notation\xy-v2.hpp">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="Header\notation\denshare.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Header\notation\den1.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Header\notation\blp.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Header\notation\iblp.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Expander.cpp">

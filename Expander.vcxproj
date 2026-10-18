@@ -172,6 +172,10 @@
     <ClInclude Include="Header\notation\xy-v1.hpp" />
     <ClInclude Include="Header\notation\xy-v2.hpp" />
     <ClInclude Include="Header\notation\xy-v3.hpp" />
+    <ClInclude Include="Header\notation\denshare.hpp" />
+    <ClInclude Include="Header\notation\den1.hpp" />
+    <ClInclude Include="Header\notation\blp.hpp" />
+    <ClInclude Include="Header\notation\iblp.hpp" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="targetver.h" />
   </ItemGroup>

@@ -133,7 +133,7 @@ term < 1：调用方（UI 层）有责任先行校验；expand 本身不保证�
 
 3.2 FS / FSalter 语义
 
-UI 层的"移除末项 / 保留末项"按钮，不属于记号接口，而是调用方对展开结果的后处理：
+UI 层的"移除末项 / 保留末项"按钮，对向量记号属于调用方对展开结果的后处理：
 
 // Expander.cpp 中：
 std::vector<int> result = notation::EmptyNotation::expand(seq, term);
@@ -145,6 +145,29 @@ result.pop_back();
 当 result.size() <= 1 时，FS 操作不执行移除（避免产生空序列歧义）。
 
 此策略在 UI 层实现，记号模块不应感知 FS/FSalter 概念。
+
+3.3 文本接口记号（expand_text / expand_text_alter）
+
+部分记号的表达式不是整数序列（例如 DEN1 / blp / iblp 的文本表达式），
+无法使用 NotationEntry::expand 的向量签名。这类记号改走 NotationEntry
+的两个可选文本槽：
+
+    std::string(*expand_text)(std::string_view, int);        // FS（较短）展开
+    std::string(*expand_text_alter)(std::string_view, int);  // FS_alter（较长）展开
+
+约定：
+
+expand_text 与 expand_text_alter 均为纯函数、不抛异常。
+
+expand_text_alter 为空（nullptr）时，记号退化为 3.2 的通用策略：
+expand_text 提供"较长"结果，IDM_FS 由 UI 按记号类型对结果做截断
+（BMS 删列 / UPMS 删列 / MrSS pop_back）。
+
+expand_text_alter 非空时，FS 与 FS_alter 均由记号自身实现，UI 直接
+使用 expand_text / expand_text_alter 的结果，不做通用截断（DEN1 / blp / iblp）。
+
+解析失败时文本接口返回错误提示字符串（不以异常报告），例如
+"解析失败，请确认你没有使用全角括号，逗号"。
 
 UI 层与记号层的边界
 
@@ -249,6 +272,10 @@ XxxNotation（kName / expand / suffix）。当前已包含：
     xy-v1.hpp          — X-Y V1（维度参数 [1,0,1]，逻辑移植自 X-Y1.js）
     xy-v2.hpp          — X-Y V2（维度参数 [1,0,1]，逻辑移植自 X-Y2.js）
     xy-v3.hpp          — X-Y V3（维度参数 [1,0,1]，新增，逻辑移植自 X-Y.js）
+    denshare.hpp       — DEN 系列公共部分（类型/解析器/比较/工具，命名空间 omegay::notation::denshare）
+    den1.hpp           — DEN1（Defective embedding notation，逻辑移植自 DEN.ts；文本接口）
+    blp.hpp            — blp（即 DEN2 / IBLP，逻辑移植自 DEN2.ts；文本接口）
+    iblp.hpp           — iblp（即 DEN3，逻辑移植自 DEN3.ts；文本接口）
 
 Expander.cpp — 唯一调用点（IDM_FS / IDM_FSALTER 分支，经 notationTable() 分派）
 

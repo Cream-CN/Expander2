@@ -50,6 +50,9 @@ FILENAME_TO_ID = {
     "def_omega-y-sequence": "IDR_DEF_OMEGA_Y_SEQUENCE",
     "def_epsilon-y":        "IDR_DEF_EPSILON_Y",
     "def_upms":             "IDR_DEF_UPMS",
+    "def_den1":             "IDR_DEF_DEN1",
+    "def_blp":              "IDR_DEF_BLP",
+    "def_iblp":             "IDR_DEF_IBLP",
 }
 
 DELIM = "DEFTXT"  # 原始字符串字面量分隔符，须避开正文里的 ')'+DELIM+'"'

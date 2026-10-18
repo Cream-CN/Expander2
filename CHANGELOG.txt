@@ -1,4 +1,6 @@
-﻿version 1.3.6.4
+﻿version 1.3.6.5
+添加了DEN1,blp,iblp（DEN系列，逻辑移植自hypcos的notation-explorer）
+version 1.3.6.4
 添加了X-Y V3（维度参数 [1,0,1]），逻辑移植自 X-Y.js
 version 1.3.6.3
 添加了Epsilon-Y

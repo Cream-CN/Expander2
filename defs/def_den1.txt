@@ -1,0 +1,6 @@
+DEN1（Defective embedding notation）
+输入格式：主体行序列与父标号列表，用分号分隔，例如
+(1,0)1(2,1,0)1;0
+每一行形如 (值,值,...)步数，分号后是父标号列表（可为空）。
+记号极限输入 Limit。
+逻辑移植自 hypcos 的 notation-explorer（src/notations/DEN/DEN.ts）。

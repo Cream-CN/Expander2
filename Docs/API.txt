@@ -468,6 +468,222 @@ uint64_t key = omegay::core::make_ykey(b->y);
 arena.clear();
 
 ====================================================================
+文件：denshare.hpp
+命名空间：omegay::notation::denshare
+依赖：无（仅标准库）
+功能：DEN 系列（DEN1 / blp / iblp）的公共类型、解析器与比较/映射工具
+====================================================================
+
+一、类型
+
+DenEntry
+结构体，表示一个带标记的条目：
+    int value   条目值，默认 0
+    bool marked 是否带标记（display 中以 '*' 前缀表示），默认 false
+
+DenRow（DEN2 的行）
+结构体，表示 (step, 条目列表)：
+    int step                step，默认 0
+    std::vector<DenEntry> entries  条目列表，下标从 0 起
+
+Den1Row（DEN1 的行）
+类型别名：std::vector<int>。行内 row[0] 是 step，row[1..] 是条目值（无标记）。
+
+Den3Row（DEN3 的行）
+类型别名：std::vector<DenEntry>。行内位置 0 是 step（视为占位条目），
+位置 1.. 是条目，与 TS 源码的扁平下标一一对应。
+
+Den1Expr / DenExpr / Den3Expr
+DEN1 / DEN2 / DEN3 的表达式：
+    bool infinity            是否为记号极限（display 为 "Limit"）
+    std::vector<...> rows    行序列
+
+二、比较工具
+
+int bool_compare(bool a, bool b) noexcept;      // false < true
+int number_compare(int a, int b) noexcept;      // -1 / 0 / 1
+int lex_compare(const std::vector<int>&, const std::vector<int>&) noexcept;
+    字典序：先比元素，再比长度（更长者更大）。
+int matrix_compare(const std::vector<std::vector<int>>&,
+                   const std::vector<std::vector<int>>&) noexcept;
+    行序列字典序：逐行 lex_compare，再比行数。
+
+三、文本解析器 TextParser
+
+构造：explicit TextParser(std::string_view s) noexcept
+
+bool eof() const noexcept
+char peek() const noexcept
+void skip_spaces() noexcept           // 只跳过空格 ' '（对齐 TS）
+void advance(std::size_t n) noexcept
+bool match(std::string_view lit) noexcept
+std::optional<int> parse_digits()     // 无数字时返回 nullopt
+
+对齐 TS 的 from_display；TS 在非法输入时 throw，这里改为返回 nullopt。
+
+四、行值提取与安全下标
+
+std::vector<int> row_values(const DenRow&) noexcept;
+int at_or(const std::vector<int>& v, std::size_t i) noexcept;   // 越界返回 0
+int entry_at(const DenRow&, std::size_t i) noexcept;             // 越界返回 0
+int den3_entry_at(const Den3Row&, std::size_t pos) noexcept;     // 位置 0/越界返回 0
+std::vector<int> den3_row_values(const Den3Row&) noexcept;       // 位置 1..
+
+越界返回 0 对齐 TS 中 undefined ?? 0 / 假值判断的语义。
+
+五、pleasant_until 与 ap 映射
+
+std::ptrdiff_t index_of_first_less(const std::vector<int>&, int) noexcept;
+std::ptrdiff_t index_of_last_greater(const std::vector<int>&, int) noexcept;
+bool contains_any_not_in(const std::vector<int>&, std::size_t i1,
+                         std::size_t i2, const std::vector<int>& tcheck) noexcept;
+int pleasant_until(const std::vector<std::vector<int>>& rows,
+                   const std::vector<int>& tcheck) noexcept;
+    在若干行的条目值列表中找第一个"不愉快"行；找不到返回 -1。
+std::size_t last_index_of(const std::vector<int>&, int) noexcept;  // 找不到返回 npos
+int ap_value(int x, const std::vector<int>& tvals, int step) noexcept;
+    ap 的单值映射：x < 最小 返回 x；x >= tvals[step] 平移；否则取 lastIndexOf(x)-step。
+
+六、切片辅助
+
+void append_slice_from(std::vector<T>& out, const std::vector<T>& row, int from);
+    追加入 row[from..]（from 为负按 0 处理）。
+void append_slice_except_tail(std::vector<T>& out, const std::vector<T>& row,
+                              int from, int tail);
+    追加入 row[from .. size-tail)。tail <= 0 时为空段（对齐 TS -0 语义）。
+
+七、极限行公共构造
+
+std::vector<DenEntry> limit_row_entries(int n);
+    DEN3 的 Limit_row(n)：entries [0..2+n]（3 <= nn < 2+n 标真）追加 2 后整体反转，
+    反转后位置 0 恰好是 step=2。
+
+====================================================================
+文件：den1.hpp
+命名空间：omegay::notation
+功能：DEN1 记号（display 名 "DEN1"）
+====================================================================
+
+一、记号接口（文本形式）
+
+struct Den1Notation {
+    static constexpr const char* kName = "DEN1";
+    static std::string expand_text(std::string_view text, int term);        // FS（较短）
+    static std::string expand_text_alter(std::string_view text, int term);  // FS_alter（较长）
+    static std::string suffix();                                            // 空串
+    static std::optional<denshare::Den1Expr> parse(std::string_view text);
+    static std::string to_string(const denshare::Den1Expr&);
+};
+
+DEN1 的表达式是"扁平行"序列：rows[0] 是父标号列表（display 中位于 ';' 之后），
+其余每行 row[0] 是 step，row[1..] 是条目值。记号极限输入/输出为 "Limit"。
+
+文本格式（display）：主体行 '(' 值,值,... ')' step 拼接，再 ';' + 父标号列表；
+例如 (1,0)1(2,1,0)1;0。
+
+expand_text / expand_text_alter 契约：
+    纯函数，不抛异常。
+    term < 1 时按 1 处理。
+    解析失败返回提示字符串（不以异常报告）。
+    "Limit" 展开为记号极限的第 term 个基本列；表达式长度 <= 1 时返回空表达式。
+
+二、内部实现（den1_detail）
+
+核心函数（命名空间 omegay::notation::den1_detail）：
+    to_short_row / parse_row / parse / compare / is_limit / cut
+    is_ancestor / compute_parent_for_mapped_row / apply_row（ap）
+    copy / extend / comp / fullcomp / expand
+    limit_r / limit_row / limit
+
+关键语义对齐：
+    行下标 0 起；R[j-1] 是第 j 行（1 起）的父标号。
+    slice(1, -k) → append_slice_except_tail(1, k)；-0 按 0 处理 → 空段。
+    comp 的短行/长行分支：短行 ci = slice(1,-step) concat slice(1+step)；
+    长行 ci = slice(1)。
+    findIndex 找不到返回 -1，-1 <= step 恒真，comp 的 flag 判定需保留该语义。
+
+====================================================================
+文件：blp.hpp
+命名空间：omegay::notation
+功能：blp 记号（即 DEN2 / IBLP，display 名 "blp"）
+====================================================================
+
+一、记号接口（文本形式）
+
+struct BlpNotation {
+    static constexpr const char* kName = "blp";
+    static std::string expand_text(std::string_view text, int term);        // FS（较短）
+    static std::string expand_text_alter(std::string_view text, int term);  // FS_alter（较长）
+    static std::string suffix();                                            // 空串
+    static std::optional<denshare::DenExpr> parse(std::string_view text);
+    static std::string to_string(const denshare::DenExpr&);
+};
+
+表达式是"标记行"序列：每行 (step, 条目[])，条目带标记（display 中以 '*' 表示）。
+记号极限输入/输出为 "Limit"。
+
+文本格式：每行 '(' 条目,... ')' step，条目 '*' 前缀表示标记，
+例如 (1,0)1(2,1,0)1(*3,2,1,0)2。
+
+expand_text / expand_text_alter 契约：
+    纯函数，不抛异常；term < 1 按 1 处理。
+    "Limit" → 极限的第 term 个基本列；空表达式 → 空文本；
+    非极限 → 截断（删除最后一行）；极限 → 展开。
+    括号内不允许为空（解析失败返回提示字符串）。
+
+二、内部实现（blp_detail）
+
+核心函数：to_short_row / parse / to_string / compare / is_limit / cut
+    seq_from / apply_row（ap）/ copy（含标记迁移）
+    comp_to / comp_from / expand / limit_row / infinity_fs
+
+关键语义对齐：
+    seq_from 记录 [行, 条目下标] 对；阈值越界按 0。
+    copy 的标记迁移：seq 取自 raw；no_move 判定与两种"直接标真"分支。
+    comp_from 末尾块的新值不带标记（TS 原样），随后由标记区间 [1..l] 统一标真。
+    already 为稀疏表（vector<optional<T>>），未构造项按 TS undefined 处理。
+
+====================================================================
+文件：iblp.hpp
+命名空间：omegay::notation
+功能：iblp 记号（即 DEN3，display 名 "iblp"）
+====================================================================
+
+一、记号接口（文本形式）
+
+struct IblpNotation {
+    static constexpr const char* kName = "iblp";
+    static std::string expand_text(std::string_view text, int term);        // FS（较短）
+    static std::string expand_text_alter(std::string_view text, int term);  // FS_alter（较长）
+    static std::string suffix();                                            // 空串
+    static std::optional<denshare::Den3Expr> parse(std::string_view text);
+    static std::string to_string(const denshare::Den3Expr&);
+};
+
+表达式是"带标记的扁平行"序列：行内位置 0 是 step，位置 1.. 是条目。
+记号极限输入/输出为 "Limit"。文本格式同 blp（但括号内允许为空）。
+
+expand_text / expand_text_alter 契约：
+    纯函数，不抛异常；term < 1 按 1 处理。
+    与 blp 不同，FS 不做 is_limit 预判：直接交给 expand（expand 内部处理非极限）。
+    FS_alter 在全部压缩完成后把结果裁剪回 len0 行（TS 原语义）。
+
+二、内部实现（iblp_detail）
+
+核心函数：to_short_row / parse / to_string / compare / is_limit / cut
+    seq_from（返回 optional）/ apply_row / copy（标记迁移用新表达式）
+    comp_to / comp_from / expand / limit_row / limit
+
+关键语义对齐：
+    seq_from 与 blp 不同：threshold 为 0 或链尾 val != threshold 时返回空；
+    返回 record.slice(1, -1)（去掉首尾两项）。
+    copy 的标记迁移：seq 取自展开后的新表达式（expr），而非 raw；
+    末判条件 !(target[j+step-1] 值 > a1)，越界视为满足。
+    comp_to 只处理位置 1.. 的标记；其中的内层检查循环在 TS 中是空操作，已略去。
+    comp_from：长行判据带 +1；新行标记区间 [2, 1+l]；后续行位置 0（step）不参与平移。
+    limit_row 即 denshare::limit_row_entries（末尾追加 2 再反转，位置 0 = step=2）。
+
+====================================================================
 通用注意事项
 ====================================================================
 

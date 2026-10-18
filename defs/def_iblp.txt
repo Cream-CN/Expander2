@@ -1,0 +1,5 @@
+iblp（即 DEN3）
+输入格式：行序列，每行形如 (条目,条目,...)步数，条目可用 * 前缀表示标记，例如
+(1,0)1(2,1,0)1(*3,2,1,0)2
+记号极限输入 Limit。
+逻辑移植自 hypcos 的 notation-explorer（src/notations/DEN/DEN3.ts）。
