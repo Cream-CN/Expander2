@@ -206,6 +206,8 @@ XxxNotation（kName / expand / suffix）。当前已包含：
     BMSFamily.hpp      — BMS 家族
     upms.hpp           — UPMS
     gy.hpp             — G-Y
+    xy-v1.hpp          — X-Y V1（维度参数 [1,0,1]，逻辑移植自 X-Y1.js）
+    xy-v2.hpp          — X-Y V2（维度参数 [1,0,1]，逻辑移植自 X-Y2.js）
     xy-v3.hpp          — X-Y V3（维度参数 [1,0,1]，新增，逻辑移植自 X-Y.js）
 
 Expander.cpp — 唯一调用点（IDM_FS / IDM_FSALTER 分支，经 notationTable() 分派）

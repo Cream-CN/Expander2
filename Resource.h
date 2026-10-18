@@ -61,5 +61,7 @@
 #define IDR_DEF_UPMS               20023
 #define IDR_DEF_GY				   20024
 #define IDR_DEF_XY_V3			   20025
+#define IDR_DEF_XY_V1			   20026
+#define IDR_DEF_XY_V2			   20027
 
 

@@ -18,6 +18,8 @@
 #include "Header/notation/BMSFamily.hpp"
 #include "Header/notation/upms.hpp"
 #include "Header/notation/gy.hpp"
+#include "Header/notation/xy-v1.hpp"
+#include "Header/notation/xy-v2.hpp"
 #include "Header/notation/xy-v3.hpp"
 #include <memory>
 #include <string>
@@ -298,6 +300,12 @@ namespace {
             { L"G-Y", "g-y",
                 &notation::GYNotation::expand, &notation::GYNotation::suffix,
                 IDR_DEF_GY },
+            { L"X-Y V1", "xy-v1",
+                &notation::XYV1Notation::expand, &notation::XYV1Notation::suffix,
+                IDR_DEF_XY_V1 },
+            { L"X-Y V2", "xy-v2",
+                &notation::XYV2Notation::expand, &notation::XYV2Notation::suffix,
+                IDR_DEF_XY_V2 },
             { L"X-Y V3", "xy-v3",
                 &notation::XYV3Notation::expand, &notation::XYV3Notation::suffix,
                 IDR_DEF_XY_V3 },
@@ -362,8 +370,8 @@ namespace {
                     static_cast<UINT_PTR>(IDM_DEFINITION_BASE + i),
                     label.c_str());
             }
-            ::AppendMenuW(hDef, MF_SEPARATOR, 0, nullptr);
-            ::AppendMenuW(hDef, MF_STRING, IDM_ENTRY_DEMO, L"Entry 演示(&E)...");
+            //::AppendMenuW(hDef, MF_SEPARATOR, 0, nullptr);
+            //::AppendMenuW(hDef, MF_STRING, IDM_ENTRY_DEMO, L"Entry 演示(&E)...");
         }
         ::AppendMenuW(hMenu, MF_POPUP,
             reinterpret_cast<UINT_PTR>(hDef), L"定义(&D)");
@@ -654,7 +662,7 @@ namespace {
         ::UpdateWindow(hwnd);
     }
 
-    void showEntryDemo(HWND hwnd, UiState* ui) {
+    /*void showEntryDemo(HWND hwnd, UiState* ui) {
         std::vector<int> seq;
         int term = 0;
         if (!readSeqAndTerm(hwnd, ui, seq, term)) return;
@@ -712,7 +720,7 @@ namespace {
 
         ::MessageBoxW(hwnd, msg.c_str(), L"Entry 演示",
             MB_OK | MB_ICONINFORMATION);
-    }
+    }*/
 
     LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         switch (msg) {
@@ -861,9 +869,9 @@ namespace {
                 ::PostQuitMessage(0);
                 break;
 
-            case IDM_ENTRY_DEMO:
+            /*case IDM_ENTRY_DEMO:
                 showEntryDemo(hwnd, ui);
-                break;
+                break;*/
 
             case IDM_FS:
             case IDM_FSALTER: {
