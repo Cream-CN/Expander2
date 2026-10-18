@@ -835,7 +835,7 @@ namespace {
                     L"部分记号的代码修改自笑姐姐(SmileLee-lyx)的NER\n"
                     L"曹知秋 记号提供给AI的定义使用《大数理论》的原文\n"
                     L"MrSS的定义来自 AAA滚木批发 (QQ3682911373)\n"
-                    L"ε-Y的代码修改自Go men的代码"
+                    L"ε-Y,X-Y的代码修改自Go men的代码gomen520/gomen520.github.io"
                     L"UPMS由test_alpha0定义\n"
                     L"BMS的代码修改自bmsmat，源仓库由Fish,kotetian,kyodaisuu提交\n"
                     L"请注意 代码系利用人工智能技术生成",
@@ -844,7 +844,8 @@ namespace {
 
             case IDM_ABOUT:
                 ::MessageBoxW(hwnd,
-                    L"ω-Y 展开器\n\n"
+                    L"展开器\n\n"
+                    L"本软件是可自由分发的自由软件，使用 GNU 通用公共许可证 第三版本 授权"
                     L"By Cream-CN\n",
                     L"关于", MB_OK | MB_ICONINFORMATION);
                 break;
