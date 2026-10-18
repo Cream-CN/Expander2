@@ -75,12 +75,12 @@ BLOCK "040904b0"
 BEGIN
 VALUE "CompanyName", "Cream-CN,Cream-CN/Expander2"
 VALUE "FileDescription", "Googology Expander"
-VALUE "FileVersion", "1.3.6.5"
+VALUE "FileVersion", "1.3.6.7"
 VALUE "InternalName", "Expander"
 VALUE "LegalCopyright", "Copyright (C) 2026 Cream-CN"
 VALUE "OriginalFilename", "Expander.exe"
 VALUE "ProductName", "Expander"
-VALUE "ProductVersion", "1.3.6.5"
+VALUE "ProductVersion", "1.3.6.7"
 END
 END
 BLOCK "VarFileInfo"
@@ -209,7 +209,7 @@ END
 
 IDR_DEF_BMS_V4 RCDATA
 BEGIN
-"在 BMS 中定义如下概念：\n"
+"在BMS中定义如下概念：\n"
 "(1) 第一行元素的父项为从该元素起，在该元素左边且小于该元素的第一个项。\n"
 "(2) 元素的祖先项为元素的父项、父项的父项等元素。\n"
 "(3) 其余行元素的父项为从该元素起，在该元素左边，小于该元素，且其正上方的项是该元素正上方的项的祖先项的第一个项。\n"
