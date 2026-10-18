@@ -379,7 +379,7 @@ namespace omegay::notation {
         inline std::string getOrd(const Matrix& S, int ver) {
             const long nc = S.cols();
             const int  nr = S.rows();
-            if (chkStd(S, ver) != 0) return "Not standard";
+            //if (chkStd(S, ver) != 0) return "Not standard";
 
             if (nc == 1) return "1";
 

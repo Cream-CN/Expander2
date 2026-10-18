@@ -137,7 +137,7 @@ namespace omegay::common {
                 break;
             }
             else if (std::isdigit(static_cast<unsigned char>(ch))) {
-                if (row >= 64) continue;             // 忽略越界行（与原实现一致：被裁剪）
+                if (row >= 128) continue;             // 忽略越界行（与原实现一致：被裁剪）
                 if (!has_digit) { cur[row] = 0; has_digit = true; neg = false; sign = 1; }
                 if (neg) sign = -1;
                 cur[row] = cur[row] * 10 + (ch - '0');
