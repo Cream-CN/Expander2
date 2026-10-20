@@ -9,6 +9,7 @@
 
     使用Microsoft Visual Studio 2026，MSVC145 C++20，C默认
     没有额外的依赖
+    构建的时候使用build.ps1即可
 
 接口
 
