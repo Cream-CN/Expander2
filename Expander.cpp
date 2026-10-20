@@ -2,7 +2,10 @@
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
 #include <windows.h>
+#include <commctrl.h>
 #include <richedit.h>
+
+#pragma comment(lib, "comctl32.lib")
 
 #include "Header/common/utf8.hpp"
 #include "Header/common/sequence.hpp"
@@ -28,6 +31,9 @@
 #include <string>
 #include <string_view>
 #include <vector>
+#include <array>
+#include <algorithm>
+#include <cwctype>
 #include <cstdint>
 #include "Resource.h"
 #include "Definitions.h"   // 记号定义文本由标头编译进程序，绕过 rc.exe
@@ -46,14 +52,20 @@ namespace {
     constexpr int IDM_FS = 101;
     constexpr int IDM_FSALTER = 102;
     constexpr int IDM_ENTRY_DEMO = 103;
-    constexpr int IDC_NOTATION_COMBO = 2001;
-    constexpr int IDM_DEFINITION_BASE = 3000;
+    constexpr int IDC_NOTATION_BTN = 2100;   // 主窗口“选择记号…”按钮
+    constexpr int IDM_DEFINITION_PICK = 4000; // “定义(&D)…”菜单：打开记号选择窗体
     constexpr wchar_t kDefWindowClass[] = L"OmegaYDefPopup";
     constexpr int IDC_POPUP_DEF_EDIT = 5001;
     constexpr int IDC_POPUP_DEF_CLOSE = 5002;
     constexpr wchar_t kLegalWindowClass[] = L"OmegaYLegal";
     constexpr int IDC_LEGAL_EDIT = 6001;
     HWND g_hLegalWindow = nullptr;
+
+    // ---- 记号选择窗体 ----
+    constexpr wchar_t kPickerWindowClass[] = L"OmegaYPicker";
+    constexpr int IDC_PICKER_SEARCH = 7101;
+    constexpr int IDC_PICKER_LIST = 7102;
+    constexpr int IDC_PICKER_STATUS = 7103;
 
     struct NotationEntry {
         const wchar_t* display_name;
@@ -70,6 +82,10 @@ namespace {
         // 非空时，FS 使用 expand_text、FS_alter 使用本入口，两者均由记号自身实现，
         // UI 不再对 FS 结果做通用截断（DEN1 / blp / iblp 即属此类）。
         std::string(*expand_text_alter)(std::string_view, int) = nullptr;
+
+        // 记号标签（用于选择窗体的搜索与展示）。最多 16 个，以 nullptr 结尾；
+        // 未用的槽位保持 nullptr。可在下表按需增删。
+        std::array<const wchar_t*, 16> tags{};
     };
 
     std::string bmsExpandTextWith(
@@ -200,142 +216,195 @@ namespace {
 
     [[nodiscard]] const std::vector<NotationEntry>& notationTable() {
         static const std::vector<NotationEntry> table = {
-            { L"空记号", "empty",
-              &notation::EmptyNotation::expand, &notation::EmptyNotation::suffix,
-              IDR_DEF_EMPTY },
+            { .display_name = L"空记号", .id = "empty",
+              .expand = &notation::EmptyNotation::expand,
+              .suffix = &notation::EmptyNotation::suffix,
+              .definition_resource_id = IDR_DEF_EMPTY,
+              .tags = { L"测试", L"基础" } },
 
-            { L"PPS", "pps",
-              &notation::PPSNotation::expand, &notation::PPSNotation::suffix,
-              IDR_DEF_PPS },
+            { .display_name = L"PPS", .id = "pps",
+              .expand = &notation::PPSNotation::expand,
+              .suffix = &notation::PPSNotation::suffix,
+              .definition_resource_id = IDR_DEF_PPS,
+              .tags = { L"PPS", L"原始数列", L"数列", L"入门" } },
 
-            { L"PPS4", "pps4",
-              &notation::PPS4Notation::expand, &notation::PPS4Notation::suffix,
-              IDR_DEF_PPS4 },
+            { .display_name = L"PPS4", .id = "pps4",
+              .expand = &notation::PPS4Notation::expand,
+              .suffix = &notation::PPS4Notation::suffix,
+              .definition_resource_id = IDR_DEF_PPS4,
+              .tags = { L"PPS", L"原始数列", L"4行", L"数列" } },
 
-            { L"Weak PPS4", "wpps4",
-              &notation::WPPS4Notation::expand, &notation::WPPS4Notation::suffix,
-              IDR_DEF_WPPS4 },
+            { .display_name = L"Weak PPS4", .id = "wpps4",
+              .expand = &notation::WPPS4Notation::expand,
+              .suffix = &notation::WPPS4Notation::suffix,
+              .definition_resource_id = IDR_DEF_WPPS4,
+              .tags = { L"PPS", L"弱", L"4行", L"数列" } },
 
-            { L"Third PPS4", "tpps4",
-              &notation::TPPS4Notation::expand, &notation::TPPS4Notation::suffix,
-              IDR_DEF_TPPS4 },
+            { .display_name = L"Third PPS4", .id = "tpps4",
+              .expand = &notation::TPPS4Notation::expand,
+              .suffix = &notation::TPPS4Notation::suffix,
+              .definition_resource_id = IDR_DEF_TPPS4,
+              .tags = { L"PPS", L"第三", L"4行", L"数列" } },
 
-            { L"Ex. Weak PPS4", "ewpps4",
-              &notation::EWPPS4Notation::expand, &notation::EWPPS4Notation::suffix,
-              IDR_DEF_EWPPS4 },
+            { .display_name = L"Ex. Weak PPS4", .id = "ewpps4",
+              .expand = &notation::EWPPS4Notation::expand,
+              .suffix = &notation::EWPPS4Notation::suffix,
+              .definition_resource_id = IDR_DEF_EWPPS4,
+              .tags = { L"PPS", L"扩展弱", L"4行", L"数列" } },
 
-            { L"Second PPS4", "spps4",
-              &notation::SecondPPS4Notation::expand, &notation::SecondPPS4Notation::suffix,
-              IDR_DEF_SPPS4 },
+            { .display_name = L"Second PPS4", .id = "spps4",
+              .expand = &notation::SecondPPS4Notation::expand,
+              .suffix = &notation::SecondPPS4Notation::suffix,
+              .definition_resource_id = IDR_DEF_SPPS4,
+              .tags = { L"PPS", L"第二", L"4行", L"数列" } },
 
-            { L"2-pps4", "2-pps4",
-              &notation::PPS2Notation::expand, &notation::PPS2Notation::suffix,
-              IDR_DEF_2PPS4 },
+            { .display_name = L"2-pps4", .id = "2-pps4",
+              .expand = &notation::PPS2Notation::expand,
+              .suffix = &notation::PPS2Notation::suffix,
+              .definition_resource_id = IDR_DEF_2PPS4,
+              .tags = { L"PPS", L"2行", L"4行", L"数列" } },
 
-            { L"ω-Y (medium)", "omega-y-medium",
-              &notation::OmegaYMediumNotation::expand, &notation::OmegaYMediumNotation::suffix,
-              IDR_DEF_OMEGA_Y_MEDIUM },
+            { .display_name = L"ω-Y (medium)", .id = "omega-y-medium",
+              .expand = &notation::OmegaYMediumNotation::expand,
+              .suffix = &notation::OmegaYMediumNotation::suffix,
+              .definition_resource_id = IDR_DEF_OMEGA_Y_MEDIUM,
+              .tags = { L"Y序列", L"ω-Y", L"中等", L"数列" } },
 
-            { L"ω-Y (strong)", "omega-y-strong",
-              &notation::OmegaYStrongNotation::expand, &notation::OmegaYStrongNotation::suffix,
-              IDR_DEF_OMEGA_Y_STRONG },
+            { .display_name = L"ω-Y (strong)", .id = "omega-y-strong",
+              .expand = &notation::OmegaYStrongNotation::expand,
+              .suffix = &notation::OmegaYStrongNotation::suffix,
+              .definition_resource_id = IDR_DEF_OMEGA_Y_STRONG,
+              .tags = { L"Y序列", L"ω-Y", L"强", L"数列" } },
 
-            { L"MrSS1.2.1", "mrss121",
-              &notation::Mrss121Notation::expand, &notation::Mrss121Notation::suffix,
-              IDR_DEF_MRSS121,
-              &notation::Mrss121Notation::expand_string },
-              { L"BMS v1.0", "bms-v1",
-                nullptr, &notation::BMSFamilyNotation::suffix,
-                IDR_DEF_BMS_V1,
-                &bmsExpandV1 },
+            { .display_name = L"MrSS1.2.1", .id = "mrss121",
+              .expand = &notation::Mrss121Notation::expand,
+              .suffix = &notation::Mrss121Notation::suffix,
+              .definition_resource_id = IDR_DEF_MRSS121,
+              .expand_text = &notation::Mrss121Notation::expand_string,
+              .tags = { L"MrSS", L"矩阵", L"数列" } },
 
-              { L"BMS v2.0", "bms-v2",
-                nullptr, &notation::BMSFamilyNotation::suffix,
-                IDR_DEF_BMS_V2,
-                &bmsExpandV2 },
+            { .display_name = L"BMS v1.0", .id = "bms-v1",
+              .expand = nullptr, .suffix = &notation::BMSFamilyNotation::suffix,
+              .definition_resource_id = IDR_DEF_BMS_V1,
+              .expand_text = &bmsExpandV1,
+              .tags = { L"BMS", L"矩阵", L"旧版" } },
 
-              { L"BMS v2.1", "bms-v21",
-                nullptr, &notation::BMSFamilyNotation::suffix,
-                IDR_DEF_BMS_V21,
-                &bmsExpandV21 },
+            { .display_name = L"BMS v2.0", .id = "bms-v2",
+              .expand = nullptr, .suffix = &notation::BMSFamilyNotation::suffix,
+              .definition_resource_id = IDR_DEF_BMS_V2,
+              .expand_text = &bmsExpandV2,
+              .tags = { L"BMS", L"矩阵" } },
 
-              { L"BMS v2.2", "bms-v22",
-                nullptr, &notation::BMSFamilyNotation::suffix,
-                IDR_DEF_BMS_V22,
-                &bmsExpandV22 },
+            { .display_name = L"BMS v2.1", .id = "bms-v21",
+              .expand = nullptr, .suffix = &notation::BMSFamilyNotation::suffix,
+              .definition_resource_id = IDR_DEF_BMS_V21,
+              .expand_text = &bmsExpandV21,
+              .tags = { L"BMS", L"矩阵" } },
 
-              { L"BMS v2.3", "bms-v23",
-                nullptr, &notation::BMSFamilyNotation::suffix,
-                IDR_DEF_BMS_V23,
-                &bmsExpandV23 },
+            { .display_name = L"BMS v2.2", .id = "bms-v22",
+              .expand = nullptr, .suffix = &notation::BMSFamilyNotation::suffix,
+              .definition_resource_id = IDR_DEF_BMS_V22,
+              .expand_text = &bmsExpandV22,
+              .tags = { L"BMS", L"矩阵" } },
 
-              { L"BMS v3.0", "bms-v3",
-                nullptr, &notation::BMSFamilyNotation::suffix,
-                IDR_DEF_BMS_V3,
-                &bmsExpandV3 },
+            { .display_name = L"BMS v2.3", .id = "bms-v23",
+              .expand = nullptr, .suffix = &notation::BMSFamilyNotation::suffix,
+              .definition_resource_id = IDR_DEF_BMS_V23,
+              .expand_text = &bmsExpandV23,
+              .tags = { L"BMS", L"矩阵" } },
 
-              { L"BMS v3.1", "bms-v31",
-                nullptr, &notation::BMSFamilyNotation::suffix,
-                IDR_DEF_BMS_V31,
-                &bmsExpandV31 },
+            { .display_name = L"BMS v3.0", .id = "bms-v3",
+              .expand = nullptr, .suffix = &notation::BMSFamilyNotation::suffix,
+              .definition_resource_id = IDR_DEF_BMS_V3,
+              .expand_text = &bmsExpandV3,
+              .tags = { L"BMS", L"矩阵" } },
 
-              { L"BMS v3.2", "bms-v32",
-                nullptr, &notation::BMSFamilyNotation::suffix,
-                IDR_DEF_BMS_V32,
-                &bmsExpandV32 },
+            { .display_name = L"BMS v3.1", .id = "bms-v31",
+              .expand = nullptr, .suffix = &notation::BMSFamilyNotation::suffix,
+              .definition_resource_id = IDR_DEF_BMS_V31,
+              .expand_text = &bmsExpandV31,
+              .tags = { L"BMS", L"矩阵" } },
 
-              { L"BMS v3.3", "bms-v33",
-                nullptr, &notation::BMSFamilyNotation::suffix,
-                IDR_DEF_BMS_V33,
-                &bmsExpandV33 },
+            { .display_name = L"BMS v3.2", .id = "bms-v32",
+              .expand = nullptr, .suffix = &notation::BMSFamilyNotation::suffix,
+              .definition_resource_id = IDR_DEF_BMS_V32,
+              .expand_text = &bmsExpandV32,
+              .tags = { L"BMS", L"矩阵" } },
 
-              { L"BMS v4.0", "bms-v4",
-                nullptr, &notation::BMSFamilyNotation::suffix,
-                IDR_DEF_BMS_V4,
-                &bmsExpandV4 },
+            { .display_name = L"BMS v3.3", .id = "bms-v33",
+              .expand = nullptr, .suffix = &notation::BMSFamilyNotation::suffix,
+              .definition_resource_id = IDR_DEF_BMS_V33,
+              .expand_text = &bmsExpandV33,
+              .tags = { L"BMS", L"矩阵" } },
 
-              { L"ω-Y sequence", "omega-y-sequence",
-                &notation::OmegaYNotation::expand, &notation::OmegaYNotation::suffix,
-                IDR_DEF_OMEGA_Y_SEQUENCE },
+            { .display_name = L"BMS v4.0", .id = "bms-v4",
+              .expand = nullptr, .suffix = &notation::BMSFamilyNotation::suffix,
+              .definition_resource_id = IDR_DEF_BMS_V4,
+              .expand_text = &bmsExpandV4,
+              .tags = { L"BMS", L"矩阵", L"最新" } },
 
-              { L"ε-Y", "epsilon-y",
-                &notation::EpsilonYNotation::expand, &notation::EpsilonYNotation::suffix,
-                IDR_DEF_EPSILON_Y },
+            { .display_name = L"ω-Y sequence", .id = "omega-y-sequence",
+              .expand = &notation::OmegaYNotation::expand,
+              .suffix = &notation::OmegaYNotation::suffix,
+              .definition_resource_id = IDR_DEF_OMEGA_Y_SEQUENCE,
+              .tags = { L"Y序列", L"ω-Y", L"数列" } },
 
-              { L"UPMS", "upms",
-                nullptr, &notation::UPMSNotation::suffix,
-                IDR_DEF_UPMS,
-                &upmsExpandText },
-            { L"G-Y", "g-y",
-                &notation::GYNotation::expand, &notation::GYNotation::suffix,
-                IDR_DEF_GY },
-            { L"X-Y V1", "xy-v1",
-                &notation::XYV1Notation::expand, &notation::XYV1Notation::suffix,
-                IDR_DEF_XY_V1 },
-            { L"X-Y V2", "xy-v2",
-                &notation::XYV2Notation::expand, &notation::XYV2Notation::suffix,
-                IDR_DEF_XY_V2 },
-            { L"X-Y V3", "xy-v3",
-                &notation::XYV3Notation::expand, &notation::XYV3Notation::suffix,
-                IDR_DEF_XY_V3 },
+            { .display_name = L"ε-Y", .id = "epsilon-y",
+              .expand = &notation::EpsilonYNotation::expand,
+              .suffix = &notation::EpsilonYNotation::suffix,
+              .definition_resource_id = IDR_DEF_EPSILON_Y,
+              .tags = { L"Y序列", L"ε-Y", L"数列" } },
 
-            { L"DEN1", "den1",
-                nullptr, &notation::Den1Notation::suffix,
-                IDR_DEF_DEN1,
-                &notation::Den1Notation::expand_text,
-                &notation::Den1Notation::expand_text_alter },
+            { .display_name = L"UPMS", .id = "upms",
+              .expand = nullptr, .suffix = &notation::UPMSNotation::suffix,
+              .definition_resource_id = IDR_DEF_UPMS,
+              .expand_text = &upmsExpandText,
+              .tags = { L"UPMS", L"矩阵", L"文本" } },
 
-            { L"blp", "blp",
-                nullptr, &notation::BlpNotation::suffix,
-                IDR_DEF_BLP,
-                &notation::BlpNotation::expand_text,
-                &notation::BlpNotation::expand_text_alter },
+            { .display_name = L"G-Y", .id = "g-y",
+              .expand = &notation::GYNotation::expand,
+              .suffix = &notation::GYNotation::suffix,
+              .definition_resource_id = IDR_DEF_GY,
+              .tags = { L"Y序列", L"G-Y", L"数列" } },
 
-            { L"iblp", "iblp",
-                nullptr, &notation::IblpNotation::suffix,
-                IDR_DEF_IBLP,
-                &notation::IblpNotation::expand_text,
-                &notation::IblpNotation::expand_text_alter },
+            { .display_name = L"X-Y V1", .id = "xy-v1",
+              .expand = &notation::XYV1Notation::expand,
+              .suffix = &notation::XYV1Notation::suffix,
+              .definition_resource_id = IDR_DEF_XY_V1,
+              .tags = { L"Y序列", L"X-Y", L"数列" } },
+
+            { .display_name = L"X-Y V2", .id = "xy-v2",
+              .expand = &notation::XYV2Notation::expand,
+              .suffix = &notation::XYV2Notation::suffix,
+              .definition_resource_id = IDR_DEF_XY_V2,
+              .tags = { L"Y序列", L"X-Y", L"数列" } },
+
+            { .display_name = L"X-Y V3", .id = "xy-v3",
+              .expand = &notation::XYV3Notation::expand,
+              .suffix = &notation::XYV3Notation::suffix,
+              .definition_resource_id = IDR_DEF_XY_V3,
+              .tags = { L"Y序列", L"X-Y", L"数列" } },
+
+            { .display_name = L"DEN1", .id = "den1",
+              .expand = nullptr, .suffix = &notation::Den1Notation::suffix,
+              .definition_resource_id = IDR_DEF_DEN1,
+              .expand_text = &notation::Den1Notation::expand_text,
+              .expand_text_alter = &notation::Den1Notation::expand_text_alter,
+              .tags = { L"DEN", L"文本", L"旧版" } },
+
+            { .display_name = L"blp", .id = "blp",
+              .expand = nullptr, .suffix = &notation::BlpNotation::suffix,
+              .definition_resource_id = IDR_DEF_BLP,
+              .expand_text = &notation::BlpNotation::expand_text,
+              .expand_text_alter = &notation::BlpNotation::expand_text_alter,
+              .tags = { L"blp", L"文本" } },
+
+            { .display_name = L"iblp", .id = "iblp",
+              .expand = nullptr, .suffix = &notation::IblpNotation::suffix,
+              .definition_resource_id = IDR_DEF_IBLP,
+              .expand_text = &notation::IblpNotation::expand_text,
+              .expand_text_alter = &notation::IblpNotation::expand_text_alter,
+              .tags = { L"iblp", L"文本", L"逆" } },
         };
         return table;
     }
@@ -345,14 +414,349 @@ namespace {
     using MenuPtr = std::unique_ptr<std::remove_pointer_t<HMENU>, MenuDeleter>;
     using BrushPtr = std::unique_ptr<std::remove_pointer_t<HBRUSH>, BrushDeleter>;
 
+    // ================= 记号选择窗体 =================
+
+    [[nodiscard]] std::wstring pickerLower(std::wstring_view s) {
+        std::wstring out;
+        out.reserve(s.size());
+        for (wchar_t c : s) out.push_back(static_cast<wchar_t>(std::towlower(c)));
+        return out;
+    }
+
+    [[nodiscard]] std::wstring joinTags(const NotationEntry& e) {
+        std::wstring out;
+        for (const wchar_t* t : e.tags) {
+            if (t == nullptr) break;
+            if (!out.empty()) out += L", ";
+            out += t;
+        }
+        return out;
+    }
+
+    // 搜索打分：0 = 不匹配；分值越高排序越靠前。
+    // 支持四种命中：记号全名(=)、Tag全名(=)、记号前缀、记号部分名(包含)、Tag部分名(包含)。
+    [[nodiscard]] int pickerMatchScore(const NotationEntry& e, const std::wstring& lq) {
+        const std::wstring lname = pickerLower(e.display_name);
+        if (lname == lq) return 5;
+        for (const wchar_t* t : e.tags) {
+            if (t == nullptr) break;
+            if (pickerLower(t) == lq) return 4;
+        }
+        if (lname.size() >= lq.size() && lname.compare(0, lq.size(), lq) == 0) return 3;
+        if (lname.find(lq) != std::wstring::npos) return 2;
+        for (const wchar_t* t : e.tags) {
+            if (t == nullptr) break;
+            if (pickerLower(t).find(lq) != std::wstring::npos) return 1;
+        }
+        return 0;
+    }
+
+    struct PickerLaunch {
+        int* result;
+        int current;
+    };
+
+    struct PickerState {
+        HWND hSearch{};
+        HWND hList{};
+        HWND hStatus{};
+        BrushPtr background;
+        std::vector<int> shown;   // 当前列表行 → 记号表索引
+        int current = 0;          // 打开窗体时的当前选择（用于首屏高亮）
+        int* pResult = nullptr;   // 确认时写入选中的记号表索引
+    };
+
+    [[nodiscard]] PickerState* getPicker(HWND h) {
+        return reinterpret_cast<PickerState*>(::GetWindowLongPtrW(h, GWLP_USERDATA));
+    }
+
+    void refreshPickerList(PickerState* st) {
+        const auto& table = notationTable();
+
+        wchar_t buf[256]{};
+        ::GetWindowTextW(st->hSearch, buf, 256);
+        std::wstring q = buf;
+        while (!q.empty() && std::iswspace(q.front())) q.erase(q.begin());
+        while (!q.empty() && std::iswspace(q.back())) q.pop_back();
+
+        struct Scored { int index; int score; };
+        std::vector<Scored> scored;
+        if (q.empty()) {
+            scored.reserve(table.size());
+            for (int i = 0; i < static_cast<int>(table.size()); ++i)
+                scored.push_back({ i, 1 });
+        }
+        else {
+            const std::wstring lq = pickerLower(q);
+            for (int i = 0; i < static_cast<int>(table.size()); ++i) {
+                const int s = pickerMatchScore(table[i], lq);
+                if (s > 0) scored.push_back({ i, s });
+            }
+            std::stable_sort(scored.begin(), scored.end(),
+                [](const Scored& a, const Scored& b) { return a.score > b.score; });
+        }
+
+        // 记住原选中记号，刷新后尽量恢复
+        const int prevRow = ListView_GetNextItem(st->hList, -1, LVNI_SELECTED);
+        int prevIndex = -1;
+        if (prevRow >= 0 && prevRow < static_cast<int>(st->shown.size()))
+            prevIndex = st->shown[prevRow];
+
+        ListView_DeleteAllItems(st->hList);
+        st->shown.clear();
+        st->shown.reserve(scored.size());
+
+        for (const Scored& sc : scored) {
+            const int idx = sc.index;
+            st->shown.push_back(idx);
+            const NotationEntry& e = table[idx];
+
+            LVITEMW it{};
+            it.mask = LVIF_TEXT | LVIF_PARAM;
+            it.iItem = static_cast<int>(st->shown.size()) - 1;
+            it.pszText = const_cast<wchar_t*>(e.display_name);
+            it.lParam = idx;
+            const int row = static_cast<int>(
+                ::SendMessageW(st->hList, LVM_INSERTITEMW, 0, reinterpret_cast<LPARAM>(&it)));
+
+            const std::wstring tags = joinTags(e);
+            if (!tags.empty()) {
+                LVITEMW si{};
+                si.mask = LVIF_TEXT;
+                si.iItem = row;
+                si.iSubItem = 1;
+                si.pszText = const_cast<wchar_t*>(tags.c_str());
+                ::SendMessageW(st->hList, LVM_SETITEMW, 0, reinterpret_cast<LPARAM>(&si));
+            }
+        }
+
+        int selectRow = -1;
+        if (prevIndex >= 0) {
+            for (int r = 0; r < static_cast<int>(st->shown.size()); ++r) {
+                if (st->shown[r] == prevIndex) { selectRow = r; break; }
+            }
+        }
+        if (selectRow < 0 && !st->shown.empty()) {
+            for (int r = 0; r < static_cast<int>(st->shown.size()); ++r) {
+                if (st->shown[r] == st->current) { selectRow = r; break; }
+            }
+            if (selectRow < 0) selectRow = 0;
+        }
+        if (selectRow >= 0) {
+            ListView_SetItemState(st->hList, selectRow,
+                LVIS_SELECTED | LVIS_FOCUSED, LVIS_SELECTED | LVIS_FOCUSED);
+            ListView_EnsureVisible(st->hList, selectRow, FALSE);
+        }
+
+        std::wstring status = L"匹配 " + std::to_wstring(st->shown.size()) +
+            L" / " + std::to_wstring(table.size()) + L" 个记号";
+        ::SetWindowTextW(st->hStatus, status.c_str());
+    }
+
+    void acceptPicker(HWND hwnd) {
+        auto* st = getPicker(hwnd);
+        if (!st) return;
+        const int row = ListView_GetNextItem(st->hList, -1, LVNI_SELECTED);
+        if (row < 0 || row >= static_cast<int>(st->shown.size())) return;
+        if (st->pResult) *st->pResult = st->shown[row];
+        ::DestroyWindow(hwnd);
+    }
+
+    LRESULT CALLBACK PickerProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+        switch (msg) {
+        case WM_CREATE: {
+            auto* cs = reinterpret_cast<CREATESTRUCTW*>(lParam);
+            auto* launch = reinterpret_cast<PickerLaunch*>(cs->lpCreateParams);
+            auto* st = new PickerState{};
+            st->background.reset(::CreateSolidBrush(::GetSysColor(COLOR_WINDOW)));
+            if (launch) {
+                st->current = launch->current;
+                st->pResult = launch->result;
+            }
+            ::SetWindowLongPtrW(hwnd, GWLP_USERDATA,
+                reinterpret_cast<LONG_PTR>(st));
+
+            HINSTANCE hInst = cs->hInstance;
+
+            ::CreateWindowExW(0, L"STATIC", L"搜索:",
+                WS_CHILD | WS_VISIBLE | SS_LEFT,
+                12, 14, 42, 18, hwnd, nullptr, hInst, nullptr);
+
+            st->hSearch = ::CreateWindowExW(0, L"EDIT", L"",
+                WS_CHILD | WS_VISIBLE | WS_BORDER | WS_TABSTOP |
+                ES_LEFT | ES_AUTOHSCROLL,
+                56, 10, 492, 22, hwnd,
+                reinterpret_cast<HMENU>(static_cast<UINT_PTR>(IDC_PICKER_SEARCH)),
+                hInst, nullptr);
+
+            st->hList = ::CreateWindowExW(
+                WS_EX_CLIENTEDGE, WC_LISTVIEWW, L"",
+                WS_CHILD | WS_VISIBLE | WS_TABSTOP | WS_VSCROLL |
+                LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_NOSORTHEADER,
+                12, 40, 536, 330, hwnd,
+                reinterpret_cast<HMENU>(static_cast<UINT_PTR>(IDC_PICKER_LIST)),
+                hInst, nullptr);
+            ::SendMessageW(st->hList, LVM_SETEXTENDEDLISTVIEWSTYLE, 0,
+                LVS_EX_FULLROWSELECT | LVS_EX_GRIDLINES | LVS_EX_DOUBLEBUFFER);
+
+            LVCOLUMNW col{};
+            col.mask = LVCF_TEXT | LVCF_WIDTH | LVCF_SUBITEM;
+            col.pszText = const_cast<wchar_t*>(L"记号");
+            col.cx = 170;
+            ::SendMessageW(st->hList, LVM_INSERTCOLUMNW, 0,
+                reinterpret_cast<LPARAM>(&col));
+            col.pszText = const_cast<wchar_t*>(L"标签");
+            col.cx = 366;
+            ::SendMessageW(st->hList, LVM_INSERTCOLUMNW, 1,
+                reinterpret_cast<LPARAM>(&col));
+
+            st->hStatus = ::CreateWindowExW(0, L"STATIC", L"",
+                WS_CHILD | WS_VISIBLE | SS_LEFT,
+                12, 376, 300, 18, hwnd,
+                reinterpret_cast<HMENU>(static_cast<UINT_PTR>(IDC_PICKER_STATUS)),
+                hInst, nullptr);
+
+            ::CreateWindowExW(0, L"BUTTON", L"确定",
+                WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_DEFPUSHBUTTON,
+                360, 400, 90, 26, hwnd,
+                reinterpret_cast<HMENU>(static_cast<UINT_PTR>(IDOK)),
+                hInst, nullptr);
+
+            ::CreateWindowExW(0, L"BUTTON", L"取消",
+                WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_PUSHBUTTON,
+                458, 400, 90, 26, hwnd,
+                reinterpret_cast<HMENU>(static_cast<UINT_PTR>(IDCANCEL)),
+                hInst, nullptr);
+
+            refreshPickerList(st);
+            break;
+        }
+        case WM_COMMAND: {
+            auto* st = getPicker(hwnd);
+            if (!st) break;
+            const int id = LOWORD(wParam);
+            if (id == IDC_PICKER_SEARCH && HIWORD(wParam) == EN_CHANGE) {
+                refreshPickerList(st);
+                return 0;
+            }
+            if (id == IDOK) { acceptPicker(hwnd); return 0; }
+            if (id == IDCANCEL) { ::DestroyWindow(hwnd); return 0; }
+            break;
+        }
+        case WM_NOTIFY: {
+            auto* nmh = reinterpret_cast<NMHDR*>(lParam);
+            if (nmh->idFrom == IDC_PICKER_LIST && nmh->code == NM_DBLCLK) {
+                acceptPicker(hwnd);
+                return 0;
+            }
+            break;
+        }
+        case WM_CTLCOLORSTATIC:
+        case WM_CTLCOLOREDIT:
+        case WM_CTLCOLORBTN: {
+            auto* st = getPicker(hwnd);
+            if (!st) return ::DefWindowProcW(hwnd, msg, wParam, lParam);
+            HDC hdc = reinterpret_cast<HDC>(wParam);
+            ::SetBkMode(hdc, TRANSPARENT);
+            ::SetTextColor(hdc, ::GetSysColor(COLOR_WINDOWTEXT));
+            return reinterpret_cast<LRESULT>(st->background.get());
+        }
+        case WM_CLOSE:
+            ::DestroyWindow(hwnd);
+            break;
+        case WM_DESTROY:
+            delete getPicker(hwnd);
+            ::SetWindowLongPtrW(hwnd, GWLP_USERDATA, 0);
+            break;
+        default:
+            return ::DefWindowProcW(hwnd, msg, wParam, lParam);
+        }
+        return 0;
+    }
+
+    void registerPickerClass(HINSTANCE hInst) {
+        static bool registered = false;
+        if (registered) return;
+
+        WNDCLASSW wc{};
+        wc.lpfnWndProc = PickerProc;
+        wc.hInstance = hInst;
+        wc.lpszClassName = kPickerWindowClass;
+        wc.hbrBackground = ::GetSysColorBrush(COLOR_WINDOW);
+        wc.hCursor = ::LoadCursorW(nullptr, IDC_ARROW);
+        ::RegisterClassW(&wc);
+        registered = true;
+    }
+
+    // 模态显示记号选择窗体；返回选中的记号表索引，取消返回 -1。
+    int showNotationPicker(HINSTANCE hInst, HWND hParent, int current,
+        const wchar_t* title = L"选择记号") {
+        registerPickerClass(hInst);
+
+        int result = -1;
+        PickerLaunch launch{ &result, current };
+
+        HWND hDlg = ::CreateWindowExW(
+            WS_EX_DLGMODALFRAME,
+            kPickerWindowClass, title,
+            WS_POPUP | WS_CAPTION | WS_SYSMENU,
+            0, 0, 560, 440,
+            hParent, nullptr, hInst, &launch);
+        if (!hDlg) return -1;
+
+        // 居中于父窗口，并整体下移 100px
+        RECT pr{}, dr{};
+        ::GetWindowRect(hParent, &pr);
+        ::GetWindowRect(hDlg, &dr);
+        const int w = dr.right - dr.left, h = dr.bottom - dr.top;
+        const int x = pr.left + ((pr.right - pr.left) - w) / 2;
+        const int y = pr.top + ((pr.bottom - pr.top) - h) / 2 + 100;
+        ::SetWindowPos(hDlg, nullptr, x, y, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
+
+        ::EnableWindow(hParent, FALSE);
+        ::ShowWindow(hDlg, SW_SHOW);
+        ::UpdateWindow(hDlg);
+        ::SetForegroundWindow(hDlg);
+
+        MSG msg;
+        while (::GetMessageW(&msg, nullptr, 0, 0)) {
+            if (!::IsDialogMessageW(hDlg, &msg)) {
+                ::TranslateMessage(&msg);
+                ::DispatchMessageW(&msg);
+            }
+            if (!::IsWindow(hDlg)) break;
+        }
+
+        ::EnableWindow(hParent, TRUE);
+        ::SetForegroundWindow(hParent);
+        return result;
+    }
+
     struct UiState {
         HWND hEditSeq{};
         HWND hEditTerm{};
         HWND hBtnFS{};
         HWND hBtnFSalter{};
-        HWND hComboNotation{};
+        HWND hBtnNotation{};    // “选择记号…”按钮
+        HWND hNotationLabel{};  // 当前记号（含标签）显示
+        int notation_index = 0; // 当前选中的记号表索引
         BrushPtr background;
     };
+
+    void updateNotationLabel(UiState* ui) {
+        const auto& table = notationTable();
+        int idx = ui->notation_index;
+        if (idx < 0 || idx >= static_cast<int>(table.size())) idx = 0;
+        const NotationEntry& e = table[idx];
+        std::wstring label = e.display_name;
+        const std::wstring tags = joinTags(e);
+        if (!tags.empty()) {
+            label += L"　[";
+            label += tags;
+            label += L"]";
+        }
+        ::SetWindowTextW(ui->hNotationLabel, label.c_str());
+    }
 
     [[nodiscard]] UiState* getUi(HWND h) {
         return reinterpret_cast<UiState*>(::GetWindowLongPtrW(h, GWLP_USERDATA));
@@ -374,23 +778,8 @@ namespace {
         ::AppendMenuW(hMenu, MF_POPUP,
             reinterpret_cast<UINT_PTR>(hFile), L"文件(&F)");
 
-        HMENU hDef = ::CreatePopupMenu();
-        {
-            const auto& table = notationTable();
-            for (int i = 0; i < static_cast<int>(table.size()); ++i) {
-                std::wstring label = table[i].display_name;
-                label += L" 定义(&";
-                label += static_cast<wchar_t>(L'A' + (i % 26));
-                label += L")";
-                ::AppendMenuW(hDef, MF_STRING,
-                    static_cast<UINT_PTR>(IDM_DEFINITION_BASE + i),
-                    label.c_str());
-            }
-            //::AppendMenuW(hDef, MF_SEPARATOR, 0, nullptr);
-            //::AppendMenuW(hDef, MF_STRING, IDM_ENTRY_DEMO, L"Entry 演示(&E)...");
-        }
-        ::AppendMenuW(hMenu, MF_POPUP,
-            reinterpret_cast<UINT_PTR>(hDef), L"定义(&D)");
+        // 定义改为直接命令项：点击后打开记号选择窗体，选定后弹出对应定义
+        ::AppendMenuW(hMenu, MF_STRING, IDM_DEFINITION_PICK, L"定义(&D)...");
 
         HMENU hHelp = ::CreatePopupMenu();
         ::AppendMenuW(hHelp, MF_STRING, IDM_HELP, L"帮助(&H)...");
@@ -551,6 +940,12 @@ namespace {
             reinterpret_cast<LPVOID>(static_cast<INT_PTR>(index)));
 
         if (hPopup) {
+            // 在系统默认位置的基础上整体下移 100px
+            RECT r{};
+            if (::GetWindowRect(hPopup, &r)) {
+                const int w = r.right - r.left, h = r.bottom - r.top;
+                ::MoveWindow(hPopup, r.left, r.top + 100, w, h, TRUE);
+            }
             ::ShowWindow(hPopup, SW_SHOW);
             ::UpdateWindow(hPopup);
         }
@@ -778,21 +1173,18 @@ namespace {
                 10, mh + 85, 80, 20,
                 hwnd, nullptr, hInst, nullptr);
 
-            ui->hComboNotation = ::CreateWindowExW(
-                0, L"COMBOBOX", nullptr,
-                WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST | WS_VSCROLL,
-                60, mh + 85, 220, 200,
+            ui->hBtnNotation = ::CreateWindowExW(0, L"BUTTON", L"选择记号…",
+                WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_PUSHBUTTON,
+                60, mh + 83, 100, 25,
                 hwnd,
-                reinterpret_cast<HMENU>(static_cast<UINT_PTR>(IDC_NOTATION_COMBO)),
+                reinterpret_cast<HMENU>(static_cast<UINT_PTR>(IDC_NOTATION_BTN)),
                 hInst, nullptr);
-            {
-                const auto& table = notationTable();
-                for (int i = 0; i < static_cast<int>(table.size()); ++i) {
-                    ::SendMessageW(ui->hComboNotation, CB_ADDSTRING, 0,
-                        reinterpret_cast<LPARAM>(table[i].display_name));
-                }
-                ::SendMessageW(ui->hComboNotation, CB_SETCURSEL, 0, 0);
-            }
+
+            ui->hNotationLabel = ::CreateWindowExW(0, L"STATIC", L"",
+                WS_CHILD | WS_VISIBLE | SS_LEFT,
+                170, mh + 87, 280, 20,
+                hwnd, nullptr, hInst, nullptr);
+            updateNotationLabel(ui);
 
             ui->hBtnFSalter = ::CreateWindowExW(0, L"BUTTON", L"展开",
                 WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
@@ -838,16 +1230,23 @@ namespace {
             const int id = LOWORD(wParam);
             const auto& table = notationTable();
 
-            if (id == IDC_NOTATION_COMBO && HIWORD(wParam) == CBN_SELCHANGE) {
-                // 定义显示框已移除；切换记号仅更新当前选择
-                break;
-            }
-            if (id >= IDM_DEFINITION_BASE &&
-                id < IDM_DEFINITION_BASE + static_cast<int>(table.size())) {
-                const int idx = id - IDM_DEFINITION_BASE;
+            if (id == IDC_NOTATION_BTN) {
                 HINSTANCE hInst = reinterpret_cast<HINSTANCE>(
                     ::GetWindowLongPtrW(hwnd, GWLP_HINSTANCE));
-                showDefinitionPopup(hInst, hwnd, idx);
+                const int sel = showNotationPicker(hInst, hwnd, ui->notation_index);
+                if (sel >= 0 && sel < static_cast<int>(table.size())) {
+                    ui->notation_index = sel;
+                    updateNotationLabel(ui);
+                }
+                break;
+            }
+            if (id == IDM_DEFINITION_PICK) {
+                HINSTANCE hInst = reinterpret_cast<HINSTANCE>(
+                    ::GetWindowLongPtrW(hwnd, GWLP_HINSTANCE));
+                const int sel = showNotationPicker(hInst, hwnd, ui->notation_index,
+                    L"选择要查看定义的记号");
+                if (sel >= 0 && sel < static_cast<int>(table.size()))
+                    showDefinitionPopup(hInst, hwnd, sel);
                 break;
             }
 
@@ -893,8 +1292,7 @@ namespace {
 
             case IDM_FS:
             case IDM_FSALTER: {
-                int sel = static_cast<int>(
-                    ::SendMessageW(ui->hComboNotation, CB_GETCURSEL, 0, 0));
+                int sel = ui->notation_index;
                 if (sel < 0 || sel >= static_cast<int>(table.size())) sel = 0;
                 const NotationEntry& entry = table[sel];
 
@@ -1007,6 +1405,11 @@ namespace {
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int nCmdShow) {
     ::LoadLibraryW(L"Msftedit.dll");
 
+    INITCOMMONCONTROLSEX icc{};
+    icc.dwSize = sizeof(icc);
+    icc.dwICC = ICC_LISTVIEW_CLASSES;
+    ::InitCommonControlsEx(&icc);
+
     WNDCLASS wc{};
     wc.lpfnWndProc = WndProc;
     wc.hInstance = hInstance;
@@ -1017,7 +1420,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int nCmdShow) {
     HWND hwnd = ::CreateWindowExW(
         0, L"OmegaY", L"Expander",
         WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX,
-        CW_USEDEFAULT, CW_USEDEFAULT, 400, 250,
+        CW_USEDEFAULT, CW_USEDEFAULT, 470, 250,
         nullptr, nullptr, hInstance, nullptr);
     if (!hwnd) return 0;
 
