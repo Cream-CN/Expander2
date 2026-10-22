@@ -77,6 +77,8 @@
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
+      <TreatSpecificWarningsAsErrors>6011;6387;6388;28182;33010;33011;33020;33021;6001;6201;6204;6383;6385;6386</TreatSpecificWarningsAsErrors>
+      <AdditionalOptions>/analyze</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -95,7 +97,8 @@
       <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalOptions>/utf-8</AdditionalOptions>
+      <TreatSpecificWarningsAsErrors>6011;6387;6388;28182;33010;33011;33020;33021;6001;6201;6204;6383;6385;6386</TreatSpecificWarningsAsErrors>
+      <AdditionalOptions>/analyze /utf-8</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -112,7 +115,8 @@
       <PreprocessorDefinitions>_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalOptions>/utf-8</AdditionalOptions>
+      <TreatSpecificWarningsAsErrors>6011;6387;6388;28182;33010;33011;33020;33021;6001;6201;6204;6383;6385;6386</TreatSpecificWarningsAsErrors>
+      <AdditionalOptions>/analyze /utf-8</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -131,7 +135,8 @@
       <PreprocessorDefinitions>NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalOptions>/utf-8</AdditionalOptions>
+      <TreatSpecificWarningsAsErrors>6011;6387;6388;28182;33010;33011;33020;33021;6001;6201;6204;6383;6385;6386</TreatSpecificWarningsAsErrors>
+      <AdditionalOptions>/analyze /utf-8</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
