@@ -3,6 +3,7 @@
 //
 // 记号定义文本以 UTF-8 原始字符串字面量直接编译进程序，完全绕过 rc.exe，
 // 从而避免 rc.exe 对 UTF-8 源文件的编码误读(首尾乱码)与 \n 不转义的问题。
+// 我***的MS
 #pragma once
 #include <string_view>
 #include "Resource.h"

@@ -451,6 +451,16 @@ namespace omegay::notation {
                 if (t->foot != nullptr) t->foot = nullptr;
                 m[static_cast<std::size_t>(t->cloumn)].pop_back();
             }
+            // 坏根为空（t 无 parent，且跨维度分支未重新定位到外层坏根）→
+            // 退化输入，删去末项（与上方 t==nullptr 及 xy-v2 的 b==nullptr 一致）
+            if (b == nullptr) {
+                std::vector<int> result;
+                result.reserve(s.size() - 1);
+                for (std::size_t i = 0; i + 1 < s.size(); ++i) {
+                    result.push_back(s[i]->value);
+                }
+                return result;
+            }
             preprocess(m, b);
             for (Entry* e : m[static_cast<std::size_t>(t->cloumn)]) {
                 e->value--;
