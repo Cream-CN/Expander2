@@ -16,17 +16,12 @@ constexpr std::string_view kDef_IDR_DEF_2PPS4 = R"DEFTXT(
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_BLP = R"DEFTXT(
-blp（即 DEN2 / IBLP）
-输入格式：行序列，每行形如 (条目,条目,...)步数，条目可用 * 前缀表示标记，例如
-(1,0)1(2,1,0)1(*3,2,1,0)2
-记号极限输入 Limit。
-逻辑移植自 hypcos 的 notation-explorer（src/notations/DEN/DEN2.ts）。
+
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_BMS_V1 = R"DEFTXT(
 BMS v1.0（Bashicu Matrix System, Version 1）
 
-输入格式：BMS 文本，如 (0,0)(1,1)(2,2) 或 (0,0)(1,1)[3]。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_BMS_V2 = R"DEFTXT(
@@ -84,12 +79,7 @@ BMS v4.0（Version 4.0，当前默认）
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_DEN1 = R"DEFTXT(
-DEN1（Defective embedding notation）
-输入格式：主体行序列与父标号列表，用分号分隔，例如
-(1,0)1(2,1,0)1;0
-每一行形如 (值,值,...)步数，分号后是父标号列表（可为空）。
-记号极限输入 Limit。
-逻辑移植自 hypcos 的 notation-explorer（src/notations/DEN/DEN.ts）。
+
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_EMPTY = R"DEFTXT(
@@ -99,19 +89,7 @@ constexpr std::string_view kDef_IDR_DEF_EMPTY = R"DEFTXT(
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_EPSILON_Y = R"DEFTXT(
-ε-Y（1-Y）
 
-ε-Y 即 1-Y 记号，等价于维度序列为 {1} 的 ω-Y 变体。
-
-极限表达式：
-  1,2,3,4,5,...
-
-展开规则（1-Y / 维度 1）：
-  与 ω-Y 的山脉图机制相同，但所有阶差分量的维度固定为 1。
-  对末列最上方的 1 求根元素，将其作用区域内的轮廓边、填充边、
-  非轮廓边按 ω-Y 的规则复制，再自上而下计算各元素取值。
-  由于维度被限制为 1，展开不会引入新的高阶分量，
-  因此 ε-Y 强于 0-Y，是 1-Y 的标准实现。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_EWPPS4 = R"DEFTXT(
@@ -352,10 +330,7 @@ Taranovsky 序数记号的“反射度”变体，含 passthrough。noraise 格�
 
 constexpr std::string_view kDef_IDR_DEF_TON_DRPC = R"DEFTXT(
 Degrees of Reflection with Passthrough (reflection configuration)（TON_DRPC）
-Taranovsky 序数记号的“反射度”变体，含 passthrough，反射配置。noraise 格式。
-输入格式：后缀式文本。叶子记号："0" 表示 -1，"Ω" 表示 0，"Limit" 表示极限；两个叶子或子树并排后再跟一个 "C" 表示组合。
-记号极限输入 Limit。
-逻辑移植自 ne-rewritten（src/notations/TON/TON_DRPC.ts）。
+
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_TON_I = R"DEFTXT(
