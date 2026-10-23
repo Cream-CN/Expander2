@@ -296,6 +296,8 @@ Parented Predecessor Sequence 4
 > 强展开：在第 b 列和第 x 列 (都不含) 之间找到最右侧的值小于等于 b 的项，将末项的值换为这个项的列标；如果找不到，则等同弱展开
 其他项展开：对任意的 i>y-L，如果第 i 项的值大于等于 x，那么第 i+L 项的值等于第 i 项的值 +L，否则第 i+L 项的值等于第 i 项的值
 基本列 [n] 为展开到第 y+nL-1 项
+
+PPS4并没有PPS1那样果糕，它的极限是z0
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_SPPS4 = R"DEFTXT(
@@ -306,10 +308,6 @@ PPS4 的第二型变体。
 
 constexpr std::string_view kDef_IDR_DEF_TON_DR = R"DEFTXT(
 Degrees of Reflection（TON_DoR）
-Taranovsky 序数记号的“反射度”变体。noraise 格式。
-输入格式：后缀式文本。叶子记号："0" 表示 -1，"Ω" 表示 0，"Limit" 表示极限；两个叶子或子树并排后再跟一个 "C" 表示组合。
-记号极限输入 Limit（等价于反射极限项）。
-逻辑移植自 ne-rewritten（src/notations/TON/TON_DoR.ts）。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_TON_DRC = R"DEFTXT(
