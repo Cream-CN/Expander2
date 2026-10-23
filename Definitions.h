@@ -314,10 +314,6 @@ Taranovsky 序数记号的“反射度”变体。noraise 格式。
 
 constexpr std::string_view kDef_IDR_DEF_TON_DRC = R"DEFTXT(
 Degrees of Reflection (reflection configuration)（TON_DRC）
-Taranovsky 序数记号的“反射度”变体，反射配置。noraise 格式。
-输入格式：后缀式文本。叶子记号："0" 表示 -1，"Ω" 表示 0，"Limit" 表示极限；两个叶子或子树并排后再跟一个 "C" 表示组合。
-记号极限输入 Limit。
-逻辑移植自 ne-rewritten（src/notations/TON/TON_DRC.ts）。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_TON_DRP = R"DEFTXT(
