@@ -27,6 +27,15 @@
 #include "Header/notation/den1.hpp"
 #include "Header/notation/blp.hpp"
 #include "Header/notation/iblp.hpp"
+#include "Header/notation/ton.hpp"
+#include "Header/notation/ton_i.hpp"
+#include "Header/notation/ton_dor.hpp"
+#include "Header/notation/ton_drc.hpp"
+#include "Header/notation/ton_drp.hpp"
+#include "Header/notation/ton_drpc.hpp"
+#include "Header/notation/ton_ibp.hpp"
+#include "Header/notation/ton_mc.hpp"
+#include "Header/notation/ton_mpc.hpp"
 #include <memory>
 #include <string>
 #include <string_view>
@@ -405,6 +414,69 @@ namespace {
               .expand_text = &notation::IblpNotation::expand_text,
               .expand_text_alter = &notation::IblpNotation::expand_text_alter,
               .tags = { L"iblp", L"文本", L"逆" } },
+
+            { .display_name = L"TON", .id = "ton-m",
+              .expand = nullptr, .suffix = &notation::TonNotation::suffix,
+              .definition_resource_id = IDR_DEF_TON_M,
+              .expand_text = &notation::TonNotation::expand_text,
+              .expand_text_alter = &notation::TonNotation::expand_text_alter,
+              .tags = { L"TON", L"序数记号", L"文本" } },
+
+            { .display_name = L"TON_I", .id = "ton-i",
+              .expand = nullptr, .suffix = &notation::TonINotation::suffix,
+              .definition_resource_id = IDR_DEF_TON_I,
+              .expand_text = &notation::TonINotation::expand_text,
+              .expand_text_alter = &notation::TonINotation::expand_text_alter,
+              .tags = { L"TON", L"n-built", L"文本" } },
+
+            { .display_name = L"TON_DoR", .id = "ton-dr",
+              .expand = nullptr, .suffix = &notation::TonDoRNotation::suffix,
+              .definition_resource_id = IDR_DEF_TON_DR,
+              .expand_text = &notation::TonDoRNotation::expand_text,
+              .expand_text_alter = &notation::TonDoRNotation::expand_text_alter,
+              .tags = { L"TON", L"反射度", L"文本" } },
+
+            { .display_name = L"TON_DRC", .id = "ton-drc",
+              .expand = nullptr, .suffix = &notation::TonDRCNotation::suffix,
+              .definition_resource_id = IDR_DEF_TON_DRC,
+              .expand_text = &notation::TonDRCNotation::expand_text,
+              .expand_text_alter = &notation::TonDRCNotation::expand_text_alter,
+              .tags = { L"TON", L"反射配置", L"文本" } },
+
+            { .display_name = L"TON_DRP", .id = "ton-drp",
+              .expand = nullptr, .suffix = &notation::TonDRPNotation::suffix,
+              .definition_resource_id = IDR_DEF_TON_DRP,
+              .expand_text = &notation::TonDRPNotation::expand_text,
+              .expand_text_alter = &notation::TonDRPNotation::expand_text_alter,
+              .tags = { L"TON", L"passthrough", L"文本" } },
+
+            { .display_name = L"TON_DRPC", .id = "ton-drpc",
+              .expand = nullptr, .suffix = &notation::TonDRPCNotation::suffix,
+              .definition_resource_id = IDR_DEF_TON_DRPC,
+              .expand_text = &notation::TonDRPCNotation::expand_text,
+              .expand_text_alter = &notation::TonDRPCNotation::expand_text_alter,
+              .tags = { L"TON", L"反射配置", L"passthrough", L"文本" } },
+
+            { .display_name = L"TON_IBP", .id = "ton-ibp",
+              .expand = nullptr, .suffix = &notation::TonIbpNotation::suffix,
+              .definition_resource_id = IDR_DEF_TON_IBP,
+              .expand_text = &notation::TonIbpNotation::expand_text,
+              .expand_text_alter = &notation::TonIbpNotation::expand_text_alter,
+              .tags = { L"TON", L"n-built", L"文本" } },
+
+            { .display_name = L"TON_MC", .id = "ton-mc",
+              .expand = nullptr, .suffix = &notation::TonMcNotation::suffix,
+              .definition_resource_id = IDR_DEF_TON_MC,
+              .expand_text = &notation::TonMcNotation::expand_text,
+              .expand_text_alter = &notation::TonMcNotation::expand_text_alter,
+              .tags = { L"TON", L"反射配置", L"文本" } },
+
+            { .display_name = L"TON_MPC", .id = "ton-mpc",
+              .expand = nullptr, .suffix = &notation::TonMpcNotation::suffix,
+              .definition_resource_id = IDR_DEF_TON_MPC,
+              .expand_text = &notation::TonMpcNotation::expand_text,
+              .expand_text_alter = &notation::TonMpcNotation::expand_text_alter,
+              .tags = { L"TON", L"反射配置", L"passthrough", L"文本" } },
         };
         return table;
     }

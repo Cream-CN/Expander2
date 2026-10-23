@@ -3,7 +3,6 @@
 //
 // 记号定义文本以 UTF-8 原始字符串字面量直接编译进程序，完全绕过 rc.exe，
 // 从而避免 rc.exe 对 UTF-8 源文件的编码误读(首尾乱码)与 \n 不转义的问题。
-// 我***的MS
 #pragma once
 #include <string_view>
 #include "Resource.h"
@@ -17,17 +16,12 @@ constexpr std::string_view kDef_IDR_DEF_2PPS4 = R"DEFTXT(
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_BLP = R"DEFTXT(
-blp（即 DEN2 / IBLP）
-输入格式：行序列，每行形如 (条目,条目,...)步数，条目可用 * 前缀表示标记，例如
-(1,0)1(2,1,0)1(*3,2,1,0)2
-记号极限输入 Limit。
-逻辑移植自 hypcos 的 notation-explorer（src/notations/DEN/DEN2.ts）。
+
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_BMS_V1 = R"DEFTXT(
 BMS v1.0（Bashicu Matrix System, Version 1）
 
-输入格式：BMS 文本，如 (0,0)(1,1)(2,2) 或 (0,0)(1,1)[3]。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_BMS_V2 = R"DEFTXT(
@@ -85,12 +79,7 @@ BMS v4.0（Version 4.0，当前默认）
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_DEN1 = R"DEFTXT(
-DEN1（Defective embedding notation）
-输入格式：主体行序列与父标号列表，用分号分隔，例如
-(1,0)1(2,1,0)1;0
-每一行形如 (值,值,...)步数，分号后是父标号列表（可为空）。
-记号极限输入 Limit。
-逻辑移植自 hypcos 的 notation-explorer（src/notations/DEN/DEN.ts）。
+
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_EMPTY = R"DEFTXT(
@@ -100,19 +89,7 @@ constexpr std::string_view kDef_IDR_DEF_EMPTY = R"DEFTXT(
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_EPSILON_Y = R"DEFTXT(
-ε-Y（1-Y）
 
-ε-Y 即 1-Y 记号，等价于维度序列为 {1} 的 ω-Y 变体。
-
-极限表达式：
-  1,2,3,4,5,...
-
-展开规则（1-Y / 维度 1）：
-  与 ω-Y 的山脉图机制相同，但所有阶差分量的维度固定为 1。
-  对末列最上方的 1 求根元素，将其作用区域内的轮廓边、填充边、
-  非轮廓边按 ω-Y 的规则复制，再自上而下计算各元素取值。
-  由于维度被限制为 1，展开不会引入新的高阶分量，
-  因此 ε-Y 强于 0-Y，是 1-Y 的标准实现。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_EWPPS4 = R"DEFTXT(
@@ -319,12 +296,51 @@ Parented Predecessor Sequence 4
 > 强展开：在第 b 列和第 x 列 (都不含) 之间找到最右侧的值小于等于 b 的项，将末项的值换为这个项的列标；如果找不到，则等同弱展开
 其他项展开：对任意的 i>y-L，如果第 i 项的值大于等于 x，那么第 i+L 项的值等于第 i 项的值 +L，否则第 i+L 项的值等于第 i 项的值
 基本列 [n] 为展开到第 y+nL-1 项
+
+PPS4并没有PPS1那样果糕，它的极限是z0
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_SPPS4 = R"DEFTXT(
 Second PPS4
 
 PPS4 的第二型变体。
+)DEFTXT";
+
+constexpr std::string_view kDef_IDR_DEF_TON_DR = R"DEFTXT(
+Degrees of Reflection（TON_DoR）
+)DEFTXT";
+
+constexpr std::string_view kDef_IDR_DEF_TON_DRC = R"DEFTXT(
+Degrees of Reflection (reflection configuration)（TON_DRC）
+)DEFTXT";
+
+constexpr std::string_view kDef_IDR_DEF_TON_DRP = R"DEFTXT(
+Degrees of Reflection with Passthrough（TON_DRP）
+)DEFTXT";
+
+constexpr std::string_view kDef_IDR_DEF_TON_DRPC = R"DEFTXT(
+Degrees of Reflection with Passthrough (reflection configuration)（TON_DRPC）
+
+)DEFTXT";
+
+constexpr std::string_view kDef_IDR_DEF_TON_I = R"DEFTXT(
+Iteration of n-built from below (no passthrough)（TON_I）
+)DEFTXT";
+
+constexpr std::string_view kDef_IDR_DEF_TON_IBP = R"DEFTXT(
+Iteration of n-built from below（TON_IBP）
+)DEFTXT";
+
+constexpr std::string_view kDef_IDR_DEF_TON_M = R"DEFTXT(
+TON（Taranovsky 序数记号，主家族）
+)DEFTXT";
+
+constexpr std::string_view kDef_IDR_DEF_TON_MC = R"DEFTXT(
+TON（reflection configuration）without passthrough（TON_MC）
+)DEFTXT";
+
+constexpr std::string_view kDef_IDR_DEF_TON_MPC = R"DEFTXT(
+TON with passthrough (reflection configuration)（TON_MPC）
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_TPPS4 = R"DEFTXT(
@@ -334,10 +350,7 @@ PPS4 的第三型变体。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_UPMS = R"DEFTXT(
-UPMS（User-defined Primitive Matrix System）
-
-输入格式：省略尾随零的矩阵文本，例如 (0)(1)(2,1)
-或显式补零的 (0,0)(1,0)(2,1)。
+UPMS
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_WPPS4 = R"DEFTXT(
@@ -372,6 +385,15 @@ constexpr Entry kTable[] = {
     { IDR_DEF_PPS, kDef_IDR_DEF_PPS },
     { IDR_DEF_PPS4, kDef_IDR_DEF_PPS4 },
     { IDR_DEF_SPPS4, kDef_IDR_DEF_SPPS4 },
+    { IDR_DEF_TON_DR, kDef_IDR_DEF_TON_DR },
+    { IDR_DEF_TON_DRC, kDef_IDR_DEF_TON_DRC },
+    { IDR_DEF_TON_DRP, kDef_IDR_DEF_TON_DRP },
+    { IDR_DEF_TON_DRPC, kDef_IDR_DEF_TON_DRPC },
+    { IDR_DEF_TON_I, kDef_IDR_DEF_TON_I },
+    { IDR_DEF_TON_IBP, kDef_IDR_DEF_TON_IBP },
+    { IDR_DEF_TON_M, kDef_IDR_DEF_TON_M },
+    { IDR_DEF_TON_MC, kDef_IDR_DEF_TON_MC },
+    { IDR_DEF_TON_MPC, kDef_IDR_DEF_TON_MPC },
     { IDR_DEF_TPPS4, kDef_IDR_DEF_TPPS4 },
     { IDR_DEF_UPMS, kDef_IDR_DEF_UPMS },
     { IDR_DEF_WPPS4, kDef_IDR_DEF_WPPS4 },

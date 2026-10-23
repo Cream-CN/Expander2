@@ -53,6 +53,15 @@ FILENAME_TO_ID = {
     "def_den1":             "IDR_DEF_DEN1",
     "def_blp":              "IDR_DEF_BLP",
     "def_iblp":             "IDR_DEF_IBLP",
+    "def_ton-m":            "IDR_DEF_TON_M",
+    "def_ton-i":            "IDR_DEF_TON_I",
+    "def_ton-dr":           "IDR_DEF_TON_DR",
+    "def_ton-drc":          "IDR_DEF_TON_DRC",
+    "def_ton-drp":          "IDR_DEF_TON_DRP",
+    "def_ton-drpc":         "IDR_DEF_TON_DRPC",
+    "def_ton-ibp":          "IDR_DEF_TON_IBP",
+    "def_ton-mc":           "IDR_DEF_TON_MC",
+    "def_ton-mpc":          "IDR_DEF_TON_MPC",
 }
 
 DELIM = "DEFTXT"  # 原始字符串字面量分隔符，须避开正文里的 ')'+DELIM+'"'
