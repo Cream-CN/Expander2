@@ -3,7 +3,6 @@
 //
 // 记号定义文本以 UTF-8 原始字符串字面量直接编译进程序，完全绕过 rc.exe，
 // 从而避免 rc.exe 对 UTF-8 源文件的编码误读(首尾乱码)与 \n 不转义的问题。
-// 我***的MS
 #pragma once
 #include <string_view>
 #include "Resource.h"
@@ -327,6 +326,77 @@ Second PPS4
 PPS4 的第二型变体。
 )DEFTXT";
 
+constexpr std::string_view kDef_IDR_DEF_TON_DR = R"DEFTXT(
+Degrees of Reflection（TON_DoR）
+Taranovsky 序数记号的“反射度”变体。noraise 格式。
+输入格式：后缀式文本。叶子记号："0" 表示 -1，"Ω" 表示 0，"Limit" 表示极限；两个叶子或子树并排后再跟一个 "C" 表示组合。
+记号极限输入 Limit（等价于反射极限项）。
+逻辑移植自 ne-rewritten（src/notations/TON/TON_DoR.ts）。
+)DEFTXT";
+
+constexpr std::string_view kDef_IDR_DEF_TON_DRC = R"DEFTXT(
+Degrees of Reflection (reflection configuration)（TON_DRC）
+Taranovsky 序数记号的“反射度”变体，反射配置。noraise 格式。
+输入格式：后缀式文本。叶子记号："0" 表示 -1，"Ω" 表示 0，"Limit" 表示极限；两个叶子或子树并排后再跟一个 "C" 表示组合。
+记号极限输入 Limit。
+逻辑移植自 ne-rewritten（src/notations/TON/TON_DRC.ts）。
+)DEFTXT";
+
+constexpr std::string_view kDef_IDR_DEF_TON_DRP = R"DEFTXT(
+Degrees of Reflection with Passthrough（TON_DRP）
+Taranovsky 序数记号的“反射度”变体，含 passthrough。noraise 格式。
+输入格式：后缀式文本。叶子记号："0" 表示 -1，"Ω" 表示 0，"Limit" 表示极限；两个叶子或子树并排后再跟一个 "C" 表示组合。
+记号极限输入 Limit。
+逻辑移植自 ne-rewritten（src/notations/TON/TON_DRP.ts）。
+)DEFTXT";
+
+constexpr std::string_view kDef_IDR_DEF_TON_DRPC = R"DEFTXT(
+Degrees of Reflection with Passthrough (reflection configuration)（TON_DRPC）
+Taranovsky 序数记号的“反射度”变体，含 passthrough，反射配置。noraise 格式。
+输入格式：后缀式文本。叶子记号："0" 表示 -1，"Ω" 表示 0，"Limit" 表示极限；两个叶子或子树并排后再跟一个 "C" 表示组合。
+记号极限输入 Limit。
+逻辑移植自 ne-rewritten（src/notations/TON/TON_DRPC.ts）。
+)DEFTXT";
+
+constexpr std::string_view kDef_IDR_DEF_TON_I = R"DEFTXT(
+Iteration of n-built from below (no passthrough)（TON_I）
+Taranovsky 序数记号的“n-built from below 迭代”变体，不含 passthrough。noraise 格式。
+输入格式：后缀式文本。叶子记号："0" 表示 -1，"Ω" 表示 0，"Limit" 表示极限；两个叶子或子树并排后再跟一个 "C" 表示组合，例如 0ΩC。
+记号极限输入 Limit（等价于迭代极限项）。
+逻辑移植自 ne-rewritten（src/notations/TON/TON_I.ts）。
+)DEFTXT";
+
+constexpr std::string_view kDef_IDR_DEF_TON_IBP = R"DEFTXT(
+Iteration of n-built from below（TON_IBP）
+Taranovsky 序数记号的“n-built from below 迭代”变体（含 passthrough）。noraise 格式。
+输入格式：后缀式文本。叶子记号："0" 表示 -1，"Ω" 表示 0，"Limit" 表示极限；两个叶子或子树并排后再跟一个 "C" 表示组合。
+记号极限输入 Limit。
+逻辑移植自 ne-rewritten（src/notations/TON/TON_IBP.ts）。
+)DEFTXT";
+
+constexpr std::string_view kDef_IDR_DEF_TON_M = R"DEFTXT(
+TON（Taranovsky 序数记号，主家族）
+输入格式：后缀式文本。叶子记号："0" 表示 -1，"Ω<n>" 表示非负序数（角括号定界，如 Ω<0>、Ω<2>），"Limit" 表示极限；两个叶子或子树并排后再跟一个 "C" 表示组合（l,r)ₙ，例如 Ω<0>0C 表示 Ω<0> 与 0 的组合。
+记号极限输入 Limit（等价于第 ω 个可数容许序数）。
+逻辑移植自 ne-rewritten（src/notations/TON/TON_main.ts）。
+)DEFTXT";
+
+constexpr std::string_view kDef_IDR_DEF_TON_MC = R"DEFTXT(
+TON（reflection configuration）without passthrough（TON_MC）
+Taranovsky 序数记号的“反射配置”变体，不含 passthrough。主家族格式。
+输入格式：后缀式文本。叶子记号："0" 表示 -1，"Ω<n>" 表示非负序数（角括号定界），"Limit" 表示极限；两个叶子或子树并排后再跟一个 "C" 表示组合。
+记号极限输入 Limit。
+逻辑移植自 ne-rewritten（src/notations/TON/TON_MC.ts）。
+)DEFTXT";
+
+constexpr std::string_view kDef_IDR_DEF_TON_MPC = R"DEFTXT(
+TON with passthrough (reflection configuration)（TON_MPC）
+Taranovsky 序数记号的“反射配置”变体，含 passthrough。主家族格式。
+输入格式：后缀式文本。叶子记号："0" 表示 -1，"Ω<n>" 表示非负序数（角括号定界），"Limit" 表示极限；两个叶子或子树并排后再跟一个 "C" 表示组合。
+记号极限输入 Limit。
+逻辑移植自 ne-rewritten（src/notations/TON/TON_MPC.ts）。
+)DEFTXT";
+
 constexpr std::string_view kDef_IDR_DEF_TPPS4 = R"DEFTXT(
 Third PPS4
 
@@ -372,6 +442,15 @@ constexpr Entry kTable[] = {
     { IDR_DEF_PPS, kDef_IDR_DEF_PPS },
     { IDR_DEF_PPS4, kDef_IDR_DEF_PPS4 },
     { IDR_DEF_SPPS4, kDef_IDR_DEF_SPPS4 },
+    { IDR_DEF_TON_DR, kDef_IDR_DEF_TON_DR },
+    { IDR_DEF_TON_DRC, kDef_IDR_DEF_TON_DRC },
+    { IDR_DEF_TON_DRP, kDef_IDR_DEF_TON_DRP },
+    { IDR_DEF_TON_DRPC, kDef_IDR_DEF_TON_DRPC },
+    { IDR_DEF_TON_I, kDef_IDR_DEF_TON_I },
+    { IDR_DEF_TON_IBP, kDef_IDR_DEF_TON_IBP },
+    { IDR_DEF_TON_M, kDef_IDR_DEF_TON_M },
+    { IDR_DEF_TON_MC, kDef_IDR_DEF_TON_MC },
+    { IDR_DEF_TON_MPC, kDef_IDR_DEF_TON_MPC },
     { IDR_DEF_TPPS4, kDef_IDR_DEF_TPPS4 },
     { IDR_DEF_UPMS, kDef_IDR_DEF_UPMS },
     { IDR_DEF_WPPS4, kDef_IDR_DEF_WPPS4 },

@@ -181,6 +181,16 @@
     <ClInclude Include="Header\notation\den1.hpp" />
     <ClInclude Include="Header\notation\blp.hpp" />
     <ClInclude Include="Header\notation\iblp.hpp" />
+    <ClInclude Include="Header\notation\tonshare.hpp" />
+    <ClInclude Include="Header\notation\ton.hpp" />
+    <ClInclude Include="Header\notation\ton_i.hpp" />
+    <ClInclude Include="Header\notation\ton_dor.hpp" />
+    <ClInclude Include="Header\notation\ton_drc.hpp" />
+    <ClInclude Include="Header\notation\ton_drp.hpp" />
+    <ClInclude Include="Header\notation\ton_drpc.hpp" />
+    <ClInclude Include="Header\notation\ton_ibp.hpp" />
+    <ClInclude Include="Header\notation\ton_mc.hpp" />
+    <ClInclude Include="Header\notation\ton_mpc.hpp" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="targetver.h" />
   </ItemGroup>

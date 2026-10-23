@@ -66,5 +66,14 @@
 #define IDR_DEF_DEN1			   20028
 #define IDR_DEF_BLP				   20029
 #define IDR_DEF_IBLP				   20030
+#define IDR_DEF_TON_M			   20031
+#define IDR_DEF_TON_I			   20032
+#define IDR_DEF_TON_DR			   20033
+#define IDR_DEF_TON_DRC			   20034
+#define IDR_DEF_TON_DRP			   20035
+#define IDR_DEF_TON_DRPC			   20036
+#define IDR_DEF_TON_IBP			   20037
+#define IDR_DEF_TON_MC			   20038
+#define IDR_DEF_TON_MPC			   20039
 
 
