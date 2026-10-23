@@ -325,41 +325,22 @@ Degrees of Reflection with Passthrough (reflection configuration)（TON_DRPC）
 
 constexpr std::string_view kDef_IDR_DEF_TON_I = R"DEFTXT(
 Iteration of n-built from below (no passthrough)（TON_I）
-Taranovsky 序数记号的“n-built from below 迭代”变体，不含 passthrough。noraise 格式。
-输入格式：后缀式文本。叶子记号："0" 表示 -1，"Ω" 表示 0，"Limit" 表示极限；两个叶子或子树并排后再跟一个 "C" 表示组合，例如 0ΩC。
-记号极限输入 Limit（等价于迭代极限项）。
-逻辑移植自 ne-rewritten（src/notations/TON/TON_I.ts）。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_TON_IBP = R"DEFTXT(
 Iteration of n-built from below（TON_IBP）
-Taranovsky 序数记号的“n-built from below 迭代”变体（含 passthrough）。noraise 格式。
-输入格式：后缀式文本。叶子记号："0" 表示 -1，"Ω" 表示 0，"Limit" 表示极限；两个叶子或子树并排后再跟一个 "C" 表示组合。
-记号极限输入 Limit。
-逻辑移植自 ne-rewritten（src/notations/TON/TON_IBP.ts）。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_TON_M = R"DEFTXT(
 TON（Taranovsky 序数记号，主家族）
-输入格式：后缀式文本。叶子记号："0" 表示 -1，"Ω<n>" 表示非负序数（角括号定界，如 Ω<0>、Ω<2>），"Limit" 表示极限；两个叶子或子树并排后再跟一个 "C" 表示组合（l,r)ₙ，例如 Ω<0>0C 表示 Ω<0> 与 0 的组合。
-记号极限输入 Limit（等价于第 ω 个可数容许序数）。
-逻辑移植自 ne-rewritten（src/notations/TON/TON_main.ts）。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_TON_MC = R"DEFTXT(
 TON（reflection configuration）without passthrough（TON_MC）
-Taranovsky 序数记号的“反射配置”变体，不含 passthrough。主家族格式。
-输入格式：后缀式文本。叶子记号："0" 表示 -1，"Ω<n>" 表示非负序数（角括号定界），"Limit" 表示极限；两个叶子或子树并排后再跟一个 "C" 表示组合。
-记号极限输入 Limit。
-逻辑移植自 ne-rewritten（src/notations/TON/TON_MC.ts）。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_TON_MPC = R"DEFTXT(
 TON with passthrough (reflection configuration)（TON_MPC）
-Taranovsky 序数记号的“反射配置”变体，含 passthrough。主家族格式。
-输入格式：后缀式文本。叶子记号："0" 表示 -1，"Ω<n>" 表示非负序数（角括号定界），"Limit" 表示极限；两个叶子或子树并排后再跟一个 "C" 表示组合。
-记号极限输入 Limit。
-逻辑移植自 ne-rewritten（src/notations/TON/TON_MPC.ts）。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_TPPS4 = R"DEFTXT(
@@ -369,10 +350,7 @@ PPS4 的第三型变体。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_UPMS = R"DEFTXT(
-UPMS（User-defined Primitive Matrix System）
-
-输入格式：省略尾随零的矩阵文本，例如 (0)(1)(2,1)
-或显式补零的 (0,0)(1,0)(2,1)。
+UPMS
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_WPPS4 = R"DEFTXT(
