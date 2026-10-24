@@ -196,6 +196,7 @@ function Invoke-GenDefinitions {
         "def_weak-a-omega2-mn-2" = "IDR_DEF_WEAK_A_OMEGA2_MN_2"
         "def_a-omega2-mn-3"     = "IDR_DEF_A_OMEGA2_MN_3"
         "def_weak-a-omega2-mn-3" = "IDR_DEF_WEAK_A_OMEGA2_MN_3"
+        "def_bsm"               = "IDR_DEF_BSM"
     }
 
     $delim = "DEFTXT"  # 原始字符串字面量分隔符，须避开正文里的 ')'+$delim+'"'

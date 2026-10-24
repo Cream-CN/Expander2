@@ -20,6 +20,7 @@
 #include "Header/notation/epsilon-y.hpp"
 #include "Header/notation/BMSFamily.hpp"
 #include "Header/notation/upms.hpp"
+#include "Header/notation/bsm.hpp"
 #include "Header/notation/gy.hpp"
 #include "Header/notation/xy-v1.hpp"
 #include "Header/notation/xy-v2.hpp"
@@ -399,6 +400,13 @@ namespace {
               .definition_resource_id = IDR_DEF_UPMS,
               .expand_text = &upmsExpandText,
               .tags = { L"UPMS", L"矩阵", L"文本" } },
+
+            { .display_name = L"BSM", .id = "bsm",
+              .expand = nullptr, .suffix = &notation::BSMNotation::suffix,
+              .definition_resource_id = IDR_DEF_BSM,
+              .expand_text = &notation::BSMNotation::expand_text,
+              .expand_text_alter = &notation::BSMNotation::expand_text,
+              .tags = { L"BSM", L"BM-like", L"矩阵", L"文本" } },
 
             { .display_name = L"G-Y", .id = "g-y",
               .expand = &notation::GYNotation::expand,

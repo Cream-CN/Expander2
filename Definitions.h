@@ -273,6 +273,19 @@ BMS v4.0
 (3) 否则保留好部的所有内容不动，将坏部不断复制加在好部后面，每复制一次就将坏部加
 )DEFTXT";
 
+constexpr std::string_view kDef_IDR_DEF_BSM = R"DEFTXT(
+BSM（Bashicu Sudden Matrix，Bashicu 突变矩阵系统）
+
+输入格式：与 BMS 相同的矩阵文本，列为 (v0,v1,...)，省略尾随零，例如 (0)(1,1)(2,1)。
+记号极限输入 Limit，其第 n 个基本列为 (0)(1,1,...,1)（第 2 列含 n+1 个 1）。
+最后一列全为零时为后继型，删去最后一列。
+
+展开规则：取末列最后一个非零项所在行 LNZ，沿 LNZ 行父链确定特殊根与候选根，
+比较各候选根的“一次展开加末列”阈值，取第一个严格小于参照阈值的候选根；
+随后将坏部按根的阶差向量复制指定项数，阶差在 LNZ 行额外减 1，
+并且仅对相对根“上升”的行施加增量。
+)DEFTXT";
+
 constexpr std::string_view kDef_IDR_DEF_DEN1 = R"DEFTXT(
 DEN1（Defective embedding notation）。
 )DEFTXT";
@@ -1228,6 +1241,7 @@ constexpr Entry kTable[] = {
     { IDR_DEF_BMS_V32, kDef_IDR_DEF_BMS_V32 },
     { IDR_DEF_BMS_V33, kDef_IDR_DEF_BMS_V33 },
     { IDR_DEF_BMS_V4, kDef_IDR_DEF_BMS_V4 },
+    { IDR_DEF_BSM, kDef_IDR_DEF_BSM },
     { IDR_DEF_DEN1, kDef_IDR_DEF_DEN1 },
     { IDR_DEF_E0MN, kDef_IDR_DEF_E0MN },
     { IDR_DEF_EMPTY, kDef_IDR_DEF_EMPTY },
