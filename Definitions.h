@@ -362,6 +362,23 @@ BTBM（Bubby3's Transfinite BMS，Bubby3 超限巴斯丘矩阵，又称 BTBMS）
 成比例的偏移，并在末层插入新尾列。后继型（末列为空）直接删去末列。
 )DEFTXT";
 
+constexpr std::string_view kDef_IDR_DEF_BTBM_WEAK = R"DEFTXT(
+BTBM-weak（weak Bubby3's Transfinite BMS，弱版 Bubby3 超限巴斯丘矩阵）
+
+与标准 BTBM 同为分层嵌套树形矩阵，语法完全一致（数值 1 起、空列 (0)、高度用 ^
+接一个完整矩阵、极限写 Limit）。区别只在后继展开的“整体替换提升”规则：
+
+1. 维护一条“临界竖直序列（critical vertical）”，它由尾列去掉末项后逐层累积
+   的高度组成。提升时对每一列，先用竖直比较判断是否越过该临界：尚未越过时按
+   原样重写并记录高度；一旦越过，就先补入到临界位置还差的那一段高度，再继续。
+2. 提升时的值基准是根 r 再加 1（标准 BTBM 直接用 r）。
+3. 越过临界之后，对同值且高度被严格包含的前一项做一次弹出清理（只在该列生效
+   一次）。
+
+正因为临界序列只截取“尾列去掉末项”，weak 在部分嵌套较深的情形下比标准 BTBM
+更早结束提升，二者展开结果可能不同。后继型（末层为空）直接删去末列。
+)DEFTXT";
+
 constexpr std::string_view kDef_IDR_DEF_CMS = R"DEFTXT(
 CMS（Crane Matrix System，Crane 矩阵系统）
 
@@ -1600,6 +1617,7 @@ constexpr Entry kTable[] = {
     { IDR_DEF_BMS_V4, kDef_IDR_DEF_BMS_V4 },
     { IDR_DEF_BSM, kDef_IDR_DEF_BSM },
     { IDR_DEF_BTBM, kDef_IDR_DEF_BTBM },
+    { IDR_DEF_BTBM_WEAK, kDef_IDR_DEF_BTBM_WEAK },
     { IDR_DEF_CMS, kDef_IDR_DEF_CMS },
     { IDR_DEF_DEN1, kDef_IDR_DEF_DEN1 },
     { IDR_DEF_DSM, kDef_IDR_DEF_DSM },

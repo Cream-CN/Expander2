@@ -225,6 +225,7 @@ function Invoke-GenDefinitions {
         "def_tbm"               = "IDR_DEF_TBM"
         "def_tupms"             = "IDR_DEF_TUPMS"
         "def_btbm"              = "IDR_DEF_BTBM"
+        "def_btbm-weak"         = "IDR_DEF_BTBM_WEAK"
     }
 
     $delim = "DEFTXT"  # 原始字符串字面量分隔符，须避开正文里的 ')'+$delim+'"'

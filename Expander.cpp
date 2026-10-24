@@ -31,6 +31,7 @@
 #include "Header/notation/tbm.hpp"
 #include "Header/notation/tupms.hpp"
 #include "Header/notation/btbm.hpp"
+#include "Header/notation/btbw.hpp"
 #include "Header/notation/gy.hpp"
 #include "Header/notation/xy-v1.hpp"
 #include "Header/notation/xy-v2.hpp"
@@ -577,6 +578,11 @@ namespace {
               .definition_resource_id = IDR_DEF_BTBM,
               .expand_text = &notation::BTBMNotation::expand_text,
               .tags = { L"BTBM", L"BM-like", L"分层树形矩阵", L"文本" } },
+            { .display_name = L"BTBM-weak 弱版 Bubby3 超限巴斯丘矩阵", .id = "btbm-weak",
+              .expand = nullptr, .suffix = &notation::BTBMWeakNotation::suffix,
+              .definition_resource_id = IDR_DEF_BTBM_WEAK,
+              .expand_text = &notation::BTBMWeakNotation::expand_text,
+              .tags = { L"BTBM-weak", L"BM-like", L"分层树形矩阵", L"文本" } },
 
             { .display_name = L"G-Y", .id = "g-y",
               .expand = &notation::GYNotation::expand,

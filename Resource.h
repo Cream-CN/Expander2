@@ -143,4 +143,6 @@
 
 #define IDR_DEF_BTBM                20101
 
+#define IDR_DEF_BTBM_WEAK           20102
+
 
