@@ -1,0 +1,19 @@
+ωMN
+
+ωMN（TS 源：src/notations/MN/Omega_MN.ts，家族 category-mn，原作者 hypcos_mn；C++ 实现见 Header/notation/omega_mn.hpp，竖向机制复用 Header/notation/smnshare.hpp）。ωMN 与 n-MN 系列共用 SMN 家族的表达式骨架，但展开算法不同：ωMN 使用"坏根复制"（get_references + magma_checks_list），而非 n-MN 的 fill_ghost/extend。
+
+表达式结构：表达式（Mountain）是若干列 Column 的序列；每列是若干条目 Entry=(value, sep) 的序列；value 是从 1 起的列标引用（决定父位置），sep 是分隔符（非负整数，显示为 sep+1 个逗号，如条目 (1,2) 显示为 ",,1"）。空表达式表示 0；另外用 ∞ 标志表示极限，显示为 "Limit"。
+
+竖向机制：一列中每个条目对应一个竖向（Vertical，分隔符序列）：按条目顺序做 verticalIncrease 得到，verticalIncrease(v, s) 从 v 末尾向前删除所有小于 s 的分隔符再追加 s。条目 (i,j) 的父位置为 (value−1, findIndexBelow(V[value−1], V[i][j]))，即在父列（列标 value）的竖向表中二分查找第一个小于该条目竖向的项位置。
+
+极限与后继：非空且末列非空的表达式是极限表达式；末列为空的表达式是后继表达式，它的展开就是删去末列。
+
+∞ 的基本列：Limit[n] 展开为 [[], [[1, n]]]：第一列为空列，第二列为单个条目 (value=1, sep=n)。
+
+展开（参数 index=m，FS 用较短展开、FS_alter 用较长展开）：对极限表达式，以末列最右上条目为起点：
+(1) 计算最右上条目的父位置 BRij（坏根列 BRij.i 与坏根列内位置 BRij.j），宽度 width = 末列列标 − BRij.i。
+(2) 处理末项分隔符：若 sep = 0，删去末项；否则令新分隔符为 sep−1，比较 verticalIncrease(坏根列中 BRij.j 上一项处的竖向, sep−1) 与末列倒数第二项处的竖向：若前者小于等于后者则删去末项，否则把末项分隔符改为 sep−1。
+(3) 把坏根列从 BRij.j 起的所有条目拼接到末列末尾。
+(4) 计算岩浆检查表 magma_checks_list：对坏根列右侧每一列的每个条目，沿父链上溯直到列标不大于 BRij.i；若最终落在坏根列（列标恰为 BRij.i）、位置不超过 BRij.j，且该位置上一项的竖向与该条目左侧竖向相同，则记录该坏根列内位置，否则记 −1。
+(5) 对 n = 1..m 逐次把坏根列右侧 width 列复制到列标加 width·n 的新位置：对每个条目，若岩浆检查值为 sm ≥ 0，则按引用区间 [ref(sm−1)+1, ref(sm)] 展开为多个条目（值均为 value + width·n）；否则复制单个条目（值为 value + width·n，若 value 不大于坏根列标则保持 value）。
+(6) 较短展开（FS）在复制完成后删去末列。

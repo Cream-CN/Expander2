@@ -1,0 +1,19 @@
+UP2MN v1A
+
+UP2MN v1A 是 notation-explorer（hypcos）中 category-upmn-test 家族的早期 UP 型山记号（credit.upmn，TS 源：src/notations/MN/UPMN/UP2MN-v1a.ts），C++ 实现见 Header/notation/up2mn_v1a.hpp。表达式类型、显示解析、竖向表、父位置与标准 n-MN 展开全部复用 smnshare.hpp（n-MN 家族），仅在末列含无限条目时走自定义坏根复制分支。
+
+表达式结构：一个表达式 Mountain 是若干列 Column 的序列；每列是若干条目 Entry=(value, sep) 的序列；value 是从 1 起的列标引用，sep 是分隔符层号（非负整数，显示为 sep+1 个逗号）。空表达式表示 0；另外用 ∞ 标志表示极限，显示为 "Limit"。竖向表由各列条目按顺序经 vertical_increase 生成；父位置为父列 value−1 中竖向小于本条目竖向的第一个位置（二分查找）。
+
+合法性：展开前校验每个 value 落在 [1, 表达式列数] 内，越界即按解析失败处理。
+
+极限与后继：非空且末列非空的表达式是极限表达式；末列为空的表达式是后继表达式，它的展开就是删去末列。
+
+∞ 的特殊判定与基本列：本记号把固定表达式 INFINITY = [[], [[1,1]], [[2,1]]]（第一列为空列，第二列为单条目 (1,1)，第三列为单条目 (2,1)）整体视为 ∞；当前表达式与该固定表达式按列字典序比较相等即识别为 ∞。Limit[n] 的基本列是对 INFINITY 应用标准 n-MN 展开（smnshare::expand，shorter=false）所得的 Mountain。
+
+展开分流（参数 m≥1；FS 较短 shorter=true，FS_alter 较长 shorter=false）：表达式为 ∞ 时直接返回其第 m 个基本列；空表达式原样返回；末列为空时删去末列。若末列不含无限条目（末项 sep=0），直接调用标准 n-MN 展开：fill_ghost 补幽灵行后反复 extend 共 m 次，较短展开删去末列，较长展开再做一次 subtract_1，最后 clear_ghost 清掉幽灵行。若末列含无限条目（末项 sep>0），进入自定义分支 expand_infinite。
+
+expand_infinite 步骤：取末列列标 right 与末项位置 top，计算竖向表 V 与父位置 pr=(Ri, Rj)；offset=right−Ri；y_offset 在 top=Rj 时取 1，否则取 top−Rj。up 标志数组初值全 0，末列标记为 up=1。对 i=Ri+1 到 right−1 逐列判定：该列不含无限条目时，有限高度 finite_height=项数；若 finite_height 不超过 Rj+1 则保持 0，否则取该列第 Rj 项的父位置，up[i] 继承父列标志。该列含无限条目时，finite_height=项数−1；小于 Rj 保持 0；大于 Rj 同样取第 Rj 项的父位置继承标志；恰等于 Rj 时进入阈值坏根比较：构造阈值列，前 Rj+1 个条目为 (列标 i, 0)，末项为 (列标 Ri, 1)；从 i+1 向右找到第一列与阈值列比较结果小于 0 的列标 X_end。若 X_end 已到末列之后，本列记 1；否则自末列起沿第 Rj 项父位置上溯到首个 finite_height 不超过 Rj 的列 Y_start，再对 k=1,2,... 比较 X_start+k 列（值不小于 X_start 的条目整体平移 Y_start−X_start）与 Y_start+k 列，按列字典序首次不一致决定 up_i 为 1 或 0；未决时若 X_end−X_start 不小于 Y_end−Y_start 记 1，否则记 0。随后先对原表达式做 subtract_1（末列末项减一层分隔符，条件成立时补回父列对应条目，再拼回父列尾部）；再对 w=1..m 把第 Ri+1 到 right 列按 copy_column 复制，列标偏移 offset·w，高度填充 y_offset·w；较短展开删去最后一列。
+
+copy_column(col, Ri, Rj, offset, up, y_offset)：若列为空、Rj=0 且 up 为真，先补 y_offset 个 (Ri+1+offset, sep=0) 条目；逐项处理时，若位置 j=Rj 且 up 为真，先在该条目前补 y_offset 个 (e.value+offset, 0) 条目；值平移规则为 e.value 大于 Ri+1，或 e.value 等于 Ri+1 且（up 为真或 j 小于 Rj）时 value 加 offset，否则原样保留。
+
+记号极限：实现未给出该记号所对应序数上界，具体极限以原始 TS 定义为准。

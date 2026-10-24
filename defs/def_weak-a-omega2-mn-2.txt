@@ -1,0 +1,17 @@
+wAω2MN2
+
+wAω2MN2 是 Aω2MN2 的弱版本（TS 源：src/notations/MN/Aw2MN2.ts，家族 category-hypcos-w2mn，credit.hypcos_mn），C++ 实现见 Header/notation/waw2mn2.hpp，与普通版 Aω2MN2 共享核心 Header/notation/aw2mn_share.hpp。表达式结构、合法性、极限与后继判定、∞ 的基本列、extend 的总体流程以及 subtract1 版本2 规则均与 Aω2MN2 相同，区别仅在 stretched 拉伸判定中的弱版豁免。
+
+表达式结构（与 Aω2MN2 相同）：Expr = Column[]，Column = Entry[]，Entry=(value, sep, mark)：value 是从 1 起的列标引用，sep 是递归地也是 Expr 的分隔符，mark 是星号标志；竖向 Vertical = Sep[]。空表达式表示 0；∞ 用标志表示，显示为 "Limit"。展开前校验每个条目 1 ≤ value ≤ 列数，括号、逗号、分号不匹配则解析失败。
+
+极限与后继：非空且末列非空为极限表达式；末列为空为后继表达式，删去末列即得前驱；空表达式展开为空。
+
+∞ 的基本列：Limit[n] = [[], [[1, sep_n]]]，其中 sep_n = [[], [[1, [[]]]]] 再接 n 个空列，显示为 ()(; 后接 n 个逗号再接 1；对 ∞ 展开时直接返回 infinity_fs(term)。
+
+展开（参数 m≥1）：FS 为较短展开 shorter=true，FS_alter 为较长展开 shorter=false；两者先对极限表达式反复调用 extend 共 m 次，较短展开随后删去末列，较长展开再调用一次 extend（is_small=true，不新增列）。extend 中依次完成：计算各列竖向 V0；由末列最右上条目经 Parent 求得坏根位置 BRij=(br, bj) 与宽度 width；记录坏根列前 bj 项及末列最右上项的分隔符 top_separators 与竖向 top_verticals；做岩浆检查；调用 subtract1 版本2；用 get_references 匹配末列竖向与 top_verticals；计算各 top 极限分隔符的拉伸阈值与拉伸量；按 stretched 规则处理条目分隔符；最后按岩浆检查结果把坏根列右侧 width 列复制到列标加 width 的新位置（is_small 时只处理 dx=0）。
+
+与 Aω2MN2 的唯一差异在 stretched 判定：弱版（weak=true）在施加拉伸之前先检查该条目在原表达式中的竖向 V0[x][y] 是否不低于对应的 top 竖向 top_verticals[br]；若是，条目保持原分隔符，不追加任何空列；普通版没有这一豁免。其余保持原分隔符的条件与普通版相同：拉伸量为 0，条目分隔符 ≥ 对应的 top 分隔符，或条目分隔符 < 拉伸阈值；不满足这些条件时，在条目分隔符后追加 stretch_value 个空列。
+
+subtract1 仍为版本2：先删去末列最右上条目，取 alpha 为坏根列 bj−1 项的竖向（无则空竖向），working_vertical 为末列最右上条目前一项的竖向（无则空竖向）；copy_entries_loop 在 alpha > working_vertical 时把坏根列中定位位置之后、bj 之前的条目复制到末列。被删分隔符为极限表达式时，构造 J（BR_separator ≥ 被删分隔符则 J 为单空列，否则 BR_separator 后接一空列），在 vertical_increase(alpha, J) > working_vertical 时先按需执行复制循环，再追加带 mark 的条目 (value, J, mark=true)；被删分隔符非极限且非 one（one 为单空列表达式 [[]]）时，先复制循环，alpha == working_vertical 时追加不带 mark 的截断条目 (value, truncated, mark=false)；分隔符为 one 时不追加条目。
+
+记号极限：与 Aω2MN2 共用 infinity_fs，基本列相同；"w"（弱）体现在拉伸时保留高位条目的原分隔符。本记号达到的极限序数以原始 TS 定义为准。

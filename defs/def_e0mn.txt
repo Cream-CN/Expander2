@@ -1,0 +1,22 @@
+e0MN
+
+e0 Mountain Notation（e0MN）是 test_alpha0 提出的基于"山"（Mountain）结构的记号，由 hypcos 的 notation-explorer 收录（TS 源：src/notations/MN/e0MN.ts），C++ 移植见 Header/notation/e0mn.hpp 与共享核心 Header/notation/mnordshare.hpp。它属于 ta0-MN 家族，与 strong e0MN 共享同一套核心实现。
+
+表达式结构：一个表达式 Expr 是若干列 Column 的序列；每列是若干条目 Entry=(a,x) 的序列；a 是左腿所指向的列标（从 1 起），x 是行高序数。行高序数 Ord 是若干项 Term=(exp,coeff) 的序列，exp 递归地也是 Ord（即指数），coeff 是正整数系数，空 Ord 表示 0。空表达式表示 0；另外用 ∞ 标志表示记号的极限，显示为 "Limit"。
+
+合法性：第 i 列（列标从 1 起）中每个条目的左腿列标 a 必须满足 0 < a < i，行高 x 必须为正；同一列中的条目自上而下必须满足 a 严格递减、x 严格递增。
+
+极限与后继：非空且末列非空的表达式是极限表达式；末列为空的表达式是后继表达式，它的展开（前驱）就是删去末列。
+
+∞ 的基本列：Limit[n]（n 为正整数）展开为 ()(1:ω^^n)，即第一列为空列、第二列为单个条目 (a=1, x=ω^^n) 的表达式；ω^^n 表示 n 层 ω 的指数塔。解析 "Limit" 得到 ∞ 标志，解析 "Limit[n]" 直接得到上述基本列。
+
+展开（FS 与 FS_alter，参数 m≥1）：FS 采用较短展开（shorter=true），FS_alter 采用较长展开（shorter=false）。二者都先对极限表达式反复应用反射 rfl 共 m 次；较短展开随后删去末列（即取前驱）；较长展开则再应用一次 rfl，并把列数截回前一步的列数。
+
+反射 rfl 对极限表达式 e 的步骤（设列数 l，末列末项 (a_n, x_n)，d = l − a_n，d 必须为正）：
+(1) 下降 down：取第 a_n 列（源列）中所有行高小于 x_n 的条目，拼接到删去末项后的末列末尾；若省略条件不成立且 ordFS(x_n, l−1) 非零，则在末列末尾追加条目 (a_n, ordFS(x_n, l−1))。省略条件为：x_n = 1，或末列不止一项且 ordFS(x_n, l−1) 小于等于倒数第二项的行高。
+(2) 逐列处理：对列 a_n+1 到 l 的每一列，左腿列标不小于 cutoff = a_n 的条目的列标加 d；所有条目的行高按 shiftOrdNumbers(cutoff, d) 处理。
+shiftOrdNumbers 的移位规则：仅当系数大于 cutoff 且系数不为 1 时系数加 d；指数为 1 的项不递归移位。
+
+行高序数的基本列 ordFS（e0 基本列）：取序数末项；若其指数为 0（即纯数字项），则系数减 1（系数为 1 时直接删去）；否则删去末项（若系数大于 1，先留下一项指数不变、系数减 1 的项），再对指数递归求 ordFS 得到 next_exp：若原指数是后继序数，则追加项 (next_exp, m)；否则追加项 (next_exp, 1)。
+
+记号极限：∞ 的第 n 个基本列 ()(1:ω^^n) 的塔高随 n 增长，sup_n ω^^n = ε0，故记号极限为 ε0（与记号名 e0MN 一致）。

@@ -1,0 +1,21 @@
+UP2MN v1B
+
+UP2MN v1B 是 notation-explorer（hypcos）中 category-upmn-test 家族的 UP 型山记号（credit.upmn，TS 源：src/notations/MN/UPMN/UP2MN-v1b.ts），C++ 实现见 Header/notation/up2mn_v1b.hpp，共享核心为 Header/notation/mnup2share.hpp。表达式为 0 起列标、整数分隔符层号的双参数山结构，显示时列标加 1 交给 n-MN 骨架。
+
+表达式结构：一个表达式 Expr 是若干列 Column 的序列；每列是若干条目 Entry=(value, sep) 的序列；value 是从 0 起的列标引用，sep 是分隔符层号（非负整数）。空表达式表示 0；另外用 ∞ 标志表示极限，显示为 "Limit"。竖向表：一列的竖向序列按条目顺序经 vertical_increase 生成——当前竖向长度不超过 sep 时得到 [0]*sep+[1]，否则把第 sep 项加 1、前 sep 项置 0；条目父位置 pi 取自身 value，pj 为父列竖向表中第一个小于本条目竖向的位置（find_index_below_row，二分查找）。
+
+合法性：展开前校验所有 value 落在 [0, 表达式列数) 内，越界按解析失败处理。
+
+极限与后继：非空且末列非空的表达式是极限表达式；末列为空的表达式是后继表达式，它的展开就是删去末列。
+
+∞ 的基本列：Limit[n]（n 为正整数）展开为：第一列为空列；对第 i=1..n 列，列内含 i−1 个引用第 i−1 列、sep=0 的条目，末项为引用第 0 列、sep=1 的条目（plus=false 分支）。解析 "Limit" 直接得到 ∞ 标志。
+
+展开（参数 m≥1；FS 较短 shorter=true，FS_alter 较长 shorter=false）：空表达式原样返回；末列为空时删去末列。否则取末列列标 right 与末项位置 top，计算竖向表 V 与父位置表 P；rp=P[right][top] 记为 (Ri, Rj)。末项 sep=0 记为有限情形 is_finite=true，否则为无限情形；有限情形用 compute_up_1mn 算 up 标志，无限情形用 compute_up_2mn（plus=false）算 up 标志。构造新表达式：保留除末列外各列；新末列由末列删去末项组成，若不是有限情形且 top=Rj，补入条目 (Ri, 0)，再拼回第 Ri 列自第 Rj 项起的所有条目。高度偏移 y_offset 在有限情形为 0；无限情形取 top−Rj 大于 1 时的 top−Rj，否则取 1。对 w=1..m 逐轮把第 Ri+1 到 right 列按 copy_column 复制，列标偏移 (right−Ri)·w，高度偏移 y_offset·w；较短展开删去最后一列。
+
+compute_up_1mn（有限情形，v1B 与 v1B+ 相同）：列标小于 Ri 的标志为 0，第 Ri 列为 1；若 Rj=0，则第 Ri 列及其右侧全部记 1。对 i=Ri+1 到末列：该列项数不超过 Rj 记 0；若 P[i][Rj].i 不等于 Ri，继承 P[i][Rj].i 列的标志；否则在列中找到第一个 value=Ri 的位置 j，找不到记 0；若 j>0，沿第 j−1 项父位置上溯到父列等于 Ri 的列 p，p 标志为 0 则本列记 0。随后进入坏根比较：X_start=i，Y_start=末列，沿第 j 项父位置上溯到父列等于 Ri 的列 Y_start；Y_start 不大于 X_start 时相等记 1、否则记 0；否则先比较两列自 j 项起的后缀列（逐项先比 value 再比 sep，前缀相同则长者大），不一致即按方向决定；再对 k=1,2,... 比较相对列 to_rel_column（value 不小于起点的条目标记为相对项、值改为减起点），相对列先比标记（标记为真是更大），再比 value 与 sep，首次不一致决定；全部一致记 1。
+
+compute_up_2mn（无限情形，v1B 即 plus=false 分支）：列标小于 Ri 为 0，第 Ri 列为 1。对 i=Ri+1 到末列：列项数不超过 Rj 记 0；项数不少于 Rj+2 时继承 P[i][Rj].i 列的标志；末项 sep=0 的有限列记 0；其余取 p=P[i][Rj].i，p 不等于 Ri 时本列记 0（这是 v1B 与 v1B+ 的关键差异，v1B+ 此处继承 p 列标志）。p 等于 Ri 时进入坏根比较：X_start=i，Y_start=末列，沿父位置上溯直到找到项数恰为 Rj+1 的列 Y_start；Y_start 不大于 X_start 时相等记 1、否则记 0；之后的相对列比较与 compute_up_1mn 相同，未决记 1。
+
+copy_column(col, rp, offset, y_offset, up)：value 大于 Ri 加 offset，小于 Ri 保持不变，等于 Ri 时仅当 up 为真才加 offset；若 up 为真且 y_offset 大于 0、Rj 未超出结果列范围，则在第 Rj 项位置前补入 y_offset 个填充条目（value 取第 Rj 项平移后的值，sep=0），原头部 Rj 项与尾部其余条目依次保留。
+
+记号极限：实现未给出该记号所对应序数上界，具体极限以原始 TS 定义为准。

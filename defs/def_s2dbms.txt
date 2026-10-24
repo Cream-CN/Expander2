@@ -1,0 +1,21 @@
+S2DBMS
+
+S2DBMS 是 SDBMS 家族的二元行高成员，TS 源为 src/notations/MN/SDBMS/S2DBMS.ts，C++ 移植见 Header/notation/s2dbms.hpp，展开骨架与共享核心 Header/notation/sdbms_core.hpp 一致，区别仅在行高为二元组及其比较、求新高规则。
+
+表达式结构：Expr 是若干 Column 的序列；Column 是若干 Entry 的序列；Entry=(value, height)，value 为 0 基列标引用（显示 value+1）；Height=(h0, h1) 两个 0 基整数，整条显示为 value+1^(h1, h0+1)，即上标先写 h1、后写 h0+1。空表达式表示 0；空列显示为 "(0)"；省略上标的条目用哨兵行高 (0, −1)，列尾 value=−1 的条目被删去。另外用 ∞ 标志表示记号极限，显示为 "Limit"。
+
+合法性：每个条目的 value 与 h0 都必须落在 [0, 列数) 内；h1 是层级数，不作列标校验；越界输入返回解析失败提示。
+
+极限与后继：非空且末列非空为极限表达式；末列为空为后继表达式，前驱即删去末列。
+
+∞ 的基本列：Limit[n] 展开为 (0)(1^(n,1))：第一列为空列，第二列为单个条目 value=0、Height=(h0=0, h1=n)。
+
+行高比较 compare_height：先比 h1，相同再比 h0（反字典序），数值大者大；height(col) 为末项行高，空列返回未定义。合并 merge_column：col1 非空时追加 col2 中行高严格大于 height(col1) 的条目；col1 为空时整列拼接 col2。复制规则：value ≥ r 时 value 加 offset；h0 ≥ r 时 h0 加 offset，h1 保持不变。
+
+compute_new_height(h, expr, r)（S2 特有）：设 v=h.h0、h1=h.h1，取第 v 列 col_rh；从首项起找第一个满足 compare_height(h, 该行高度) ≤ 0 的下标 hj。
+(1) 若整列都大于 h（hj 不存在）：当 col_rh 的 h1（height1）小于 h1 时返回 Height=(r, h1−1)；否则返回 col_rh 末项行高，col_rh 为空时返回未定义（不插入中项）。
+(2) 否则：新值 new_value = col_rh[hj].value，新行高 = (new_value, h1)；若 hj>0 且 col_rh[hj−1] 的行高严格大于新行高，则改用该行高；返回之。
+
+展开骨架：right 为末列下标，末列末项为 (r, h)；用 compute_new_height 求出 new_h；末列删去末项后，若 new_h 有定义先并入中项 (r, new_h)，再并入第 r 列；复制循环 w=1..m，i=r+1..right，偏移量 (right−r)·w，按上述复制规则复制；FS（shorter=true）复制后删去末列，FS_alter（shorter=false）保留末列。
+
+记号极限：Limit[n]=(0)(1^(n,1))，实现只给出基本列与展开，其上确界序数以原始 TS 定义为准。

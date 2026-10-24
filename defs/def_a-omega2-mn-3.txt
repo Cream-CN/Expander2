@@ -1,0 +1,21 @@
+Aω2MN3
+
+Aω2MN3 是 hypcos_mn 在 notation-explorer 中提出的 Aw2MN 版本3 记号（家族 category-hypcos-w2mn，TS 源：src/notations/MN/Aw2MN3.ts），C++ 移植见 Header/notation/aw2mn3.hpp，与版本2 Aω2MN2、wAω2MN2 及弱版 wAω2MN3 共享核心 Header/notation/aw2mn_share.hpp。表达式结构、合法性、极限与后继判定、∞ 基本列、extend 的总体流程与拉伸、复制机制均与 Aω2MN2 相同，区别仅在 subtract1 采用版本3 规则。
+
+表达式结构（与 Aω2MN2 相同）：Expr = Column[]，Column = Entry[]，Entry=(value, sep, mark)：value 是从 1 起的列标引用，sep 是递归地也是 Expr 的分隔符，mark 是星号标志；竖向 Vertical = Sep[]。空表达式表示 0；∞ 用标志表示，显示为 "Limit"。展开前校验每个条目 1 ≤ value ≤ 列数，括号、逗号、分号不匹配则解析失败。
+
+极限与后继：非空且末列非空为极限表达式；末列为空为后继表达式，删去末列即得前驱；空表达式展开为空。
+
+∞ 的基本列：Limit[n] = [[], [[1, sep_n]]]，其中 sep_n = [[], [[1, [[]]]]] 再接 n 个空列，显示为 ()(; 后接 n 个逗号再接 1；对 ∞ 展开时直接返回 infinity_fs(term)。
+
+展开（参数 m≥1，FS 较短展开 shorter=true，FS_alter 较长展开 shorter=false）：先对极限表达式反复调用 extend 共 m 次，较短展开随后删去末列，较长展开再调用一次 extend（is_small=true，不新增列）。extend 中依次完成：计算各列竖向 V0；由末列最右上条目经 Parent 求得坏根位置 BRij=(br, bj) 与宽度 width；记录坏根列前 bj 项及末列最右上项的分隔符 top_separators 与竖向 top_verticals；做岩浆检查；调用 subtract1 版本3；用 get_references 匹配末列竖向与 top_verticals；计算拉伸阈值与拉伸量；按 stretched 规则处理条目分隔符（本记号非弱版，无高位豁免）；最后按岩浆检查结果把坏根列右侧 width 列复制到列标加 width 的新位置（is_small 时只处理 dx=0）。
+
+subtract1 版本3（V3）：先删去末列最右上条目；alpha = 坏根列第 bj−1 项的竖向（bj=0 时为空竖向）；working_vertical = 末列最右上条目前一项的竖向（无前一项时为空竖向）。copy_entries_loop：若 alpha ≤ working_vertical 直接返回；否则在坏根列竖向表中定位 working_vertical 下方位置，把该位置之后、bj 之前的条目依次复制到末列，value 取被删条目的 value，working_vertical 随复制逐条 vertical_increase。
+
+版本3 与版本2 的实现差异（以代码为准）：
+(1) one 提前返回：若被删条目分隔符是 one（单空列表达式 [[]]），subtract1 直接返回删去末项后的表达式，不执行复制循环，也不追加任何条目；版本2 在此情况下同样不追加条目，但不提前返回。
+(2) 复制循环位置：版本3 在分支判断之前先执行一次 copy_entries_loop；版本2 的复制循环位于各分支内部——极限分支按 alpha > working_vertical 的条件执行，非极限分支先执行复制循环再判定是否追加。
+(3) 非极限分支的追加判据：truncated = 被删分隔符删去末列；版本3 在 vertical_increase(alpha, truncated) > working_vertical 时追加不带 mark 的条目 (value, truncated, mark=false)；版本2 的判据是 alpha == working_vertical。
+(4) 极限分支的 J 构造：BR_separator = S(A, br, bj−1)；J = 若 BR_separator ≥ 被删分隔符则为单空列，否则 BR_separator 后接一个空列。版本3 随后进入 while 循环：只要 vertical_increase(alpha, J) 与 vertical_increase(working_vertical, J) 不相等，就向 J 追加一个空列，直到两侧竖向相等，最后向末列追加带 mark 的条目 (value, J, mark=true)；版本2 不循环加长 J，只在 vertical_increase(alpha, J) > working_vertical 时追加，且复制循环按 alpha > working_vertical 的条件嵌套在该极限分支内。
+
+记号极限：∞ 基本列与 Aω2MN2 相同（共用 infinity_fs）；版本3 的规则差异集中在 one 提前返回、复制循环前置、非极限分支的追加判据以及极限分支 J 的循环加长。本记号达到的极限序数以原始 TS 定义为准。

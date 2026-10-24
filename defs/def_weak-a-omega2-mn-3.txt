@@ -1,0 +1,21 @@
+wAω2MN3
+
+wAω2MN3 是 Aω2MN3 的弱版本（TS 源：src/notations/MN/Aw2MN3.ts，家族 category-hypcos-w2mn，credit.hypcos_mn），C++ 实现见 Header/notation/waw2mn3.hpp，与其余三个记号共享核心 Header/notation/aw2mn_share.hpp。表达式结构、合法性、极限与后继判定、∞ 基本列、extend 总体流程与 Aω2MN3 相同；本记号同时携带版本3 的 subtract1 规则与弱版拉伸豁免。
+
+表达式结构（与其余三个记号相同）：Expr = Column[]，Column = Entry[]，Entry=(value, sep, mark)：value 是从 1 起的列标引用，sep 是递归地也是 Expr 的分隔符，mark 是星号标志；竖向 Vertical = Sep[]。空表达式表示 0；∞ 用标志表示，显示为 "Limit"。展开前校验每个条目 1 ≤ value ≤ 列数，括号、逗号、分号不匹配则解析失败。
+
+极限与后继：非空且末列非空为极限表达式；末列为空为后继表达式，删去末列即得前驱；空表达式展开为空。
+
+∞ 的基本列：Limit[n] = [[], [[1, sep_n]]]，其中 sep_n = [[], [[1, [[]]]]] 再接 n 个空列，显示为 ()(; 后接 n 个逗号再接 1；对 ∞ 展开时直接返回 infinity_fs(term)。
+
+展开（参数 m≥1，FS 较短展开 shorter=true，FS_alter 较长展开 shorter=false）：先对极限表达式反复调用 extend 共 m 次，较短展开随后删去末列，较长展开再调用一次 extend（is_small=true，不新增列）。extend 中依次完成：计算各列竖向 V0；由末列最右上条目经 Parent 求得坏根位置 BRij=(br, bj) 与宽度 width；记录坏根列前 bj 项及末列最右上项的分隔符 top_separators 与竖向 top_verticals；做岩浆检查；调用 subtract1 版本3；用 get_references 匹配末列竖向与 top_verticals；计算拉伸阈值与拉伸量；按 stretched 弱版规则处理条目分隔符；最后按岩浆检查结果把坏根列右侧 width 列复制到列标加 width 的新位置（is_small 时只处理 dx=0）。
+
+弱版拉伸豁免（与 wAω2MN2 相同，区别于普通版）：stretched 判定中，若 weak=true 且该条目在原表达式中的竖向 V0[x][y] 不低于对应的 top 竖向 top_verticals[br]，条目保持原分隔符，不追加空列；其余保持原分隔符的条件为拉伸量为 0、条目分隔符 ≥ 对应的 top 分隔符、条目分隔符 < 拉伸阈值；不满足这些条件时在条目分隔符后追加 stretch_value 个空列。普通版没有高位豁免。
+
+subtract1 版本3（与 Aω2MN3 相同，区别于版本2）：先删去末列最右上条目；alpha = 坏根列第 bj−1 项的竖向（bj=0 时为空竖向）；working_vertical = 末列最右上条目前一项的竖向（无前一项时为空竖向）。若被删条目分隔符是 one（单空列表达式 [[]]），直接返回删去末项后的表达式，不执行复制循环，也不追加条目。否则先执行一次 copy_entries_loop：若 alpha > working_vertical，在坏根列竖向表中定位 working_vertical 下方位置，把该位置之后、bj 之前的条目依次复制到末列，value 取被删条目的 value，working_vertical 随复制逐条 vertical_increase。随后按分隔符类型分支：
+(1) 极限分支：BR_separator = S(A, br, bj−1)；J = 若 BR_separator ≥ 被删分隔符则为单空列，否则 BR_separator 后接一个空列；while 循环把空列追加到 J，直到 vertical_increase(alpha, J) 与 vertical_increase(working_vertical, J) 相等；最后向末列追加带 mark 的条目 (value, J, mark=true)。
+(2) 非极限分支：truncated = 被删分隔符删去末列；若 vertical_increase(alpha, truncated) > working_vertical，向末列追加不带 mark 的条目 (value, truncated, mark=false)。
+
+版本3 相对版本2 的差异在此记号中同样成立：one 提前返回；复制循环前置；非极限分支以 vertical_increase(alpha, truncated) > working_vertical 为追加判据（版本2 为 alpha == working_vertical）；极限分支循环加长 J 至两侧竖向相等后总是追加（版本2 不循环加长，仅在 vertical_increase(alpha, J) > working_vertical 时追加）。
+
+记号极限：与普通版共用 infinity_fs，基本列相同；"w"（弱）体现在拉伸时保留高位条目的原分隔符。本记号达到的极限序数以原始 TS 定义为准。

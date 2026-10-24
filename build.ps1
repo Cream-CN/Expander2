@@ -10,11 +10,13 @@
     找到 VS 安装根后，使用其 VC\Auxiliary\Build\vcvars64.bat 初始化编译环境，
     并在同一 cmd 会话内调用 MSBuild 构建 Expander.slnx。
 
-    构建前可先运行 tools/gen_definitions.py 重新生成 Definitions.h
-    （把 defs/*.txt 的记号定义文本编译进程序，绕过 rc.exe 的编码/转义问题）。
+    Definitions.h 的生成流程已合并进本脚本（原 tools/gen_definitions.py 的逻辑改为纯
+    PowerShell 实现，不再依赖 python）：把 defs/*.txt 的记号定义文本以 UTF-8 原始字符串
+    字面量写进标头，由 MSVC 直接编译进程序，绕过 rc.exe 的编码误读与 \n 不转义问题。
+    仅重新生成头文件（-Mode gen / 菜单 1）不需要 Visual Studio。
 
     TUI 菜单选项：
-      1) 只重新生成 Definitions.h（gen_definitions.py）
+      1) 只重新生成 Definitions.h（内置流程）
       2) 直接调用 VS 增量构建（MSBuild /t:Build）
       3) 调用 VS 并全量重建（MSBuild /t:Rebuild）
       4) 先 1 后 3：重新生成 + 全量重建
@@ -100,32 +102,162 @@ function Resolve-VcvarsAndMsbuild([string]$vs) {
     return $vcvars, $msbuild
 }
 
-function Resolve-Python {
-    $c = Get-Command python -ErrorAction SilentlyContinue
-    if ($c) { return $c.Source }
-    $c = Get-Command py -ErrorAction SilentlyContinue
-    if ($c) { return $c.Source }
-    return $null
+# VS 环境仅在构建类步骤需要时解析；gen（重新生成 Definitions.h）为纯 PowerShell，不依赖 VS
+$script:vs = $null
+$script:vcvars = $null
+$script:msbuild = $null
+
+function Ensure-VsEnv {
+    if ($script:vs -and $script:vcvars -and $script:msbuild) { return }
+    $script:vs = Resolve-VsInstallPath
+    $script:vcvars, $script:msbuild = Resolve-VcvarsAndMsbuild $script:vs
 }
 
 # ---------- 各构建步骤 ----------
 function Invoke-GenDefinitions {
-    $py = Resolve-Python
-    if (-not $py) { throw "未找到 python / py 命令，无法运行 tools/gen_definitions.py" }
-    $gen = Join-Path $root "tools\gen_definitions.py"
-    if (-not (Test-Path -LiteralPath $gen)) { throw "未找到 $gen" }
+    # 原 tools/gen_definitions.py 的生成逻辑，现以纯 PowerShell 内嵌于此。
+    # 记号定义文本原本作为 RCDATA 资源由 rc.exe 编译进 .res；rc.exe 对 UTF-8 无 BOM
+    # 的源文件按 ANSI/本地代码页误读（中文首尾乱码），且资源脚本里的 "\n" 只是字面字符。
+    # 本流程把定义文本以 C++ 原始字符串字面量 R"(...)" 写进标头 Definitions.h（字节原样
+    # 保留、换行即真换行），由 MSVC 直接编译进程序，完全不经过 rc.exe。
     Write-Host ""
-    Write-Host "==> [1] 重新生成 Definitions.h ..." -ForegroundColor Green
-    & $py $gen
-    if ($LASTEXITCODE -ne 0) { throw "gen_definitions.py 失败，退出码 $LASTEXITCODE" }
+    Write-Host "==> [1] 重新生成 Definitions.h（内置流程，无需 python）..." -ForegroundColor Green
+    $defsDir = Join-Path $root "defs"
+    $out     = Join-Path $root "Definitions.h"
+    if (-not (Test-Path -LiteralPath $defsDir)) { throw "错误: 找不到定义目录 $defsDir" }
+
+    # 定义文本文件名(去 .txt 扩展名) -> 资源 ID 宏名(与 Resource.h 保持一致)
+    $fileToId = @{
+        "def_empty"            = "IDR_DEF_EMPTY"
+        "def_pps"              = "IDR_DEF_PPS"
+        "def_pps4"             = "IDR_DEF_PPS4"
+        "def_wpps4"            = "IDR_DEF_WPPS4"
+        "def_tpps4"            = "IDR_DEF_TPPS4"
+        "def_ewpps4"           = "IDR_DEF_EWPPS4"
+        "def_spps4"            = "IDR_DEF_SPPS4"
+        "def_2-pps4"           = "IDR_DEF_2PPS4"
+        "def_omega-y-medium"   = "IDR_DEF_OMEGA_Y_MEDIUM"
+        "def_omega-y-strong"   = "IDR_DEF_OMEGA_Y_STRONG"
+        "def_mrss121"          = "IDR_DEF_MRSS121"
+        "def_bms-v1"           = "IDR_DEF_BMS_V1"
+        "def_bms-v2"           = "IDR_DEF_BMS_V2"
+        "def_bms-v21"          = "IDR_DEF_BMS_V21"
+        "def_bms-v22"          = "IDR_DEF_BMS_V22"
+        "def_bms-v23"          = "IDR_DEF_BMS_V23"
+        "def_bms-v3"           = "IDR_DEF_BMS_V3"
+        "def_bms-v31"          = "IDR_DEF_BMS_V31"
+        "def_bms-v32"          = "IDR_DEF_BMS_V32"
+        "def_bms-v33"          = "IDR_DEF_BMS_V33"
+        "def_bms-v4"           = "IDR_DEF_BMS_V4"
+        "def_omega-y-sequence" = "IDR_DEF_OMEGA_Y_SEQUENCE"
+        "def_epsilon-y"        = "IDR_DEF_EPSILON_Y"
+        "def_upms"             = "IDR_DEF_UPMS"
+        "def_den1"             = "IDR_DEF_DEN1"
+        "def_blp"              = "IDR_DEF_BLP"
+        "def_iblp"             = "IDR_DEF_IBLP"
+        "def_ton-m"            = "IDR_DEF_TON_M"
+        "def_ton-i"            = "IDR_DEF_TON_I"
+        "def_ton-dr"           = "IDR_DEF_TON_DR"
+        "def_ton-drc"          = "IDR_DEF_TON_DRC"
+        "def_ton-drp"          = "IDR_DEF_TON_DRP"
+        "def_ton-drpc"         = "IDR_DEF_TON_DRPC"
+        "def_ton-ibp"          = "IDR_DEF_TON_IBP"
+        "def_ton-mc"           = "IDR_DEF_TON_MC"
+        "def_ton-mpc"          = "IDR_DEF_TON_MPC"
+        "def_mn"               = "IDR_DEF_MN"
+    }
+
+    $delim = "DEFTXT"  # 原始字符串字面量分隔符，须避开正文里的 ')'+$delim+'"'
+    $early = ")" + $delim + '"'
+
+    # 严格 UTF-8 解码器：非法字节序列直接抛异常
+    $utf8Strict = New-Object Text.UTF8Encoding($false, $true)
+
+    $entries = [System.Collections.Generic.List[object]]::new()
+    foreach ($name in ($fileToId.Keys | Sort-Object)) {
+        $id = $fileToId[$name]
+        $p  = Join-Path $defsDir ($name + ".txt")
+        if (-not (Test-Path -LiteralPath $p)) {
+            Write-Host "警告: 缺 $name.txt —— $id 将回退为“暂缺”" -ForegroundColor Yellow
+            continue
+        }
+        $bytes = [IO.File]::ReadAllBytes($p)
+        if ($bytes.Length -ge 3 -and $bytes[0] -eq 0xEF -and $bytes[1] -eq 0xBB -and $bytes[2] -eq 0xBF) {
+            $stripped = New-Object byte[] ($bytes.Length - 3)
+            [Array]::Copy($bytes, 3, $stripped, 0, $stripped.Length)
+            $bytes = $stripped
+        }
+        try { $text = $utf8Strict.GetString($bytes) }
+        catch { throw "错误: $p 不是合法 UTF-8 ($($_.Exception.Message))" }
+        # 校验原始字符串字面量不会被提前终止
+        if ($text.Contains($early)) {
+            throw "错误: $p 含有会终止原始字面量的序列 )$delim`""
+        }
+        $entries.Add([pscustomobject]@{ Id = $id; Body = $text.TrimEnd("`r", "`n") })
+    }
+
+    # 按 ID 宏名排序，保证输出稳定、便于 diff
+    $sorted = @($entries | Sort-Object { $_.Id })
+
+    $lines = [System.Collections.Generic.List[string]]::new()
+    $lines.Add('// GENERATED FILE —— 请勿手工编辑。由 build.ps1 的 Invoke-GenDefinitions 从 defs/*.txt 生成。')
+    $lines.Add('// 重新生成: .\build.ps1 -Mode gen （或菜单 1 / 4 / 5）')
+    $lines.Add('//')
+    $lines.Add('// 记号定义文本以 UTF-8 原始字符串字面量直接编译进程序，完全绕过 rc.exe，')
+    $lines.Add('// 从而避免 rc.exe 对 UTF-8 源文件的编码误读(首尾乱码)与 \n 不转义的问题。')
+    $lines.Add('#pragma once')
+    $lines.Add('#include <string_view>')
+    $lines.Add('#include "Resource.h"')
+    $lines.Add('')
+    $lines.Add('namespace expander_defs {')
+    $lines.Add('')
+    foreach ($e in $sorted) {
+        $lines.Add('constexpr std::string_view kDef_' + $e.Id + ' = R"' + $delim + '(')
+        $lines.Add($e.Body)
+        $lines.Add(')' + $delim + '";')
+        $lines.Add('')
+    }
+    $lines.Add('struct Entry { int id; std::string_view utf8; };')
+    $lines.Add('constexpr Entry kTable[] = {')
+    foreach ($e in $sorted) {
+        $lines.Add('    { ' + $e.Id + ', kDef_' + $e.Id + ' },')
+    }
+    $lines.Add('};')
+    $lines.Add('')
+    $lines.Add('// 按资源 ID 取定义文本；未收录的记号返回空(由调用方显示“暂缺”)。')
+    $lines.Add('[[nodiscard]] inline std::string_view lookup(int id) {')
+    $lines.Add('    for (const Entry& e : kTable) {')
+    $lines.Add('        if (e.id == id) return e.utf8;')
+    $lines.Add('    }')
+    $lines.Add('    return {};')
+    $lines.Add('}')
+    $lines.Add('')
+    $lines.Add('} // namespace expander_defs')
+    $lines.Add('')
+
+    # 输出为 UTF-8 with BOM：Debug|Win32 配置未开 /utf-8，BOM 让 MSVC 按 UTF-8 识别源文件
+    $text = [string]::Join("`n", $lines)
+    [IO.File]::WriteAllText($out, $text, (New-Object Text.UTF8Encoding($true)))
+    Write-Host "生成完成: $out  ($($sorted.Count) 个记号)" -ForegroundColor Green
+}
+
+function Show-EnvInfo {
+    Write-Host ""
+    Write-Host "Visual Studio : $script:vs"     -ForegroundColor Cyan
+    Write-Host "vcvars64.bat  : $script:vcvars" -ForegroundColor Cyan
+    Write-Host "MSBuild       : $script:msbuild" -ForegroundColor Cyan
+    Write-Host "项目          : $Project" -ForegroundColor Cyan
+    Write-Host "配置          : $Configuration / $Platform" -ForegroundColor Cyan
+    Write-Host ""
 }
 
 function Invoke-MsBuild {
     param([string]$Target)   # "" = 增量构建；" /t:Rebuild" = 全量重建
+    Ensure-VsEnv
     $label = if ($Target) { "全量重建 (Rebuild)" } else { "增量构建 (Build)" }
     Write-Host ""
     Write-Host "==> [msbuild] $label  $Configuration/$Platform ..." -ForegroundColor Green
-    $inner = "call `"$vcvars`" >nul 2>&1 && `"$msbuild`" `"$Project`" /m /p:Configuration=$Configuration /p:Platform=$Platform /v:minimal /nologo$Target"
+    $inner = "call `"$script:vcvars`" >nul 2>&1 && `"$script:msbuild`" `"$Project`" /m /p:Configuration=$Configuration /p:Platform=$Platform /v:minimal /nologo$Target"
     Write-Host "执行: cmd /c $inner" -ForegroundColor DarkGray
     & cmd /c $inner
     if ($LASTEXITCODE -ne 0) { throw "MSBuild $label 失败，退出码 $LASTEXITCODE" }
@@ -145,13 +277,15 @@ function Invoke-Mode([string]$action) {
 # ---------- TUI 菜单 ----------
 function Show-Menu {
     try { Clear-Host } catch { }   # 无控制台（管道/CI）时优雅降级
+    try { Ensure-VsEnv } catch { } # 尽力显示 VS 路径；构建类选项会自动解析
+    $vsLabel = if ($script:vs) { $script:vs } else { "未找到（构建类选项会报错）" }
     Write-Host ""
     Write-Host "==================== Expander 一键构建 ====================" -ForegroundColor Cyan
-    Write-Host "  VS      : $vs"         -ForegroundColor DarkGray
+    Write-Host "  VS      : $vsLabel" -ForegroundColor DarkGray
     Write-Host "  项目    : $Project"    -ForegroundColor DarkGray
     Write-Host "  配置    : $Configuration / $Platform" -ForegroundColor DarkGray
     Write-Host ""
-    Write-Host "  [1] 只重新生成 Definitions.h（tools/gen_definitions.py）" -ForegroundColor Yellow
+    Write-Host "  [1] 只重新生成 Definitions.h（内置流程，无需 python）" -ForegroundColor Yellow
     Write-Host "  [2] 直接调用 VS 增量构建（MSBuild /t:Build）" -ForegroundColor Yellow
     Write-Host "  [3] 调用 VS 并全量重建（MSBuild /t:Rebuild）" -ForegroundColor Yellow
     Write-Host "  [4] 先 1 后 3：重新生成 + 全量重建" -ForegroundColor Yellow
@@ -185,20 +319,6 @@ function Read-MenuChoice {
         default { return "exit" }
     }
 }
-
-# ---------- 定位并校验环境 ----------
-$vs = Resolve-VsInstallPath
-$vcvars, $msbuild = Resolve-VcvarsAndMsbuild $vs
-
-if (-not (Test-Path -LiteralPath $Project)) { throw "未找到解决方案：$Project" }
-
-Write-Host ""
-Write-Host "Visual Studio : $vs"     -ForegroundColor Cyan
-Write-Host "vcvars64.bat  : $vcvars" -ForegroundColor Cyan
-Write-Host "MSBuild       : $msbuild" -ForegroundColor Cyan
-Write-Host "项目          : $Project" -ForegroundColor Cyan
-Write-Host "配置          : $Configuration / $Platform" -ForegroundColor Cyan
-Write-Host ""
 
 # ---------- 确定执行模式 ----------
 # 注意：这里不用 $mode 作为变量名——$Mode 参数带 ValidateSet，PowerShell 变量不区分
