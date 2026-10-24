@@ -167,6 +167,24 @@ subtract1 版本3（V3）：先删去末列最右上条目；alpha = 坏根列�
 记号极限：∞ 基本列与 Aω2MN2 相同（共用 infinity_fs）；版本3 的规则差异集中在 one 提前返回、复制循环前置、非极限分支的追加判据以及极限分支 J 的循环加长。本记号达到的极限序数以原始 TS 定义为准。
 )DEFTXT";
 
+constexpr std::string_view kDef_IDR_DEF_BBM = R"DEFTXT(
+BBM（Branching BMS，BBMS，分支巴斯丘矩阵）
+
+分层嵌套树形矩阵，语法与 BTBM 相同（数值 1 起、空列 (0)、高度用 ^ 接一个完整
+矩阵、极限写 Limit）。Limit 的第 n 个基本列同样是长度 n+1 的纯嵌套塔。
+
+展开主流程（定位尾层、尾列下标 t、根 r 及根层，按 (t-r) 比例整体提升并追加
+新尾列）与 BTBM 一致，唯一区别是“特殊形状”的判定和处理：
+
+1. 判定：只要尾层之下一层的末列是空列，就判为特殊（BTBM 还额外要求该层只有
+   一项且其值等于当前层左界减一，条件更严格）。
+2. 展开：特殊形状在尾层 t_layer>0 时就递归进末项的高度复制（BTBM 要 t_layer>1
+   才递归）；到第 0 层时，把末项高度去掉末列后按 term 复制若干份填入。
+
+因此 BBM 在不少嵌套情形下会比 BTBM 更早进入特殊复制，二者结果可能不同。
+后继型（末层为空）直接删去末列。
+)DEFTXT";
+
 constexpr std::string_view kDef_IDR_DEF_BHM = R"DEFTXT(
 BHM（Bashicu Hyper Matrix，Bashicu 高阶矩阵系统）
 
@@ -1602,6 +1620,7 @@ constexpr Entry kTable[] = {
     { IDR_DEF_3MN, kDef_IDR_DEF_3MN },
     { IDR_DEF_A_OMEGA2_MN_2, kDef_IDR_DEF_A_OMEGA2_MN_2 },
     { IDR_DEF_A_OMEGA2_MN_3, kDef_IDR_DEF_A_OMEGA2_MN_3 },
+    { IDR_DEF_BBM, kDef_IDR_DEF_BBM },
     { IDR_DEF_BHM, kDef_IDR_DEF_BHM },
     { IDR_DEF_BLM, kDef_IDR_DEF_BLM },
     { IDR_DEF_BLP, kDef_IDR_DEF_BLP },

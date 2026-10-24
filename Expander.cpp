@@ -32,6 +32,7 @@
 #include "Header/notation/tupms.hpp"
 #include "Header/notation/btbm.hpp"
 #include "Header/notation/btbw.hpp"
+#include "Header/notation/bbm.hpp"
 #include "Header/notation/gy.hpp"
 #include "Header/notation/xy-v1.hpp"
 #include "Header/notation/xy-v2.hpp"
@@ -583,6 +584,11 @@ namespace {
               .definition_resource_id = IDR_DEF_BTBM_WEAK,
               .expand_text = &notation::BTBMWeakNotation::expand_text,
               .tags = { L"BTBM-weak", L"BM-like", L"分层树形矩阵", L"文本" } },
+            { .display_name = L"BBM 分支巴斯丘矩阵", .id = "bbm",
+              .expand = nullptr, .suffix = &notation::BBMNotation::suffix,
+              .definition_resource_id = IDR_DEF_BBM,
+              .expand_text = &notation::BBMNotation::expand_text,
+              .tags = { L"BBM", L"BM-like", L"分层树形矩阵", L"文本" } },
 
             { .display_name = L"G-Y", .id = "g-y",
               .expand = &notation::GYNotation::expand,
