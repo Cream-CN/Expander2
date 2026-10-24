@@ -22,7 +22,7 @@
       0) 退出
 
     由于此前出现过 MSBuild 增量构建误判（改动了 Definitions.h 等头文件却未重编译），
-    强烈建议在修改任何 .hpp / Definitions.h / Resource.h 后使用全量重建（菜单 3 或 4）。
+    在修改任何 .hpp / Definitions.h / Resource.h 后使用全量重建（菜单 3 或 4）。
 
 .EXAMPLE
     powershell -ExecutionPolicy Bypass -File build.ps1
