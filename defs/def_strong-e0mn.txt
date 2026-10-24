@@ -1,0 +1,12 @@
+strong e0MN
+
+strong e0MN 是 e0MN 的强版本（TS 源：src/notations/MN/strong_e0MN.ts，家族 category-ta0-mn，原作者 test_alpha0），C++ 实现见 Header/notation/strong_e0mn.hpp，与 e0MN 共享核心 Header/notation/mnordshare.hpp。表达式结构、合法性、极限与后继判定、∞ 的基本列均与 e0MN 相同，区别仅在展开算法中的三处判定（以代码为准）。
+
+与 e0MN 的三处差异：
+(1) shiftOrdNumbers 的移位判据：strong 版对指数项也递归移位，且判据为系数 ≥ cutoff（含省略的 1，例如 cutoff=1、d=2 时 ω = ω^1·1 变为 ω^3·3）；而 e0MN 标准版仅当系数 > cutoff 且系数 ≠ 1 时移位。
+(2) down 的省略判据：strong 版要求 ordFS(x_n, l−1) 等于末列倒数第二项的行高才省略（相等判定）；标准版是小于等于。
+(3) shortExpansion 的省略判据：strong 版同样用相等判定，标准版用小于等于。
+
+其余展开流程（rfl / down / processRflCol / FS / FS_alter 的较短与较长分支）与 e0MN 相同，此处不再重复：FS 先对表达式反复应用 rfl 共 m 次后删去末列；FS_alter 应用 rfl 共 m 次后再应用一次并把列数截回。
+
+记号极限：∞ 的基本列与 e0MN 相同（共用的 infinity_fs），故极限同为 ε0；"strong" 体现在展开省略与移位的判据更激进。

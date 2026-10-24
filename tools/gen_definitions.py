@@ -2,6 +2,11 @@
 # -*- coding: utf-8 -*-
 """生成 Definitions.h —— 把 defs/*.txt 的记号定义文本编译进程序，绕过 rc.exe。
 
+【已废弃】该生成流程已合并进 build.ps1 的 Invoke-GenDefinitions（纯 PowerShell 实现，
+不再依赖 python）。请改用:
+    .\build.ps1 -Mode gen
+本脚本仅保留作历史参考，仍可独立运行，但生成的头文件注释为旧版署名。
+
 背景:
     记号定义文本原本作为 RCDATA 资源由 rc.exe 编译进 .res。rc.exe 对
     UTF-8 无 BOM 的源文件按 ANSI/本地代码页误读，导致中文在首尾乱码，
@@ -62,6 +67,7 @@ FILENAME_TO_ID = {
     "def_ton-ibp":          "IDR_DEF_TON_IBP",
     "def_ton-mc":           "IDR_DEF_TON_MC",
     "def_ton-mpc":          "IDR_DEF_TON_MPC",
+    "def_mn":               "IDR_DEF_MN",
 }
 
 DELIM = "DEFTXT"  # 原始字符串字面量分隔符，须避开正文里的 ')'+DELIM+'"'

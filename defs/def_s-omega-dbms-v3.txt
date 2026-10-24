@@ -1,0 +1,24 @@
+SωDBMS v3
+
+SωDBMS v3 是 SDBMS 家族的纯整数 (v, p) 行高版本，TS 源为 src/notations/MN/SDBMS/S_omega_DBMS-v3.ts（TS id s-omega-dbms-v3），C++ 移植见 Header/notation/s_omega_dbms_v3.hpp。与 v2 的区别：p、v 均为定义整数、没有 ω 分量，行高比较为较短者大；与 v1 的区别：行高不是整数序列，而是 (值, 位置) 二元条目序列。
+
+表达式结构：Expr 是若干 Column 的序列；Column 是若干 Entry 的序列；Entry=(value, height)；Height 为 HEntry 序列，HEntry=(v, p)，v 为 0 基列标、p 为位置数；整条显示为 value+1^((v+1@p),…)，p 原样显示不减一。空表达式表示 0；空列显示为 "(0)"；省略上标即空行高，列尾 value=−1 的条目被删去。另外用 ∞ 标志表示记号极限，显示为 "Limit"。
+
+合法性：value 落在 [0, 列数)；行高非空；每个 v 落在 [0, 列数) 内；越界输入返回解析失败提示。
+
+极限与后继：非空且末列非空为极限表达式；末列为空为后继表达式，前驱即删去末列。
+
+∞ 的基本列：Limit[n] 展开为 (0)(1^(1@n))：第一列为空列；第二列为单个条目 value=0，行高单项 (v=0, p=n)。
+
+比较规则 compare_hentry：先比 v 再比 p，数值大者大。行高比较 compare_height：前缀相同后较短者大。height(col) 为末项行高，空列返回未定义；合并 merge_column：col1 非空时追加 col2 中行高严格大于 height(col1) 的条目，col1 为空时整列拼接。复制规则：value ≥ r 加 offset；v ≥ r 加 offset，p 保持不变。
+
+height_fill_dec(h, p, v)（v3 特有）：从末项起，末项 p ≤ 给定 p 就弹出；若弹出后末项 v 与给定 v 相同再弹出；最后压入 (v, p)。
+
+compute_new_height(h, expr, r)（v3 特有）：末项为 (v, p)。
+(1) 若 p > 0：直接返回 height_fill_dec(h, p−1, r)。
+(2) 若行高只有一项：取第 v 列末项行高返回；该列为空则返回未定义（不插入中项）。
+(3) 否则：p_bound 取倒数第二项的 p；取第 v 列 col_rh，找第一个 compare_height(h, col_rh[k].height) ≤ 0 的下标 hj；若整列都大于 h，返回 col_rh 末项行高（空列未定义）；否则 new_h = height_fill_dec(h, p_bound−1, col_rh[hj].value)；若 hj>0 且 col_rh[hj−1] 行高严格大于 new_h，则改用该行高返回。
+
+展开骨架：right 为末列下标，末列末项为 (r, h)；new_h 求出后并入中项 (r, new_h) 与第 r 列；复制循环 w=1..m，i=r+1..right，偏移量 (right−r)·w；FS 删去末列，FS_alter 保留末列。
+
+记号极限：Limit[n]=(0)(1^(1@n))；实现只给出基本列与展开，其上确界序数以原始 TS 定义为准。

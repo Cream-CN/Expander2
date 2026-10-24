@@ -1,0 +1,10 @@
+MN Notations
+包含家族：
+- e0MN / strong e0MN / ωMN / PCF's ωMN / TωMN：ε0 之上构造的 MN 基础系列；
+- 1MN / 2MN / 3MN（nMN 系列）：以 n 为幂基的 MN 系列；
+- Sω2MN / SAω2MN / Sω^ωMN：S 系列 MN 型记号；
+- S1DBMS / S2DBMS / SωDBMS v1/v2/v3 / Sω+1DBMS / Sω2DBMS / Sω^2DBMS：
+  S 系列 DBMS 型记号；
+- UP1MN / UP2MN v1A / v1B / v1B+：UP 系列 MN 型记号；
+- UP1DBMS / UP2DBMS v1 / v1B+ / v1C / v2：UP 系列 DBMS 型记号；
+- Aω2MN2 / Aω2MN3 / wAω2MN2 / wAω2MN3：Aw2MN 系列。

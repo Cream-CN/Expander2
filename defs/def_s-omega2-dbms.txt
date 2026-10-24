@@ -1,0 +1,23 @@
+Sω2DBMS
+
+Sω2DBMS 是 SDBMS 家族中位置可取 ω+n 高阶位置的版本，TS 源为 src/notations/MN/SDBMS/S_omega2_DBMS.ts（TS id s-omega2-dbms），C++ 移植见 Header/notation/s_omega2_dbms.hpp。与 Sω+1DBMS 的区别：位置除整数外是高阶位置 ω+n（而非单独的 ω），find_lower_height_pos 的高阶分支会逐级退阶；其余递归机制相同。
+
+表达式结构：Expr 是若干 Column 的序列；Column 是若干 Entry 的序列；Entry=(value, height)；Height 为 HEntry 序列，HEntry=(v, p)；HeightPos p 为数字位置（0 基）或高阶位置 (higher, num)。整条显示为 value+1^((v+1@p),…)：高阶位置显示 ω（num=0）或 ω+num，数字位置显示 p+1。空表达式表示 0；空列显示为 "(0)"；省略上标即空行高，列尾 value=−1 的条目被删去。另外用 ∞ 标志表示记号极限，显示为 "Limit"。
+
+合法性：value 落在 [0, 列数)；行高非空；v 落在 [0, 列数)；非高阶的数字 p 落在 [0, 列数)；越界输入返回解析失败提示。
+
+极限与后继：非空且末列非空为极限表达式；末列为空为后继表达式，前驱即删去末列。
+
+∞ 的基本列：Limit[n] 展开为 (0)(1^(1@ω))(2^(2@ω+1))…(n^(n@ω+n−1))：第一列为空列；其后第 i 列（i=0..n−1）为单个条目 value=i、行高单项 (v=i, 高阶位置 num=i)。
+
+比较规则：compare_hpos 中高阶位置大于数字位置；同为高阶比 num，同为数字比 num。compare_hentry 先比 v 再比 p；行高字典序前缀相同后较短者大。height(col) 为末项行高，空列未定义；合并规则同家族。复制规则：value、v ≥ r 时加 offset；高阶位置保持不变，数字 p ≥ r 时加 offset。
+
+height_fill_dec(h, p, v)：末项 v ≥ 给定 v 弹出后压入 (v, p)。
+
+compute_new_height(h, expr, r)：末项为 (v, p)；先 find_lower_height_pos 求 new_p，找到则 height_fill_dec(h, new_p, r)；否则 find_maximal_entry_below 取条目行高，找不到返回未定义。
+
+递归机制：descend_height_to_value 与 find_maximal_entry_below 与 Sω+1DBMS 相同；find_lower_height_pos 的差异在于高阶位置分支：p 为高阶位置时，若 num>0 返回高阶位置 num−1，若 num=0 返回数字位置 r；数字位置分支与 Sω+1 相同（先取最大条目，末项位置为高阶时失败，v1=p1.num 时返回 v1，否则递归）。
+
+展开骨架：right 为末列下标，末列末项为 (r, h)；new_h 并入中项 (r, new_h) 与第 r 列；复制循环 w=1..m，i=r+1..right，偏移量 (right−r)·w；FS 删去末列，FS_alter 保留末列。
+
+记号极限：Limit[n] 高阶位置的 num 随列递增；实现只给出基本列与展开，其上确界序数以原始 TS 定义为准。

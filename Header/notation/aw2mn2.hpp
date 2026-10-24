@@ -1,35 +1,61 @@
 // Header/notation/aw2mn2.hpp
-// Aω2MN2 记号（display 名 "Aω2MN2"）。
+// Aω2MN2 记号（display 名 "Aω2MN2"，TS id "a-omega2-mn-2"）。
 // 逻辑移植自 notation-explorer（hypcos）的 src/notations/MN/Aw2MN2.ts
-// （TS id "a-omega2-mn-2"，家族/类别：category-hypcos-w2mn，credit.hypcos_mn）。
-// 表达式结构（TS）：Sep=Expr（递归）；Vertical=Expr[]；
-// Entry=[int,Sep,bool?]（第三项为标记）；Column=Entry[]；Expr=Column[]。
-// 注意：本文件为接口骨架 —— 函数定义仅返回记号名字（占位），尚未在
-// Expander.cpp 的 notationTable() 注册；算法逻辑待移植后补全。
+// （家族/类别：category-hypcos-w2mn，credit.hypcos_mn）。
+// 表达式结构：Sep=Expr（递归）；Vertical=Sep[]；Entry=[value(1-based), Sep, mark?]；
+// Column=Entry[]；Expr=Column[]；∞ 用 bool 标志表示。
+// 核心实现与弱版/版本3 共享 Header/notation/aw2mn_share.hpp（本记号：subtract1 版2、非弱版）。
 #pragma once
 
 #include <optional>
 #include <string>
 #include <string_view>
-#include <vector>
+
+#include "Header/notation/aw2mn_share.hpp"
 
 namespace omegay::notation {
-
-// Expr 的占位类型（定义待补全）。
-struct Aw2Mn2Expr {};
 
 struct Aw2MN2Notation {
     static constexpr const char* kName = "Aω2MN2";
 
-    // FS：较短展开。
-    [[nodiscard]] static std::string expand_text(std::string_view, int) { return kName; }
-    // FS_alter：较长展开。
-    [[nodiscard]] static std::string expand_text_alter(std::string_view, int) { return kName; }
+    [[nodiscard]] static std::string expand_text(std::string_view text, int term) {
+        return expand_text_impl(text, term, /*longer=*/false);
+    }
+    [[nodiscard]] static std::string expand_text_alter(std::string_view text, int term) {
+        return expand_text_impl(text, term, /*longer=*/true);
+    }
     [[nodiscard]] static std::string suffix() { return {}; }
 
-    // 供测试 / 调试使用的解析与格式化。
-    [[nodiscard]] static std::optional<Aw2Mn2Expr> parse(std::string_view) { return std::nullopt; }
-    [[nodiscard]] static std::string to_string(const Aw2Mn2Expr&) { return kName; }
+    [[nodiscard]] static std::optional<aw2mn_share::Parsed> parse(std::string_view text) {
+        return aw2mn_share::parse(text);
+    }
+
+    [[nodiscard]] static std::string to_string(const aw2mn_share::Parsed& p) {
+        if (p.infinity) return "Limit";
+        return aw2mn_share::mountain_display(p.expr);
+    }
+
+private:
+    static std::string expand_text_impl(std::string_view text, int term, bool longer) {
+        if (term < 1) term = 1;
+        const auto parsed = aw2mn_share::parse(text);
+        if (!parsed) return aw2mn_share::kParseFail;
+        if (parsed->infinity) return aw2mn_share::mountain_display(aw2mn_share::infinity_fs(term));
+        const aw2mn_share::Expr& e = parsed->expr;
+        if (e.empty()) return {};
+        if (e.back().empty()) {
+            return aw2mn_share::mountain_display(aw2mn_share::Expr(e.begin(), e.end() - 1));
+        }
+        // 值域校验：value(1-based) 作为父列索引 value-1 须在 [0, size)
+        for (const auto& col : e) {
+            for (const auto& en : col) {
+                if (en.value < 1 || en.value > static_cast<int>(e.size())) return aw2mn_share::kParseFail;
+            }
+        }
+        return aw2mn_share::mountain_display(
+            aw2mn_share::expand(e, term, /*shorter=*/!longer, /*weak=*/false,
+                                aw2mn_share::SubtractKind::V2));
+    }
 };
 
 } // namespace omegay::notation

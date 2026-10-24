@@ -1,5 +1,1 @@
 TON with passthrough (reflection configuration)（TON_MPC）
-Taranovsky 序数记号的“反射配置”变体，含 passthrough。主家族格式。
-输入格式：后缀式文本。叶子记号："0" 表示 -1，"Ω<n>" 表示非负序数（角括号定界），"Limit" 表示极限；两个叶子或子树并排后再跟一个 "C" 表示组合。
-记号极限输入 Limit。
-逻辑移植自 ne-rewritten（src/notations/TON/TON_MPC.ts）。

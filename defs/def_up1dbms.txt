@@ -1,0 +1,19 @@
+UP1DBMS
+
+UP1DBMS 是 notation-explorer（hypcos）中 category-upmn-test 家族的 UP 型矩阵记号（TS 源：src/notations/MN/UPMN/UP1DBMS.ts），C++ 实现见 Header/notation/up1dbms.hpp。它在 UP1MN 的列标引用之外为每个条目附加一个整数行高，行高同时作为父列索引参与坏根判定。
+
+表达式结构：一个表达式 Expr 是若干列 Column 的序列；每列是若干条目 Entry=(value, height) 的序列；value 是从 0 起的列标引用，height 是从 0 起的行高，显示为 (value+1)^(height+1)；空列显示为 "(0)"。解析时条目先读列标减 1，可选上标 ^ 数字再减 1 作为行高；无上标时行高置为哨兵 −1，列尾 value=−1 的条目在解析时删去。空表达式表示 0；另外用 ∞ 标志表示极限，显示为 "Limit"。
+
+合法性：展开前校验每个 value 落在 [0, 表达式列数) 内；末列非空时末项行高也须落在 [0, 列数) 内，越界按解析失败处理。
+
+极限与后继：非空且末列非空的表达式是极限表达式；末列为空的表达式是后继表达式，它的展开就是删去末列。
+
+∞ 的基本列：Limit[n]（n 为正整数）展开为第一列空列，随后第 i=0..n−1 列各含单个条目 (value=i, height=i)，显示依次为 (1)^(1)、(2)^(2)、……、(n)^(n)。
+
+展开（参数 m≥1；FS 较短 shorter=true，FS_alter 较长 shorter=false）：空表达式原样返回；末列为空时删去末列。否则取末列末项 (r, h)，新行高 new_h 取第 h 列末项的行高（空列记 −1）。构造新末列：末列删去末项，先并入条目 (r, new_h)，再并入第 r 列；merge_column 规则为保留第一列全部条目，再追加第二列中行高严格大于第一列末项行高的条目（空列行高视为 −1）。新表达式由其余各列与新末列组成。随后由 compute_up(expr, r, h) 算出每列 up 标志，对 w=1..m 逐轮把第 r+1 到末列按 copy_column 复制，列标偏移 (right−r)·w；较短展开删去最后一列，较长展开保留全部复制列。
+
+copy_column(col, r, offset, up)：条目 value 大于 r，或等于 r 且 up 为真时 value 加 offset，否则保持；行高按同一 copy_value 规则同步平移。
+
+compute_up(expr, r, h) 返回每列布尔标志：列标小于 r 为 0，第 r 列为 1。对 i=r+1 到末列逐列判定：h_root 为该列自后向前第一个 value 不小于 r 的条目行高，h_root 小于 h 记 0；h_proj 为第一个 value 不小于 r+1 的条目行高，若 h_proj 不小于 h，取 parent_at(col, h)（第一个行高不小于 h 的条目 value，找不到记 −1），标志继承该引用列，引用不到记 0；若 h_proj 不小于 0，再沿 h_proj 行高上溯到父列等于 r 的列 p_proj，p_proj 引用不到或其标志为 0 则本列记 0。随后进入坏根比较：X_start=i，Y_start=末列，沿 h_proj+1 行高上溯到父列等于 r 的列 Y_start，引用不到记 0；Y_start 不大于 X_start 时相等记 1、否则记 0；否则先比较 X_start 列与 Y_start 列中 value 不大于 r 的条目（discard_after 截断），逐项先比 value 再比 height，前缀相同则长者大，不一致即按方向决定；再对 k=1,2,... 比较相对列，每个条目展开为四元组（value 是否不小于起点、相对 value、height 是否不小于起点、相对 height），先比 value 标记、再比相对 value、再比 height 标记、再比相对 height，前缀相同则长者大，首次不一致决定；全部一致记 1。
+
+记号极限：实现未给出该记号所对应序数上界，具体极限以原始 TS 定义为准。

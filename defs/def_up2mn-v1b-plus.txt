@@ -1,0 +1,15 @@
+UP2MN v1B+
+
+UP2MN v1B+ 是 notation-explorer（hypcos）中 category-upmn 家族的 UP 型山记号（credit.upmn，TS 源：src/notations/MN/UPMN/UP2MN-v1b-plus.ts），C++ 实现见 Header/notation/up2mn_v1b_plus.hpp，共享核心 Header/notation/mnup2share.hpp。它与 UP2MN v1B 共用同一套表达式结构、竖向表、父位置、极限与后继判定、扩展骨架与复制函数，仅在两处判定上不同（以代码为准）。
+
+表达式结构、合法性、极限与后继判定均与 UP2MN v1B 相同：Expr 为列序列，条目 (value 0 起列标, sep 层号)，空表达式表示 0，∞ 标志显示 "Limit"；非空且末列非空为极限表达式，末列为空为后继表达式，后继展开即删去末列；value 须落在 [0, 列数) 内。
+
+与 v1B 的两处差异：
+
+(1) ∞ 的基本列：Limit[n]（n 为正整数）为第一列空列，第 i=1..n 列只含单个条目 (value=i−1, sep=1)；v1B 的第 i 列则先有 i−1 个 sep=0 条目再加一个 sep=1 末项。
+
+(2) compute_up_2mn（无限情形）中 p≠Ri 分支：当 P[i][Rj].i 不等于 Ri 时，v1B+ 继承该父列 p 的标志 result[p]，而 v1B 直接记 0。其余判定——列项数分档（≤Rj 记 0、≥Rj+2 继承父列、末项 sep=0 记 0）、坏根 Y_start 上溯到项数恰为 Rj+1 的列、后缀列与相对列比较规则、未决记 1——均与 v1B 相同。
+
+展开流程与 v1B 相同：先算 up 标志，构造新末列（非有限且 top=Rj 时补条目 (Ri, 0)，再拼回第 Ri 列自 Rj 项起的尾部），y_offset 无限情形取 top−Rj 与 1 的较大者，随后对 w=1..m 复制第 Ri+1 到 right 列，列标偏移 (right−Ri)·w、高度偏移 y_offset·w；FS 较短展开删去最后一列，FS_alter 较长展开保留全部复制列。copy_column 的值平移与 Rj 位置补条目规则亦与 v1B 相同。
+
+记号极限：实现未给出该记号所对应序数上界，具体极限以原始 TS 定义为准。

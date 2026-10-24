@@ -1,0 +1,23 @@
+UP2DBMS v2
+
+UP2DBMS v2 是 notation-explorer（hypcos）中 category-upmn 家族的 UP 型 DBMS 矩阵记号（credit.up2dbms-v2，TS 源：src/notations/MN/UPMN/UP2DBMS-v2.ts），C++ 实现见 Header/notation/up2dbms_v2.hpp。它与 v1 系列不同：条目行高是一对高度 (h0, h1)，显示为高度对形式；新行高计算与列合并沿用 SDBMS 家族规则，坏根 up 判定与带 BMS 升级分支的复制列均为 v2 专属实现。UI 等价视图（dbms、RMN、Y、层化图等）未移植。
+
+表达式结构：一个表达式 Expr 是若干列 Column 的序列；每列是若干条目 Entry=(value, height) 的序列；value 是从 0 起的列标引用；height=(h0, h1) 为高度对，h0 是父列列标（0 起），h1 是层级号，显示为 (value+1)^(h1, h0+1)；空列显示为 "(0)"。解析时条目先读列标减 1，上标 ^ 后接高度对 (h1, h0+1)（也允许列标后直接跟高度对括号）；无上标时置哨兵高度 (0, −1)，列尾 value=−1 的条目在解析时删去。空表达式表示 0；另外用 ∞ 标志表示极限，显示为 "Limit"。
+
+高度比较：先比 h1，h1 相同再比 h0（反字典序）；条目比较先比 value 再比高度；列比较为条目的字典序，前缀相同则长者更大。
+
+合法性：展开前校验每个 value 与每个 h0 都落在 [0, 表达式列数) 内，越界按解析失败处理。
+
+极限与后继：非空且末列非空的表达式是极限表达式；末列为空的表达式是后继表达式，它的展开就是删去末列。
+
+∞ 的基本列：Limit[n]（n 为正整数）展开为第一列空列，第 i=0..n−1 列各含单个条目 (value=i, height=(h0=i, h1=i+1))，显示依次为 (1)^(1,1)、(2)^(2,2)、……、(n)^(n,n)。
+
+展开（参数 m≥1；FS 较短 shorter=true，FS_alter 较长 shorter=false）：空表达式原样返回；末列为空时删去末列。否则取末列末项 (r, h)，由 compute_new_height(h, expr, r) 算出新行高 new_h。构造新末列：末列删去末项，若 new_h 存在先并入条目 (r, new_h)，再并入第 r 列；merge_column 规则为第一列空时直接取第二列，否则保留第一列全部条目，追加第二列中高度严格大于第一列末项高度的条目。新表达式由其余各列与新末列组成。随后由 compute_up(expr, r, h) 算出每列 up 标志，对 w=1..m 逐轮把第 r+1 到末列按 copy_column 复制，列标偏移 (right−r)·w；较短展开删去最后一列，较长展开保留全部复制列。
+
+compute_new_height(h=(v, h1), expr, r)：在第 v 列中找到第一个高度不小于 h 的位置 hj；若不存在：当该列末项 h1 小于 h.h1 时返回高度 (r, h1−1)，否则返回该列末项高度；若存在：new_h 取为 (第 hj 项 value, h1)，若 hj>0 且前一项高度大于 new_h，则把 new_h 抬升为前一项高度。
+
+compute_up(expr, r, h) 返回每列布尔标志：列标小于 r 为 false，第 r 列为 true；若 h.h1=0，第 r 列右侧全部记 true 并直接返回。对 i=r+1 到末列：h_root 为该列自后向前第一个 value 不小于 r 的条目高度，不存在或其 h1 小于 h.h1 记 false；h_proj 为第一个 value 不小于 r+1 的条目高度，阈值高度 threshold=(r+1, min(h_proj.h1, h.h1−1))（h_proj 不存在时 h1 取 0）；若 h_proj 不小于 threshold，取 parent_at(col, threshold)（第一个高度不小于 threshold 的条目 value，找不到记 −1），标志继承该引用列，引用不到记 false；否则取 p_proj=parent_at(col, h_proj)，引用不到或其标志为 false 记 false。随后进入坏根比较：X_start=i，Y_start=末列，沿 threshold 高度上溯到父列等于 r 的列 Y_start，上溯途中引用不到记 false；Y_start 不大于 X_start 时相等记 true、否则记 false；否则先比较 X_start 列与 Y_start 列中 value 不大于 r 的条目（discard_after 截断）的列字典序，不一致即按方向决定；再对 k=1,2,... 比较相对列：每个条目展开为（value 是否不小于起点、相对 value、h0 是否不小于起点、相对 h0、h1），依次比较标记、相对 value、h0 标记、相对 h0、h1，前缀相同则长者大，首次不一致决定；全部一致记 true。
+
+copy_column(col, r, offset, up)：常规条目经 copy_entry 平移——value 大于 r，或等于 r 且 up 为真时 value 加 offset，否则保持；h0 按同一规则平移，h1 不变。特殊 BMS 升级分支：当条目 value 等于 r 且 up 为假时，若该项 h1=0，或 h1 与前一项 h1 相同，则直接平移为 (r+offset, 平移后高度)；否则先补入条目 (r+offset, (r, 前一项 h1，无前项时 h1=0))，再把原条目按 up 为假规则平移后追加。
+
+记号极限：实现未给出该记号所对应序数上界，具体极限以原始 TS 定义为准。

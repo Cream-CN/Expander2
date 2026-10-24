@@ -75,5 +75,6 @@
 #define IDR_DEF_TON_IBP			   20037
 #define IDR_DEF_TON_MC			   20038
 #define IDR_DEF_TON_MPC			   20039
+#define IDR_DEF_MN				   20040
 
 

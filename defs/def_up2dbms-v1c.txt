@@ -1,0 +1,9 @@
+UP2DBMS v1C
+
+UP2DBMS v1C 是 notation-explorer（hypcos）中 category-upmn 家族的 UP 型 DBMS 山记号（credit.upmn，TS 源：src/notations/MN/UPMN/UP2DBMS-v1c.ts），C++ 实现见 Header/notation/up2dbms_v1c.hpp，共享核心 Header/notation/mnup2share.hpp。表达式结构、合法性、极限与后继判定、∞ 基本列、新末列构造、有限情形 up 判定与复制值平移规则均与 UP2DBMS v1B+ 相同，唯一差异在无限情形 compute_up_2mn 的坏根 Y_start 上溯循环（以代码为准）。
+
+共同部分：Expr 为列序列，条目 (value 0 起列标, sep 层号)，空表达式表示 0，∞ 标志显示 "Limit"；非空且末列非空为极限表达式，末列为空为后继表达式，后继展开即删去末列；value 须落在 [0, 列数) 内。Limit[n] 为第一列空列，第 i=1..n 列先含 i 个引用第 i−1 列、sep=0 的条目，末项为引用第 i−1 列、sep=1 的条目。展开时末项 sep=0 为有限情形，否则为无限情形；新末列由末列删去末项后拼回第 Ri 列自 Rj 项起的尾部，y_offset 恒为 top−Rj，随后对 w=1..m 复制第 Ri+1 到 right 列，FS 较短删末列、FS_alter 较长保留。有限情形使用真实的 up2mn_compute_up_1mn 算法；copy_column 中 value 等于 Ri 时仅当 up 为真才加 offset。
+
+与 v1B+ 的唯一差异：compute_up_2mn 中定位坏根列 Y_start 的上溯循环。v1B+ 沿 P[Y_start][Rj+1].i 上溯，终止条件为列项数恰等于 Rj+2；v1C 沿 P[Y_start][Rj].i 上溯，终止条件为列项数恰等于 Rj+2 且该位置父列恰为 Ri，两个条件同时满足才停止。循环之前的分档判定（项数 ≤Rj+1 记 0、≥Rj+3 继承 P[i][Rj+1].i 列、末项 sep=0 继承父列、p≠Ri 继承 p 列）、循环之后的 Y_start 位置比较（相等记 1、否则记 0）、后缀列与相对列比较规则及未决记 1，均与 v1B+ 相同。
+
+记号极限：实现未给出该记号所对应序数上界，具体极限以原始 TS 定义为准。

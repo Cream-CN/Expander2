@@ -36,6 +36,36 @@
 #include "Header/notation/ton_ibp.hpp"
 #include "Header/notation/ton_mc.hpp"
 #include "Header/notation/ton_mpc.hpp"
+#include "Header/notation/e0mn.hpp"
+#include "Header/notation/strong_e0mn.hpp"
+#include "Header/notation/omega_mn.hpp"
+#include "Header/notation/pcf_omega_mn.hpp"
+#include "Header/notation/t_omega_mn.hpp"
+#include "Header/notation/n_mn.hpp"
+#include "Header/notation/s_omega2_mn.hpp"
+#include "Header/notation/sa_omega2_mn.hpp"
+#include "Header/notation/s_omega_pow_omega_mn.hpp"
+#include "Header/notation/s1dbms.hpp"
+#include "Header/notation/s2dbms.hpp"
+#include "Header/notation/s_omega_dbms_v1.hpp"
+#include "Header/notation/s_omega_dbms_v2.hpp"
+#include "Header/notation/s_omega_dbms_v3.hpp"
+#include "Header/notation/s_omega_p1_dbms.hpp"
+#include "Header/notation/s_omega2_dbms.hpp"
+#include "Header/notation/s_omega_square_dbms.hpp"
+#include "Header/notation/up1mn.hpp"
+#include "Header/notation/up1dbms.hpp"
+#include "Header/notation/up2mn_v1a.hpp"
+#include "Header/notation/up2mn_v1b.hpp"
+#include "Header/notation/up2mn_v1b_plus.hpp"
+#include "Header/notation/up2dbms_v1.hpp"
+#include "Header/notation/up2dbms_v1b_plus.hpp"
+#include "Header/notation/up2dbms_v1c.hpp"
+#include "Header/notation/up2dbms_v2.hpp"
+#include "Header/notation/aw2mn2.hpp"
+#include "Header/notation/aw2mn3.hpp"
+#include "Header/notation/waw2mn2.hpp"
+#include "Header/notation/waw2mn3.hpp"
 #include <memory>
 #include <string>
 #include <string_view>
@@ -477,6 +507,231 @@ namespace {
               .expand_text = &notation::TonMpcNotation::expand_text,
               .expand_text_alter = &notation::TonMpcNotation::expand_text_alter,
               .tags = { L"TON", L"反射配置", L"passthrough", L"文本" } },
+
+            // ---- MN 系列（e0MN / TωMN / SDBMS / SMN / UPMN / Aw2MN）----
+            { .display_name = L"e0MN", .id = "e0mn",
+              .expand = nullptr, .suffix = &notation::E0MNNotation::suffix,
+              .definition_resource_id = IDR_DEF_MN,
+              .expand_text = &notation::E0MNNotation::expand_text,
+              .expand_text_alter = &notation::E0MNNotation::expand_text_alter,
+              .tags = { L"MN", L"文本" } },
+
+            { .display_name = L"strong e0MN", .id = "strong-e0mn",
+              .expand = nullptr, .suffix = &notation::StrongE0MNNotation::suffix,
+              .definition_resource_id = IDR_DEF_MN,
+              .expand_text = &notation::StrongE0MNNotation::expand_text,
+              .expand_text_alter = &notation::StrongE0MNNotation::expand_text_alter,
+              .tags = { L"MN", L"文本" } },
+
+            { .display_name = L"ωMN", .id = "omega-mn",
+              .expand = nullptr, .suffix = &notation::OmegaMNNotation::suffix,
+              .definition_resource_id = IDR_DEF_MN,
+              .expand_text = &notation::OmegaMNNotation::expand_text,
+              .expand_text_alter = &notation::OmegaMNNotation::expand_text_alter,
+              .tags = { L"MN", L"文本" } },
+
+            { .display_name = L"PCF's ωMN", .id = "pcf-omega-mn",
+              .expand = nullptr, .suffix = &notation::PcfOmegaMNNotation::suffix,
+              .definition_resource_id = IDR_DEF_MN,
+              .expand_text = &notation::PcfOmegaMNNotation::expand_text,
+              .expand_text_alter = &notation::PcfOmegaMNNotation::expand_text_alter,
+              .tags = { L"MN", L"文本" } },
+
+            { .display_name = L"TωMN", .id = "t-omega-mn",
+              .expand = nullptr, .suffix = &notation::TOmegaMNNotation::suffix,
+              .definition_resource_id = IDR_DEF_MN,
+              .expand_text = &notation::TOmegaMNNotation::expand_text,
+              .expand_text_alter = &notation::TOmegaMNNotation::expand_text_alter,
+              .tags = { L"MN", L"文本" } },
+
+            { .display_name = L"1MN", .id = "1-mn",
+              .expand = nullptr, .suffix = &notation::NMnNotation<1>::suffix,
+              .definition_resource_id = IDR_DEF_MN,
+              .expand_text = &notation::NMnNotation<1>::expand_text,
+              .expand_text_alter = &notation::NMnNotation<1>::expand_text_alter,
+              .tags = { L"MN", L"文本" } },
+
+            { .display_name = L"2MN", .id = "2-mn",
+              .expand = nullptr, .suffix = &notation::NMnNotation<2>::suffix,
+              .definition_resource_id = IDR_DEF_MN,
+              .expand_text = &notation::NMnNotation<2>::expand_text,
+              .expand_text_alter = &notation::NMnNotation<2>::expand_text_alter,
+              .tags = { L"MN", L"文本" } },
+
+            { .display_name = L"3MN", .id = "3-mn",
+              .expand = nullptr, .suffix = &notation::NMnNotation<3>::suffix,
+              .definition_resource_id = IDR_DEF_MN,
+              .expand_text = &notation::NMnNotation<3>::expand_text,
+              .expand_text_alter = &notation::NMnNotation<3>::expand_text_alter,
+              .tags = { L"MN", L"文本" } },
+
+            { .display_name = L"Sω2MN", .id = "s-omega2-mn",
+              .expand = nullptr, .suffix = &notation::SOmega2MNNotation::suffix,
+              .definition_resource_id = IDR_DEF_MN,
+              .expand_text = &notation::SOmega2MNNotation::expand_text,
+              .expand_text_alter = &notation::SOmega2MNNotation::expand_text_alter,
+              .tags = { L"MN", L"文本" } },
+
+            { .display_name = L"SAω2MN", .id = "sa-omega2-mn",
+              .expand = nullptr, .suffix = &notation::SAOmega2MNNotation::suffix,
+              .definition_resource_id = IDR_DEF_MN,
+              .expand_text = &notation::SAOmega2MNNotation::expand_text,
+              .expand_text_alter = &notation::SAOmega2MNNotation::expand_text_alter,
+              .tags = { L"MN", L"文本" } },
+
+            { .display_name = L"Sω^ωMN", .id = "s-omega-pow-omega-mn",
+              .expand = nullptr, .suffix = &notation::SOmegaPowOmegaMNNotation::suffix,
+              .definition_resource_id = IDR_DEF_MN,
+              .expand_text = &notation::SOmegaPowOmegaMNNotation::expand_text,
+              .expand_text_alter = &notation::SOmegaPowOmegaMNNotation::expand_text_alter,
+              .tags = { L"MN", L"文本" } },
+
+            { .display_name = L"UP1MN", .id = "up1mn",
+              .expand = nullptr, .suffix = &notation::UP1MNNotation::suffix,
+              .definition_resource_id = IDR_DEF_MN,
+              .expand_text = &notation::UP1MNNotation::expand_text,
+              .expand_text_alter = &notation::UP1MNNotation::expand_text_alter,
+              .tags = { L"MN", L"UPMN", L"文本" } },
+
+            { .display_name = L"UP2MN v1A", .id = "up2mn-v1a",
+              .expand = nullptr, .suffix = &notation::UP2MNV1ANotation::suffix,
+              .definition_resource_id = IDR_DEF_MN,
+              .expand_text = &notation::UP2MNV1ANotation::expand_text,
+              .expand_text_alter = &notation::UP2MNV1ANotation::expand_text_alter,
+              .tags = { L"MN", L"UPMN", L"文本" } },
+
+            { .display_name = L"UP2MN v1B", .id = "up2mn-v1b",
+              .expand = nullptr, .suffix = &notation::UP2MNV1BNotation::suffix,
+              .definition_resource_id = IDR_DEF_MN,
+              .expand_text = &notation::UP2MNV1BNotation::expand_text,
+              .expand_text_alter = &notation::UP2MNV1BNotation::expand_text_alter,
+              .tags = { L"MN", L"UPMN", L"文本" } },
+
+            { .display_name = L"UP2MN v1B+", .id = "up2mn-v1b-plus",
+              .expand = nullptr, .suffix = &notation::UP2MNV1BPlusNotation::suffix,
+              .definition_resource_id = IDR_DEF_MN,
+              .expand_text = &notation::UP2MNV1BPlusNotation::expand_text,
+              .expand_text_alter = &notation::UP2MNV1BPlusNotation::expand_text_alter,
+              .tags = { L"MN", L"UPMN", L"文本" } },
+
+            { .display_name = L"UP1DBMS", .id = "up1dbms",
+              .expand = nullptr, .suffix = &notation::UP1DBMSNotation::suffix,
+              .definition_resource_id = IDR_DEF_MN,
+              .expand_text = &notation::UP1DBMSNotation::expand_text,
+              .expand_text_alter = &notation::UP1DBMSNotation::expand_text_alter,
+              .tags = { L"MN", L"UPMN", L"DBMS", L"文本" } },
+
+            { .display_name = L"UP2DBMS v1", .id = "up2dbms-v1",
+              .expand = nullptr, .suffix = &notation::UP2DBMSV1Notation::suffix,
+              .definition_resource_id = IDR_DEF_MN,
+              .expand_text = &notation::UP2DBMSV1Notation::expand_text,
+              .expand_text_alter = &notation::UP2DBMSV1Notation::expand_text_alter,
+              .tags = { L"MN", L"UPMN", L"DBMS", L"文本" } },
+
+            { .display_name = L"UP2DBMS v1B+", .id = "up2dbms-v1b-plus",
+              .expand = nullptr, .suffix = &notation::UP2DBMSV1BPlusNotation::suffix,
+              .definition_resource_id = IDR_DEF_MN,
+              .expand_text = &notation::UP2DBMSV1BPlusNotation::expand_text,
+              .expand_text_alter = &notation::UP2DBMSV1BPlusNotation::expand_text_alter,
+              .tags = { L"MN", L"UPMN", L"DBMS", L"文本" } },
+
+            { .display_name = L"UP2DBMS v1C", .id = "up2dbms-v1c",
+              .expand = nullptr, .suffix = &notation::UP2DBMSV1CNotation::suffix,
+              .definition_resource_id = IDR_DEF_MN,
+              .expand_text = &notation::UP2DBMSV1CNotation::expand_text,
+              .expand_text_alter = &notation::UP2DBMSV1CNotation::expand_text_alter,
+              .tags = { L"MN", L"UPMN", L"DBMS", L"文本" } },
+
+            { .display_name = L"UP2DBMS v2", .id = "up2dbms-v2",
+              .expand = nullptr, .suffix = &notation::Up2DbmsV2Notation::suffix,
+              .definition_resource_id = IDR_DEF_MN,
+              .expand_text = &notation::Up2DbmsV2Notation::expand_text,
+              .expand_text_alter = &notation::Up2DbmsV2Notation::expand_text_alter,
+              .tags = { L"MN", L"UPMN", L"DBMS", L"文本" } },
+
+            { .display_name = L"S1DBMS", .id = "s1dbms",
+              .expand = nullptr, .suffix = &notation::S1DBMSNotation::suffix,
+              .definition_resource_id = IDR_DEF_MN,
+              .expand_text = &notation::S1DBMSNotation::expand_text,
+              .expand_text_alter = &notation::S1DBMSNotation::expand_text_alter,
+              .tags = { L"MN", L"SDBMS", L"文本" } },
+
+            { .display_name = L"S2DBMS", .id = "s2dbms",
+              .expand = nullptr, .suffix = &notation::S2DBMSNotation::suffix,
+              .definition_resource_id = IDR_DEF_MN,
+              .expand_text = &notation::S2DBMSNotation::expand_text,
+              .expand_text_alter = &notation::S2DBMSNotation::expand_text_alter,
+              .tags = { L"MN", L"SDBMS", L"文本" } },
+
+            { .display_name = L"SωDBMS v1", .id = "s-omega-dbms",
+              .expand = nullptr, .suffix = &notation::SOmegaDBMSV1Notation::suffix,
+              .definition_resource_id = IDR_DEF_MN,
+              .expand_text = &notation::SOmegaDBMSV1Notation::expand_text,
+              .expand_text_alter = &notation::SOmegaDBMSV1Notation::expand_text_alter,
+              .tags = { L"MN", L"SDBMS", L"文本" } },
+
+            { .display_name = L"SωDBMS v2", .id = "s-omega-dbms-v2",
+              .expand = nullptr, .suffix = &notation::SOmegaDBMSV2Notation::suffix,
+              .definition_resource_id = IDR_DEF_MN,
+              .expand_text = &notation::SOmegaDBMSV2Notation::expand_text,
+              .expand_text_alter = &notation::SOmegaDBMSV2Notation::expand_text_alter,
+              .tags = { L"MN", L"SDBMS", L"文本" } },
+
+            { .display_name = L"SωDBMS v3", .id = "s-omega-dbms-v3",
+              .expand = nullptr, .suffix = &notation::SOmegaDBMSV3Notation::suffix,
+              .definition_resource_id = IDR_DEF_MN,
+              .expand_text = &notation::SOmegaDBMSV3Notation::expand_text,
+              .expand_text_alter = &notation::SOmegaDBMSV3Notation::expand_text_alter,
+              .tags = { L"MN", L"SDBMS", L"文本" } },
+
+            { .display_name = L"Sω+1DBMS", .id = "s-omega-p1-dbms",
+              .expand = nullptr, .suffix = &notation::SOmegaP1DBMSNotation::suffix,
+              .definition_resource_id = IDR_DEF_MN,
+              .expand_text = &notation::SOmegaP1DBMSNotation::expand_text,
+              .expand_text_alter = &notation::SOmegaP1DBMSNotation::expand_text_alter,
+              .tags = { L"MN", L"SDBMS", L"文本" } },
+
+            { .display_name = L"Sω2DBMS", .id = "s-omega2-dbms",
+              .expand = nullptr, .suffix = &notation::SOmega2DBMSNotation::suffix,
+              .definition_resource_id = IDR_DEF_MN,
+              .expand_text = &notation::SOmega2DBMSNotation::expand_text,
+              .expand_text_alter = &notation::SOmega2DBMSNotation::expand_text_alter,
+              .tags = { L"MN", L"SDBMS", L"文本" } },
+
+            { .display_name = L"Sω^2DBMS", .id = "s-omega-square-dbms",
+              .expand = nullptr, .suffix = &notation::SOmegaSquareDBMSNotation::suffix,
+              .definition_resource_id = IDR_DEF_MN,
+              .expand_text = &notation::SOmegaSquareDBMSNotation::expand_text,
+              .expand_text_alter = &notation::SOmegaSquareDBMSNotation::expand_text_alter,
+              .tags = { L"MN", L"SDBMS", L"文本" } },
+
+            { .display_name = L"Aω2MN2", .id = "a-omega2-mn-2",
+              .expand = nullptr, .suffix = &notation::Aw2MN2Notation::suffix,
+              .definition_resource_id = IDR_DEF_MN,
+              .expand_text = &notation::Aw2MN2Notation::expand_text,
+              .expand_text_alter = &notation::Aw2MN2Notation::expand_text_alter,
+              .tags = { L"MN", L"文本" } },
+
+            { .display_name = L"wAω2MN2", .id = "weak-a-omega2-mn-2",
+              .expand = nullptr, .suffix = &notation::WAw2MN2Notation::suffix,
+              .definition_resource_id = IDR_DEF_MN,
+              .expand_text = &notation::WAw2MN2Notation::expand_text,
+              .expand_text_alter = &notation::WAw2MN2Notation::expand_text_alter,
+              .tags = { L"MN", L"文本" } },
+
+            { .display_name = L"Aω2MN3", .id = "a-omega2-mn-3",
+              .expand = nullptr, .suffix = &notation::Aw2MN3Notation::suffix,
+              .definition_resource_id = IDR_DEF_MN,
+              .expand_text = &notation::Aw2MN3Notation::expand_text,
+              .expand_text_alter = &notation::Aw2MN3Notation::expand_text_alter,
+              .tags = { L"MN", L"文本" } },
+
+            { .display_name = L"wAω2MN3", .id = "weak-a-omega2-mn-3",
+              .expand = nullptr, .suffix = &notation::WAw2MN3Notation::suffix,
+              .definition_resource_id = IDR_DEF_MN,
+              .expand_text = &notation::WAw2MN3Notation::expand_text,
+              .expand_text_alter = &notation::WAw2MN3Notation::expand_text_alter,
+              .tags = { L"MN", L"文本" } },
         };
         return table;
     }

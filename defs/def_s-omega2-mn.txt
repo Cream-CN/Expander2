@@ -1,0 +1,35 @@
+Sω2MN
+
+Sω2MN（TS id "S-omega2-MN"，逻辑移植自 notation-explorer 的 src/notations/MN/SMN/S_omega2_MN.ts，家族 category-smile-mn，credit.n_mn；C++ 实现见 Header/notation/s_omega2_mn.hpp）属于 Smile's MN（SMN）系列，与 SAω2MN、Sω^ωMN 共用同一套山形骨架，区别在于分隔符比较、拉伸数据与前驱分支的具体规则。
+
+表达式结构：一个表达式 Expr 是若干列 Column 的序列；每列是若干条目 Entry=(value, sep) 的序列；value 是从 1 起的列标引用（决定父位置），sep 是整数向量（解析时去掉尾部 0 归一）；竖向 Vertical 是 sep 的序列。空表达式表示 0；另外用 ∞ 标志表示极限，显示为 "Limit"。
+
+显示：sep = (c0, c1) 时先显示 c1 个分号再显示 c0 个逗号；条目显示为分隔符加列标；每列包裹在一对括号中。解析接受带括号列与不带括号列，单独的 "0" 或紧跟分隔符、空格、括号的 "0" 表示空列；解析时若发现条目列标超出 0 到列数的范围，直接返回解析失败提示。
+
+比较规则：sep 按反字典序比较——长度不等时短者小，等长时从末元素向前逐位比较；竖向按字典序比较，元素相同则较长者大。
+
+竖向机制：按条目顺序做 vertical_increase 生成竖向表，vertical_increase(v, s) 从 v 末尾向前删除所有小于 s 的分隔符再追加 s。父位置 (pi, pj)：pi = value−1；pi=−1 时 pj=0，否则 pj = find_index_below(V[pi], V[i][j])，即在父列竖向表中二分查找第一个严格小于当前竖向的位置。
+
+极限与后继：空表达式表示 0；末列为空的表达式是后继表达式，展开就是删去末列；其余非空表达式为极限表达式。
+
+∞ 的基本列：Limit[n] 展开为空列后接单条目 (value=1, sep={n, 1})，即 Limit[1] = ()(;,1)，Limit[2] = ()(;,,1)，余类推。解析 "Limit"、"limit"、"LIMIT" 均得到 ∞ 标志。
+
+展开（参数 m≥1；FS 采用较短展开 shorter=true，FS_alter 采用较长展开 shorter=false）：本记号不做 fill_ghost；对极限表达式连续 m 次应用 extend；较短展开在最后删去末列，较长展开再做一次 subtract_1。
+
+extend（一次反射式扩展）：设 right 为末列列标、top 为末列最右上条目下标；计算竖向表 V0；求末列最右上条目的父位置 p=(Ri, Rj)；magma_indices 得岩浆检查表 MI0；stretch_data_list 得拉伸数据表 SD0；先调用 subtract_1(m0, V0, SD0[Rj]) 得到中间山形 m，重算末列竖向，取 MI0 的前 right 列部分继续计算 magma_indices 得 MI；offset = right−Ri；随后对列 Ri+1 到 right 依次调用 copy_column，把源列复制到列标加 offset 的新位置，拉伸竖向上限取 V0[right][top]。
+
+magma_indices（岩浆检查表）：对坏根列 Ri 右侧每一列的每个条目沿父链上溯：父列标 pi < Ri 则中断；pi == Ri 记录 min(pj, Rj)；否则转记父条目对应的检查值（父位置等于父列末尾时退到前一项，超出结果表则中断）。
+
+辅助函数 S(c, j, bound)：j 越上界则递归 S(c, j−1, bound)；j<0 返回空向量；若 c[j] 的 sep ≥ bound 返回空向量；否则 previous = S(c, j−1, bound)，返回当前 sep 与 previous 中较小者。其他辅助：sep_dimension(s) 为 s 前导 0 的个数；sep_is_one(s) 当且仅当 s 长度为 1 且首元素为 1；sep_increase(a, d) 把 a 补零到 d+1 位，第 d 位加 1，前 d 位置零。
+
+stretch_data_top（末项拉伸数据）：取末列最右上条目的分隔符 t。若 sep_dimension(t) > 0（t 含前导零、二阶及以上激活）：threshold = S(Ri 列, Rj−1, t)，stretch_to = S(末列, top−1, t)；当 stretch_to ≤ threshold 时，stretch_to = sep_increase(stretch_to, 0)，并置 force=true。否则：threshold 为 t 的副本、首元素减 1（t 为空则保持空向量），stretch_to = threshold，force=false；若 t 不是 sep_is_one，比较 vertical_increase(v_parent, stretch_to) 与末列倒数第二项竖向 v_bottom，前者更大时置 force=true（v_parent 取父列 Rj−1 处竖向，Rj=0 时为空竖向；v_bottom 在 top=0 时为空竖向）。
+
+stretch_data_list：对 j=0 到 Rj−1，先按末列岩浆检查值 MI[right] 推进 ref_j 使 MI[right][ref_j+1] ≤ j；threshold = S(Ri 列, j−1, m[Ri][j].sep)，stretch_to = S(末列, ref_j−1, m[Ri][j].sep)，force=false；末位数据取 stretch_data_top。
+
+subtract_1：删去末列末项；若 SD_top.force 为真，追加条目 Entry{Ri+1, SD_top.stretch_to}；随后把坏根列从 Rj 起的全部条目拼接到末列末尾。
+
+compute_stretch(sep, data)：若 sep ≤ threshold 保持不变；否则返回 sep_add(stretch_to, sep_sub(sep, threshold))。sep_add(a,b)：b 为空时返回 a；先把 a 补到 b 的长度，末位加上 b 的末位，前 b.size−1 位取 b 的对应位。sep_sub(a,b)：a 更长时返回 a，a 更短时返回空向量；否则找到最后一位不同的位置 d，若 d=0 或 a[d−1] < b[d−1] 返回空向量，否则把结果第 d−1 位减去 b[d−1]。
+
+copy_column：遍历源列条目；表外条目仅在 value ≥ Ri+1 时列标加 offset 后直接复制；表内条目新列标为 value+offset，mi 切换时按末列同 mi 的记录做行提升：current_mi == Rj，或下一项 mi 相同，则复制 mr[ref_j] 的分隔符；新分隔符若源竖向大于竖向上限 stretch_v_max 则保持原 sep，否则对该条目调用 compute_stretch，所用拉伸数据为 SD[current_mi]。
+
+记号极限：本移植未内建序数阶位结论；记号对应的序数极限以原始 TS 定义为准。

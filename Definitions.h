@@ -1,5 +1,5 @@
-﻿// GENERATED FILE —— 请勿手工编辑。由 tools/gen_definitions.py 从 defs/*.txt 生成。
-// 重新生成: python tools/gen_definitions.py
+﻿// GENERATED FILE —— 请勿手工编辑。由 build.ps1 的 Invoke-GenDefinitions 从 defs/*.txt 生成。
+// 重新生成: .\build.ps1 -Mode gen （或菜单 1 / 4 / 5）
 //
 // 记号定义文本以 UTF-8 原始字符串字面量直接编译进程序，完全绕过 rc.exe，
 // 从而避免 rc.exe 对 UTF-8 源文件的编码误读(首尾乱码)与 \n 不转义的问题。
@@ -16,12 +16,71 @@ constexpr std::string_view kDef_IDR_DEF_2PPS4 = R"DEFTXT(
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_BLP = R"DEFTXT(
+blp
+基本Laver图案（Basic Laver Pattern）是Renrui Qi（test_alpha0）在文献《Notes On Laver Table》（arXiv:2501.06733v4 [math.LO]）中提出的记号。
 
+我们称 3 元组 p = (s, l, r) 为基本 Laver 图（Basic Laver Pattern，或简称为 blp），如果对于某个整数 n ≥ 2（称为 p 的长度）有：
+
+1. s = (s₁, s₂, …, sₙ) 是一个序列，使得对于任意的 i，sᵢ 均为严格递增的自然数序列，|sᵢ| ≥ 3，并且 sᵢ 以 i, i+1 结尾。此外，s₁ = (0,1,2)，s₂ = (0,1,2,3)。sᵢ 称为 p 的第 i 行。我们用 sᵢ,₁ 表示 sᵢ 的第一个元素。
+
+2. l = (l₁, l₂, …, lₙ)，其中 lᵢ ∈ ω，2·lᵢ ≤ |sᵢ| ≤ 2·lᵢ + 2。若 2·lᵢ = |sᵢ|，则 lᵢ ≥ 3。lᵢ 称为 sᵢ 的步长。
+若 lᵢ > 1, |sᵢ| = 2·lᵢ + 1，则我们称 sᵢ 是恰当的。若 lᵢ > 1, |sᵢ| = 2·lᵢ + 2，则我们称 sᵢ 是长的。
+
+3. r 是一个映射，使得若 i ∈ dom(r)，则 sᵢ 是长的，r(i) < i，s_{r(i)} 是恰当的，并且 sᵢ 与 s_{r(i)} 在各自步长上的前 lᵢ + 1 个元素相互重合。
+
+令 m 为正整数，θ₁ < θ₂ < θ₃ < λ。我们称 θ₁, θ₂, θ₃ 是 m-线性的，如果存在 θ₂ = θ₀' < … < θₘ' = θ₃
+使得对于任意的 0 ≤ i < m，都存在 jᵢ ∈ Iter(j) 使得 jᵢ : θ₁ ↦ θᵢ' ↦ θ_{i+1}'。
+
+如果 j₀, j₁, …, jₘ 见证 θ₁, θ₂, θ₃ 是 m + 1-线性的，则 j₁, j₂, …, j_{m−2}, jₘ(jₘ)(j_{m−1}) 见证 θ₁, θ₂, θ₃ 是 m-线性的。
+
+一个基本 Laver 系统（basic Laver system，简称为 bls）包含一个 blp p、一个正整数 m、一个序数序列 θ₀', …, θₘ'、一个序数序列 θ₀, θ₁, …, θ_{n+1}、嵌入 j₁, …, jₙ ∈ Iter(j)，使得：
+
+1. θ₀', …, θₘ' 见证 θ₀, θ₁, θ₂ 是 m-线性的，
+2. 对于任意 i ≥ 1 有 crit(jᵢ) = θ_{s_{i,1}}，且 jᵢ : (lᵢ)θ_{s_{i,1}} ↦ … ↦ θ_{s_{i,|sᵢ|}}。
+3. 若 r(i) = i'，则 jᵢ ^{θ_{s_{i',-1}}} ≡ j_{i'}。
+
+若 q 为 bls，则我们称 q 是 q.p 的实现，此时它继承了从 q.p 到 q 的每个属性。例如，q.l₂ = q.p.l₂。如果 blp 或 bls 在上下文中是清楚的，则我们可以省略 p. 部分，使用 l₂ 来表示 p.l₂。
+注意到通过对 n 进行归纳，对于任何 bls q 以及 0 ≤ i < j ≤ q.n+1，都有 l ∈ Iter(j) 使得 l : (1)q.θᵢ ↦ q.θⱼ。
+现在我们定义 blp 的复制操作。
+
+令 p 为 blp，p.n ≥ 3。我们定义 p.del 为 p 删除掉最后一行。如果 q 为 bls 且 q.n ≥ 3，则 q.del 定义为从 q 中删除 q.θ_{q.n+1}、q.j_{q.n} 和 q.p 的最后一行。当 n' < n 时，q|n' 定义为对 q 应用 n − n' 次 .del。
+
+令 p 为 blp。我们定义 p 的可复制性，以及当 p 可复制时的 blp copy(p) 如下。如果 n = 2，则 p 不可复制。
+
+令 a = s_{n,-l_n-2}，b = s_{n,-l_n-1} − 1。如果 a = 0，则 p 不可复制。如果对于某些 i，a ≤ i ≤ b，sᵢ 有一个元素 x，使得 s_{n,1} < x < a，并且 x 不是 sₙ 的元素，则 p 不可复制。
+
+我们定义 q = p.Copied 为：令 q|n−1 = p.del，且 q.n = n + b − a，q.l_{n+i} = l_{a+i}。q.s_{n+i} = m''(s_{a+i})，其中对于 k < s_{n,1}，m(k) = k；对于某个 i，若 k ≤ a，则 m(k) = s_{n,i+l_n}；若 k > a，则 m(k) = n − a + k。否则 m 未定义，且在计算 p.Copied 时，若对未定义的输入调用 m，则 p 不可复制。若 r(i) = i'，a ≤ i < b，则当 i' < s_{n,1} 时，令 q.r(i + n − a) = i + n − a，当 i' ≥ a 时，令 q.r(i + n − a) = i' + n − a。
+
+若 q 是 bls，且 q.p 是可复制的，则我们定义 q.Copied 为唯一的 bls，并且 q.Copied.p = q.p.Copied，并且 q.Copied 的嵌入序列为 j₁, j₂, …, j_{n−1}, jₙ(jₐ), jₙ(j_{a+1}), …, jₙ(j_{b−1})，其中 a,b 如前所述，并且 m 线性的见证保持不变。注意最后一个嵌入 jₙ(j_{b−1}) 为 q.j_{−1}(q.j_{b−1})。
+
+对于一个 blp p，若 sₙ 的前三个元素为 0,1,2，且 lₙ = 3，且 |sₙ| = 6，则我们称 p 为极限类型；若 sₙ 的前三个元素为 0,1,2，且 lₙ = 2，且 |sₙ| = 5，则称 p 为后继类型；若 p.n > 2，且 p 既不是极限类型也不是后继类型，则称 p 为暂时类型。
+
+当 m 为正整数，p 为极限类型或后继类型时，我们定义 p.E(m) 如下。令 a = s_{n,-3}，我们取 p.E(0) = p.del，且 p.E'(k) 是唯一的 blp，满足 p.E'(k).del = p.E(k)，p.E'(k).s_{-1,1} = a，p.E'(k).l_{-1} = 1，p.E(k+1) = p.E(k).Copied，其中 k = 1,2,3,…。
+
+若 q 为 bls，则我们取 q.E 使得 q.E.p = q.p.E(m)，并且通过假设 m 线性的见证嵌入为 j₁',…,jₘ'，我们将关于 p.E'(k) 的 bls 的 j_{−1} 取为 jₙ(j_k')。
+注意到 q.E.j_{−1} = q.j_{−1}(q.j₁')(q.E(m − 1).j_{−1})，以及 crit(q.j_{−1}(q.j₁')) = q.θ_{s_{-1,-3}} < q.θ_{−1}。
+现在我们定义 blp 中恰当行的完成操作。
+
+令 sᵢ 为 p 的恰当行，S 为严格在 s_{i,l_i} 与 s_{i,l_i+1} 之间的整数构成的集合。令 T ⊆ S，T = {t₁ < … < t_u}。
+
+我们定义 q = comp(p,i,T) 如下：q.n = n + u，并且对于任意的 i' < i 都有 q.s_{i'} = s_{i'}, q.l_{i'} = l_{i'}。对于任意的 i ≤ i' ≤ n，若 i' > i 且不满足 r(i') = i，则 q.s_{i'+u} = m''(s_{i'}), q.l_{i'+u} = l_{i'}+u，其中 m(x) = x, x ≤ i, m(x) = x+u, x > i，否则 q.s_{i'+u} 定义为将 i+1,i+2,…,i+u 和 T 插入 m''(s_{i'})，q.l_{i'+u} = l_{i'} + u。对于任意 x,y 且 r(x) = y，令 q.r(m(x)) = m(y)。对于任意的 0 < i ≤ u，q.s_{i−1+i'} 定义为将 t₁,t₂,…,t_{i'},i+1,i+2,…,i+i' 插入 sᵢ。
+
+我们定义 fullcomp(p,i) = comp(p,i,T)，其中 T = {x₁,x₂,…,x_{k−1}}，x₀ = i，x_l = s_{x_{l−1},-3}，x_{k−1} > s_{i,-3} ≥ x_k。
+
+注意到若 T = ∅，则 comp(p,i,T) = p。
+
+对于 bls q，若 sᵢ 为 p 的恰当行，则我们令 q' = comp(q,i,T) 为唯一的 bls，使得 q'.p = comp(p,i,T)，
+q'.j_i = q'.j_{i+1} = … = q'.j_{i+|T|}，并且 m-线性保持不变。
+
+若 p 是可复制的，m > 0 为整数，则我们通过假设 i₁ < i₂ < … < i_u 为 p.Copied.r 的值域，并且对 p.Copied
+依次执行 fullcomp(−,i_v) 来定义 p.M，其中 v = u, u − 1, …, 1。类似地，如果 q 是 bls，并且 q.p 是可复制
+的，则我们以同样的方式通过 q.Copied 定义 q.M。我们有 q.M.p = q.p.M，并且 q.M.j_{−1} = q.Copied.j_{−1}。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_BMS_V1 = R"DEFTXT(
 BMS v1.0（Bashicu Matrix System, Version 1）
 
+输入格式：BMS 文本，如 (0,0)(1,1)(2,2) 或 (0,0)(1,1)[3]。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_BMS_V2 = R"DEFTXT(
@@ -67,19 +126,33 @@ BMS v3.2（Version 3.2）
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_BMS_V33 = R"DEFTXT(
-BMS v3.3（Version 3.3）
-
-输入格式同 v1.0。
+BMS v3.3
+BM3.3被认为是比较理想的IBMS(Idealized BMS, IBMS)，它的提升次数被大幅削弱了
+我们令 t 为末列中最后一个非零元素的行指标。在 BM3.3 和 BM4 之中，如果末列中 t 行元素的祖先项经过坏根，
+那么对于坏部中所有的 t − 1 行元素来说，提升矩阵的对应项均为 1，
+这一点上两个版本的 BMS 是相同的。
+但是如果末列中 t 行元素的祖先项不经过坏根，那么二者的规则就会产生区别。
+对于 BM4 来说，当且仅当其父项提升矩阵的取值为 1 ，且父项是坏根或位于 BM4 中的坏根的右侧时，该项提升矩阵的取值为 1。
+但在BM3.3 中，当且仅当其父项提升矩阵的取值为 1 ，且父项位于坏根的右侧时，该项提升矩阵的取值为 1。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_BMS_V4 = R"DEFTXT(
-BMS v4.0（Version 4.0，当前默认）
-
-输入格式同 v1.0。
+BMS v4.0
+(1) 第一行元素的父项为从该元素起，在该元素左边且小于该元素的第一个项。
+(2) 元素的祖先项为元素的父项、父项的父项等元素。
+(3) 其余行元素的父项为从该元素起，在该元素左边，小于该元素，且其正上方的项是该元素正上方的项的祖先项的第一个项。
+(4) 坏根为最后一列中从下往上数的第一个非零项的父项所在的列。
+(5) 坏部为坏根和末列之间的部分，包含坏根，但是不包含末列。
+(6) 好部为坏根之前的部分，不包含坏根。
+(7) 阶差向量为末列和坏根的差值，但是其最后一项始终为零。特别地，如果末列中的第 i + 1 行元素为零，则阶差向量的第 i 行元素也为零。
+展开：
+(1) 空矩阵所对应的序数为 0，即 (∅) = 0。
+(2) 如果 BMS 的最后一列全为零，则它所对应的序数为删去最后一列之后余下部分所对应的序数 +1。
+(3) 否则保留好部的所有内容不动，将坏部不断复制加在好部后面，每复制一次就将坏部加
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_DEN1 = R"DEFTXT(
-
+DEN1（Defective embedding notation）。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_EMPTY = R"DEFTXT(
@@ -89,7 +162,7 @@ constexpr std::string_view kDef_IDR_DEF_EMPTY = R"DEFTXT(
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_EPSILON_Y = R"DEFTXT(
-
+ε-Y
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_EWPPS4 = R"DEFTXT(
@@ -191,15 +264,21 @@ A_{r₊t} := sort ( Aᵣᵒˡᵈ ∪ s ∪ {r + 1, …, r + t} ), l_{r₊t} :=
 iblp的定义目前还有些问题，但是其在MHO下的停机是公认证实的。
 )DEFTXT";
 
+constexpr std::string_view kDef_IDR_DEF_MN = R"DEFTXT(
+MN Notations
+包含家族：
+- e0MN / strong e0MN / ωMN / PCF's ωMN / TωMN：ε0 之上构造的 MN 基础系列；
+- 1MN / 2MN / 3MN（nMN 系列）：以 n 为幂基的 MN 系列；
+- Sω2MN / SAω2MN / Sω^ωMN：S 系列 MN 型记号；
+- S1DBMS / S2DBMS / SωDBMS v1/v2/v3 / Sω+1DBMS / Sω2DBMS / Sω^2DBMS：
+  S 系列 DBMS 型记号；
+- UP1MN / UP2MN v1A / v1B / v1B+：UP 系列 MN 型记号；
+- UP1DBMS / UP2DBMS v1 / v1B+ / v1C / v2：UP 系列 DBMS 型记号；
+- Aω2MN2 / Aω2MN3 / wAω2MN2 / wAω2MN3：Aw2MN 系列。
+)DEFTXT";
+
 constexpr std::string_view kDef_IDR_DEF_MRSS121 = R"DEFTXT(
 MrSS1.2.1（山脉结构序列）
-
-本版本只利用 1 层山脉结构。
-合法表达式形如 S = a1, a2, a3, ...，其中 a1 = 1，
-an 为 MrSS 表达式或有限非零序数。
-
-支持嵌套写法，例如：
-  1,(1,2),(1,2,3)
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_OMEGA_Y_MEDIUM = R"DEFTXT(
@@ -297,17 +376,15 @@ Parented Predecessor Sequence 4
 其他项展开：对任意的 i>y-L，如果第 i 项的值大于等于 x，那么第 i+L 项的值等于第 i 项的值 +L，否则第 i+L 项的值等于第 i 项的值
 基本列 [n] 为展开到第 y+nL-1 项
 
-PPS4并没有PPS1那样果糕，它的极限是z0
+PPS4治好了无穷降链的问题，但是其地府段的特色减弱，并且极限只有ζ0
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_SPPS4 = R"DEFTXT(
 Second PPS4
-
-PPS4 的第二型变体。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_TON_DR = R"DEFTXT(
-Degrees of Reflection（TON_DoR）
+Degrees of Reflection（TON_DoR）。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_TON_DRC = R"DEFTXT(
@@ -320,7 +397,6 @@ Degrees of Reflection with Passthrough（TON_DRP）
 
 constexpr std::string_view kDef_IDR_DEF_TON_DRPC = R"DEFTXT(
 Degrees of Reflection with Passthrough (reflection configuration)（TON_DRPC）
-
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_TON_I = R"DEFTXT(
@@ -333,10 +409,11 @@ Iteration of n-built from below（TON_IBP）
 
 constexpr std::string_view kDef_IDR_DEF_TON_M = R"DEFTXT(
 TON（Taranovsky 序数记号，主家族）
+最正宗的TON
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_TON_MC = R"DEFTXT(
-TON（reflection configuration）without passthrough（TON_MC）
+TON（reflection configuration）without passthrough
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_TON_MPC = R"DEFTXT(
@@ -350,7 +427,10 @@ PPS4 的第三型变体。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_UPMS = R"DEFTXT(
-UPMS
+UPMS（User-defined Primitive Matrix System）
+
+输入格式：省略尾随零的矩阵文本，例如 (0)(1)(2,1)
+或显式补零的 (0,0)(1,0)(2,1)。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_WPPS4 = R"DEFTXT(
@@ -378,6 +458,7 @@ constexpr Entry kTable[] = {
     { IDR_DEF_EPSILON_Y, kDef_IDR_DEF_EPSILON_Y },
     { IDR_DEF_EWPPS4, kDef_IDR_DEF_EWPPS4 },
     { IDR_DEF_IBLP, kDef_IDR_DEF_IBLP },
+    { IDR_DEF_MN, kDef_IDR_DEF_MN },
     { IDR_DEF_MRSS121, kDef_IDR_DEF_MRSS121 },
     { IDR_DEF_OMEGA_Y_MEDIUM, kDef_IDR_DEF_OMEGA_Y_MEDIUM },
     { IDR_DEF_OMEGA_Y_SEQUENCE, kDef_IDR_DEF_OMEGA_Y_SEQUENCE },
