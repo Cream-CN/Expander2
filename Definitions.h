@@ -343,6 +343,25 @@ BSM（Bashicu Sudden Matrix，Bashicu 突变矩阵系统）
 并且仅对相对根“上升”的行施加增量。
 )DEFTXT";
 
+constexpr std::string_view kDef_IDR_DEF_BTBM = R"DEFTXT(
+BTBM（Bubby3's Transfinite BMS，Bubby3 超限巴斯丘矩阵，又称 BTBMS）
+
+分层嵌套的树形矩阵。元素写成“数值”或“数值^高度”，高度本身又是一个完整的
+（可多层嵌套的）BTBM 矩阵；数值按 1 起显示（最小为 1），空列写成 (0)，列用
+圆括号、列内元素用逗号，极限写 Limit。末元素的高度嵌套即表达式的“下一层”。
+
+基本列：Limit 的第 n 个基本列是长度为 n+1 的纯嵌套塔：
+  n=0：(0)
+  n=1：(0)(1)
+  n=2：(0)(1^(2))
+  n=3：(0)(1^(2^(3)))，依此类推。
+
+展开：沿各层向下定位尾层（tail layer）、尾列下标 t 与根 r 及其所在层；命中
+“特殊（special）”形状时在对应层复制末项；否则从根列起，用“整体替换提升”
+（ascend_replace）按 term 逐层重建末段——把值不小于根 r 的项统一加上与 (t-r)
+成比例的偏移，并在末层插入新尾列。后继型（末列为空）直接删去末列。
+)DEFTXT";
+
 constexpr std::string_view kDef_IDR_DEF_CMS = R"DEFTXT(
 CMS（Crane Matrix System，Crane 矩阵系统）
 
@@ -1580,6 +1599,7 @@ constexpr Entry kTable[] = {
     { IDR_DEF_BMS_V33, kDef_IDR_DEF_BMS_V33 },
     { IDR_DEF_BMS_V4, kDef_IDR_DEF_BMS_V4 },
     { IDR_DEF_BSM, kDef_IDR_DEF_BSM },
+    { IDR_DEF_BTBM, kDef_IDR_DEF_BTBM },
     { IDR_DEF_CMS, kDef_IDR_DEF_CMS },
     { IDR_DEF_DEN1, kDef_IDR_DEF_DEN1 },
     { IDR_DEF_DSM, kDef_IDR_DEF_DSM },

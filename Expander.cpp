@@ -30,6 +30,7 @@
 #include "Header/notation/lpms.hpp"
 #include "Header/notation/tbm.hpp"
 #include "Header/notation/tupms.hpp"
+#include "Header/notation/btbm.hpp"
 #include "Header/notation/gy.hpp"
 #include "Header/notation/xy-v1.hpp"
 #include "Header/notation/xy-v2.hpp"
@@ -571,6 +572,11 @@ namespace {
               .definition_resource_id = IDR_DEF_TUPMS,
               .expand_text = &notation::TUPMSNotation::expand_text,
               .tags = { L"TUPMS", L"BM-like", L"树形矩阵", L"文本" } },
+            { .display_name = L"BTBM Bubby3 超限巴斯丘矩阵", .id = "btbm",
+              .expand = nullptr, .suffix = &notation::BTBMNotation::suffix,
+              .definition_resource_id = IDR_DEF_BTBM,
+              .expand_text = &notation::BTBMNotation::expand_text,
+              .tags = { L"BTBM", L"BM-like", L"分层树形矩阵", L"文本" } },
 
             { .display_name = L"G-Y", .id = "g-y",
               .expand = &notation::GYNotation::expand,
