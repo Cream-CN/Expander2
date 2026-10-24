@@ -1300,6 +1300,23 @@ subtract1 版本3（与 Aω2MN3 相同，区别于版本2）：先删去末列�
 记号极限：与普通版共用 infinity_fs，基本列相同；"w"（弱）体现在拉伸时保留高位条目的原分隔符。本记号达到的极限序数以原始 TS 定义为准。
 )DEFTXT";
 
+constexpr std::string_view kDef_IDR_DEF_WMM = R"DEFTXT(
+wMM（Weak Mutant Matrix，弱突变矩阵系统）
+
+输入格式：与 BMS 相同的矩阵文本，列为 (v0,v1,...)，省略尾随零，例如 (0,0)(1,1)(2,2)(3,2)。
+记号极限输入 Limit，其第 n 个基本列为 (0)(1,1,...,1)。
+最后一列全为零时为后继型，删去最后一列。
+
+展开规则：每个单元格除数值外还对应一个“vertical 序列”（先比序列长度，
+再从高位到低位逐项比较）；父项由数值恰好小 1 且 vertical 不更大的祖先
+确定。展开时沿父链收集根的位置，把末列数值减 1 并覆写成根列后缀，再按
+根宽与根高逐段复制坏部，通过 reference 行号映射为每列重建数值。
+
+提供两个展开：
+- FS（shorter）：在核心结果上再删去最后一列。
+- FS_alter：保留核心结果的全部列。
+)DEFTXT";
+
 constexpr std::string_view kDef_IDR_DEF_WPPS4 = R"DEFTXT(
 Weak PPS4
 
@@ -1383,6 +1400,7 @@ constexpr Entry kTable[] = {
     { IDR_DEF_UPMS, kDef_IDR_DEF_UPMS },
     { IDR_DEF_WEAK_A_OMEGA2_MN_2, kDef_IDR_DEF_WEAK_A_OMEGA2_MN_2 },
     { IDR_DEF_WEAK_A_OMEGA2_MN_3, kDef_IDR_DEF_WEAK_A_OMEGA2_MN_3 },
+    { IDR_DEF_WMM, kDef_IDR_DEF_WMM },
     { IDR_DEF_WPPS4, kDef_IDR_DEF_WPPS4 },
 };
 

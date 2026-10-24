@@ -25,6 +25,7 @@
 #include "Header/notation/cms.hpp"
 #include "Header/notation/dsm.hpp"
 #include "Header/notation/blm.hpp"
+#include "Header/notation/wmm.hpp"
 #include "Header/notation/gy.hpp"
 #include "Header/notation/xy-v1.hpp"
 #include "Header/notation/xy-v2.hpp"
@@ -458,6 +459,13 @@ namespace {
               .definition_resource_id = IDR_DEF_BLM,
               .expand_text = &notation::BLMNotation::expand_text,
               .tags = { L"BLM", L"BM-like", L"矩阵", L"文本" } },
+
+            { .display_name = L"wMM", .id = "wmm",
+              .expand = nullptr, .suffix = &notation::WMMNotation::suffix,
+              .definition_resource_id = IDR_DEF_WMM,
+              .expand_text = &notation::WMMNotation::expand_text,
+              .expand_text_alter = &notation::WMMNotation::expand_text_alter,
+              .tags = { L"wMM", L"BM-like", L"矩阵", L"文本" } },
 
             { .display_name = L"G-Y", .id = "g-y",
               .expand = &notation::GYNotation::expand,
