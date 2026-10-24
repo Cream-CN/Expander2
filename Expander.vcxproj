@@ -184,6 +184,7 @@
 <ClInclude Include="Header\notation\omega_mn.hpp" />
 <ClInclude Include="Header\notation\t_omega_mn.hpp" />
 <ClInclude Include="Header\notation\aw2mn2.hpp" />
+<ClInclude Include="Header\notation\waw2mn2.hpp" />
     <ClInclude Include="Header\notation\tonshare.hpp" />
     <ClInclude Include="Header\notation\ton.hpp" />
     <ClInclude Include="Header\notation\ton_i.hpp" />
