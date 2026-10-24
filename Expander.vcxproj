@@ -200,6 +200,7 @@
 <ClInclude Include="Header\notation\s_omega_dbms_v2.hpp" />
 <ClInclude Include="Header\notation\s_omega_dbms_v3.hpp" />
 <ClInclude Include="Header\notation\s_omega2_dbms.hpp" />
+<ClInclude Include="Header\notation\s_omega_square_dbms.hpp" />
     <ClInclude Include="Header\notation\tonshare.hpp" />
     <ClInclude Include="Header\notation\ton.hpp" />
     <ClInclude Include="Header\notation\ton_i.hpp" />
