@@ -62,6 +62,7 @@ FILENAME_TO_ID = {
     "def_ton-ibp":          "IDR_DEF_TON_IBP",
     "def_ton-mc":           "IDR_DEF_TON_MC",
     "def_ton-mpc":          "IDR_DEF_TON_MPC",
+    "def_mn":               "IDR_DEF_MN",
 }
 
 DELIM = "DEFTXT"  # 原始字符串字面量分隔符，须避开正文里的 ')'+DELIM+'"'

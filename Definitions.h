@@ -16,12 +16,17 @@ constexpr std::string_view kDef_IDR_DEF_2PPS4 = R"DEFTXT(
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_BLP = R"DEFTXT(
-
+blp（即 DEN2 / IBLP）
+输入格式：行序列，每行形如 (条目,条目,...)步数，条目可用 * 前缀表示标记，例如
+(1,0)1(2,1,0)1(*3,2,1,0)2
+记号极限输入 Limit。
+逻辑移植自 hypcos 的 notation-explorer（src/notations/DEN/DEN2.ts）。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_BMS_V1 = R"DEFTXT(
 BMS v1.0（Bashicu Matrix System, Version 1）
 
+输入格式：BMS 文本，如 (0,0)(1,1)(2,2) 或 (0,0)(1,1)[3]。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_BMS_V2 = R"DEFTXT(
@@ -79,7 +84,12 @@ BMS v4.0（Version 4.0，当前默认）
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_DEN1 = R"DEFTXT(
-
+DEN1（Defective embedding notation）
+输入格式：主体行序列与父标号列表，用分号分隔，例如
+(1,0)1(2,1,0)1;0
+每一行形如 (值,值,...)步数，分号后是父标号列表（可为空）。
+记号极限输入 Limit。
+逻辑移植自 hypcos 的 notation-explorer（src/notations/DEN/DEN.ts）。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_EMPTY = R"DEFTXT(
@@ -89,7 +99,19 @@ constexpr std::string_view kDef_IDR_DEF_EMPTY = R"DEFTXT(
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_EPSILON_Y = R"DEFTXT(
+ε-Y（1-Y）
 
+ε-Y 即 1-Y 记号，等价于维度序列为 {1} 的 ω-Y 变体。
+
+极限表达式：
+  1,2,3,4,5,...
+
+展开规则（1-Y / 维度 1）：
+  与 ω-Y 的山脉图机制相同，但所有阶差分量的维度固定为 1。
+  对末列最上方的 1 求根元素，将其作用区域内的轮廓边、填充边、
+  非轮廓边按 ω-Y 的规则复制，再自上而下计算各元素取值。
+  由于维度被限制为 1，展开不会引入新的高阶分量，
+  因此 ε-Y 强于 0-Y，是 1-Y 的标准实现。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_EWPPS4 = R"DEFTXT(
@@ -189,6 +211,27 @@ A_{r₊t} := sort ( Aᵣᵒˡᵈ ∪ s ∪ {r + 1, …, r + t} ), l_{r₊t} :=
 
 （补全主循环（用于 E (A,m)））。令初始 r := n（n 为原始 A 的行数）。当 r 不超过当前 B 的行数时循环：先对行 r 执行标记补全，再执行原生补全得到 t，然后更新 r := r + t + 1。当 r 越界时补全结束，丢弃 Rec，所得 B 即为 E (A,m)。
 iblp的定义目前还有些问题，但是其在MHO下的停机是公认证实的。
+)DEFTXT";
+
+constexpr std::string_view kDef_IDR_DEF_MN = R"DEFTXT(
+MN 系列记号（源自 hypcos 的 Notation Explorer）
+=================================================
+
+本组记号均为大数记号（googology）系统中的展开器实现。输入为对应记号的
+标准表达式文本，输出为其第 n 项基本列展开（Fundamental Sequence）。
+
+包含家族：
+- e0MN / strong e0MN / ωMN / PCF's ωMN / TωMN：ε0 之上构造的 MN 基础系列；
+- 1MN / 2MN / 3MN（nMN 系列）：以 n 为幂基的 MN 系列；
+- Sω2MN / SAω2MN / Sω^ωMN：S 系列 MN 型记号；
+- S1DBMS / S2DBMS / SωDBMS v1/v2/v3 / Sω+1DBMS / Sω2DBMS / Sω^2DBMS：
+  S 系列 DBMS 型记号；
+- UP1MN / UP2MN v1A / v1B / v1B+：UP 系列 MN 型记号；
+- UP1DBMS / UP2DBMS v1 / v1B+ / v1C / v2：UP 系列 DBMS 型记号；
+- Aω2MN2 / Aω2MN3 / wAω2MN2 / wAω2MN3：Aw2MN 系列。
+
+用法：在输入框内输入该记号的表达式，选择展开次数（指数），点击展开。
+极限序数输入 "Limit"。各记号的具体语法见各自参考实现（Notation Explorer）。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_MRSS121 = R"DEFTXT(
@@ -296,8 +339,6 @@ Parented Predecessor Sequence 4
 > 强展开：在第 b 列和第 x 列 (都不含) 之间找到最右侧的值小于等于 b 的项，将末项的值换为这个项的列标；如果找不到，则等同弱展开
 其他项展开：对任意的 i>y-L，如果第 i 项的值大于等于 x，那么第 i+L 项的值等于第 i 项的值 +L，否则第 i+L 项的值等于第 i 项的值
 基本列 [n] 为展开到第 y+nL-1 项
-
-PPS4并没有PPS1那样果糕，它的极限是z0
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_SPPS4 = R"DEFTXT(
@@ -308,39 +349,73 @@ PPS4 的第二型变体。
 
 constexpr std::string_view kDef_IDR_DEF_TON_DR = R"DEFTXT(
 Degrees of Reflection（TON_DoR）
+Taranovsky 序数记号的“反射度”变体。noraise 格式。
+输入格式：后缀式文本。叶子记号："0" 表示 -1，"Ω" 表示 0，"Limit" 表示极限；两个叶子或子树并排后再跟一个 "C" 表示组合。
+记号极限输入 Limit（等价于反射极限项）。
+逻辑移植自 ne-rewritten（src/notations/TON/TON_DoR.ts）。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_TON_DRC = R"DEFTXT(
 Degrees of Reflection (reflection configuration)（TON_DRC）
+Taranovsky 序数记号的“反射度”变体，反射配置。noraise 格式。
+输入格式：后缀式文本。叶子记号："0" 表示 -1，"Ω" 表示 0，"Limit" 表示极限；两个叶子或子树并排后再跟一个 "C" 表示组合。
+记号极限输入 Limit。
+逻辑移植自 ne-rewritten（src/notations/TON/TON_DRC.ts）。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_TON_DRP = R"DEFTXT(
 Degrees of Reflection with Passthrough（TON_DRP）
+Taranovsky 序数记号的“反射度”变体，含 passthrough。noraise 格式。
+输入格式：后缀式文本。叶子记号："0" 表示 -1，"Ω" 表示 0，"Limit" 表示极限；两个叶子或子树并排后再跟一个 "C" 表示组合。
+记号极限输入 Limit。
+逻辑移植自 ne-rewritten（src/notations/TON/TON_DRP.ts）。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_TON_DRPC = R"DEFTXT(
 Degrees of Reflection with Passthrough (reflection configuration)（TON_DRPC）
-
+Taranovsky 序数记号的“反射度”变体，含 passthrough，反射配置。noraise 格式。
+输入格式：后缀式文本。叶子记号："0" 表示 -1，"Ω" 表示 0，"Limit" 表示极限；两个叶子或子树并排后再跟一个 "C" 表示组合。
+记号极限输入 Limit。
+逻辑移植自 ne-rewritten（src/notations/TON/TON_DRPC.ts）。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_TON_I = R"DEFTXT(
 Iteration of n-built from below (no passthrough)（TON_I）
+Taranovsky 序数记号的“n-built from below 迭代”变体，不含 passthrough。noraise 格式。
+输入格式：后缀式文本。叶子记号："0" 表示 -1，"Ω" 表示 0，"Limit" 表示极限；两个叶子或子树并排后再跟一个 "C" 表示组合，例如 0ΩC。
+记号极限输入 Limit（等价于迭代极限项）。
+逻辑移植自 ne-rewritten（src/notations/TON/TON_I.ts）。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_TON_IBP = R"DEFTXT(
 Iteration of n-built from below（TON_IBP）
+Taranovsky 序数记号的“n-built from below 迭代”变体（含 passthrough）。noraise 格式。
+输入格式：后缀式文本。叶子记号："0" 表示 -1，"Ω" 表示 0，"Limit" 表示极限；两个叶子或子树并排后再跟一个 "C" 表示组合。
+记号极限输入 Limit。
+逻辑移植自 ne-rewritten（src/notations/TON/TON_IBP.ts）。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_TON_M = R"DEFTXT(
 TON（Taranovsky 序数记号，主家族）
+输入格式：后缀式文本。叶子记号："0" 表示 -1，"Ω<n>" 表示非负序数（角括号定界，如 Ω<0>、Ω<2>），"Limit" 表示极限；两个叶子或子树并排后再跟一个 "C" 表示组合（l,r)ₙ，例如 Ω<0>0C 表示 Ω<0> 与 0 的组合。
+记号极限输入 Limit（等价于第 ω 个可数容许序数）。
+逻辑移植自 ne-rewritten（src/notations/TON/TON_main.ts）。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_TON_MC = R"DEFTXT(
 TON（reflection configuration）without passthrough（TON_MC）
+Taranovsky 序数记号的“反射配置”变体，不含 passthrough。主家族格式。
+输入格式：后缀式文本。叶子记号："0" 表示 -1，"Ω<n>" 表示非负序数（角括号定界），"Limit" 表示极限；两个叶子或子树并排后再跟一个 "C" 表示组合。
+记号极限输入 Limit。
+逻辑移植自 ne-rewritten（src/notations/TON/TON_MC.ts）。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_TON_MPC = R"DEFTXT(
 TON with passthrough (reflection configuration)（TON_MPC）
+Taranovsky 序数记号的“反射配置”变体，含 passthrough。主家族格式。
+输入格式：后缀式文本。叶子记号："0" 表示 -1，"Ω<n>" 表示非负序数（角括号定界），"Limit" 表示极限；两个叶子或子树并排后再跟一个 "C" 表示组合。
+记号极限输入 Limit。
+逻辑移植自 ne-rewritten（src/notations/TON/TON_MPC.ts）。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_TPPS4 = R"DEFTXT(
@@ -350,7 +425,10 @@ PPS4 的第三型变体。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_UPMS = R"DEFTXT(
-UPMS
+UPMS（User-defined Primitive Matrix System）
+
+输入格式：省略尾随零的矩阵文本，例如 (0)(1)(2,1)
+或显式补零的 (0,0)(1,0)(2,1)。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_WPPS4 = R"DEFTXT(
@@ -378,6 +456,7 @@ constexpr Entry kTable[] = {
     { IDR_DEF_EPSILON_Y, kDef_IDR_DEF_EPSILON_Y },
     { IDR_DEF_EWPPS4, kDef_IDR_DEF_EWPPS4 },
     { IDR_DEF_IBLP, kDef_IDR_DEF_IBLP },
+    { IDR_DEF_MN, kDef_IDR_DEF_MN },
     { IDR_DEF_MRSS121, kDef_IDR_DEF_MRSS121 },
     { IDR_DEF_OMEGA_Y_MEDIUM, kDef_IDR_DEF_OMEGA_Y_MEDIUM },
     { IDR_DEF_OMEGA_Y_SEQUENCE, kDef_IDR_DEF_OMEGA_Y_SEQUENCE },
