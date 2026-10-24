@@ -181,6 +181,7 @@
     <ClInclude Include="Header\notation\den1.hpp" />
     <ClInclude Include="Header\notation\blp.hpp" />
     <ClInclude Include="Header\notation\iblp.hpp" />
+<ClInclude Include="Header\notation\omega_mn.hpp" />
     <ClInclude Include="Header\notation\tonshare.hpp" />
     <ClInclude Include="Header\notation\ton.hpp" />
     <ClInclude Include="Header\notation\ton_i.hpp" />
