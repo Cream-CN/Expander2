@@ -28,6 +28,7 @@
 #include "Header/notation/wmm.hpp"
 #include "Header/notation/gms.hpp"
 #include "Header/notation/lpms.hpp"
+#include "Header/notation/tbm.hpp"
 #include "Header/notation/gy.hpp"
 #include "Header/notation/xy-v1.hpp"
 #include "Header/notation/xy-v2.hpp"
@@ -558,6 +559,12 @@ namespace {
               .definition_resource_id = IDR_DEF_LPTSS,
               .expand_text = &notation::LPTSSNotation::expand_text,
               .tags = { L"LPTSS", L"LPMS", L"BM-like", L"矩阵", L"文本" } },
+
+            { .display_name = L"TBM 超限巴斯丘矩阵", .id = "tbm",
+              .expand = nullptr, .suffix = &notation::TBMNotation::suffix,
+              .definition_resource_id = IDR_DEF_TBM,
+              .expand_text = &notation::TBMNotation::expand_text,
+              .tags = { L"TBM", L"BM-like", L"树形矩阵", L"文本" } },
 
             { .display_name = L"G-Y", .id = "g-y",
               .expand = &notation::GYNotation::expand,

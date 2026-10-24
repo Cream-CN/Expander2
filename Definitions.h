@@ -1222,6 +1222,24 @@ TωMN（TS 源：src/notations/MN/T_omega_MN.ts，家族 category-mn，credit hy
 记号极限：TωMN 的极限由递归嵌套的分隔符基本列承载，分隔符自身为极限时进入递归展开；记号最终上确界以原始 TS 定义为准。
 )DEFTXT";
 
+constexpr std::string_view kDef_IDR_DEF_TBM = R"DEFTXT(
+TBM（Transfinite Bashicu matrix，超限巴斯丘矩阵，又称 TBMS）
+
+树形矩阵记号。与平面巴斯丘矩阵不同，每个元素写成“数值^高度”，其中高度本身
+又是一个（可嵌套的）TBM 矩阵；高度为 1 时省略上标，只写数值。列用圆括号，
+列内元素用逗号，例如 (0)(1,1^ω)(2)。空列写成 ()，ω 也可用 w 代替，极限写 Limit。
+
+基本列：Limit 的第 n 个基本列为
+  n=0：()
+  n>0：()(1^<上一项>)
+即 ()、()(1)、()(1^ω)、()(1^()(1^ω))、……
+
+展开：末列为空是后继型，删去末列；末元素高度为 1（即上式中的后继）时按树形
+巴斯丘规则复制提升——计算各列的竖直序列、父列、阶差与提升阈值，从根列起按
+term 复制并加上阶差；末元素高度为更高极限时，先对该高度递归取第 term 个基本
+序列，按空列切成若干段，替换末元素的高度。
+)DEFTXT";
+
 constexpr std::string_view kDef_IDR_DEF_TON_DR = R"DEFTXT(
 Degrees of Reflection（TON_DoR）。
 )DEFTXT";
@@ -1595,6 +1613,7 @@ constexpr Entry kTable[] = {
     { IDR_DEF_SPPS4, kDef_IDR_DEF_SPPS4 },
     { IDR_DEF_STRONG_E0MN, kDef_IDR_DEF_STRONG_E0MN },
     { IDR_DEF_T_OMEGA_MN, kDef_IDR_DEF_T_OMEGA_MN },
+    { IDR_DEF_TBM, kDef_IDR_DEF_TBM },
     { IDR_DEF_TON_DR, kDef_IDR_DEF_TON_DR },
     { IDR_DEF_TON_DRC, kDef_IDR_DEF_TON_DRC },
     { IDR_DEF_TON_DRP, kDef_IDR_DEF_TON_DRP },

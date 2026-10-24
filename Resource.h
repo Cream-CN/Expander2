@@ -137,4 +137,6 @@
 #define IDR_DEF_LPMS                20097
 #define IDR_DEF_LPTSS               20098
 
+#define IDR_DEF_TBM                 20099
+
 
