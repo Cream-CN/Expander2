@@ -181,6 +181,19 @@ BHM（Bashicu Hyper Matrix，Bashicu 高阶矩阵系统）
 复制坏部指定项数。FS 少复制一段，FS_alter 的末段只复制根列一列。
 )DEFTXT";
 
+constexpr std::string_view kDef_IDR_DEF_BLM = R"DEFTXT(
+BLM（Bashicu Large Matrix，Bashicu 大矩阵系统）
+
+输入格式：与 BMS 相同的矩阵文本，列为 (v0,v1,...)，省略尾随零，例如 (0)(1,1)(2,2)(3,2)。
+记号极限输入 Limit，其第 n 个基本列为 (0)(1,1,...,1)。
+最后一列全为零时为后继型，删去最后一列。该记号只有 FS，没有 FS_alter。
+
+展开规则：BLM 的经典大函数式实现：自末列向上确定每一行的有效高度，
+逐候选根计算阶差向量 c，并维护一张根编号矩阵 b2（含其历史的共享传播语义）；
+确定最终坏根 d7 后，保留好部，将坏部连同根编号标记一起复制 a*d7 列，
+仅在对应根编号落在激活范围内的位置施加阶差；最后在顶行全零时裁去该尾行。
+)DEFTXT";
+
 constexpr std::string_view kDef_IDR_DEF_BLP = R"DEFTXT(
 blp
 基本Laver图案（Basic Laver Pattern）是Renrui Qi（test_alpha0）在文献《Notes On Laver Table》（arXiv:2501.06733v4 [math.LO]）中提出的记号。
@@ -1305,6 +1318,7 @@ constexpr Entry kTable[] = {
     { IDR_DEF_A_OMEGA2_MN_2, kDef_IDR_DEF_A_OMEGA2_MN_2 },
     { IDR_DEF_A_OMEGA2_MN_3, kDef_IDR_DEF_A_OMEGA2_MN_3 },
     { IDR_DEF_BHM, kDef_IDR_DEF_BHM },
+    { IDR_DEF_BLM, kDef_IDR_DEF_BLM },
     { IDR_DEF_BLP, kDef_IDR_DEF_BLP },
     { IDR_DEF_BMS_V1, kDef_IDR_DEF_BMS_V1 },
     { IDR_DEF_BMS_V2, kDef_IDR_DEF_BMS_V2 },

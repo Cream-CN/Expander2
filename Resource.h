@@ -115,5 +115,6 @@
 #define IDR_DEF_3BM_BHM             20077
 #define IDR_DEF_CMS                 20078
 #define IDR_DEF_DSM                 20079
+#define IDR_DEF_BLM                 20080
 
 
