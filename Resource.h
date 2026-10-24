@@ -76,5 +76,37 @@
 #define IDR_DEF_TON_MC			   20038
 #define IDR_DEF_TON_MPC			   20039
 #define IDR_DEF_MN				   20040
+#define IDR_DEF_E0MN                20041
+#define IDR_DEF_STRONG_E0MN         20042
+#define IDR_DEF_OMEGA_MN            20043
+#define IDR_DEF_PCF_OMEGA_MN        20044
+#define IDR_DEF_T_OMEGA_MN          20045
+#define IDR_DEF_1MN                 20046
+#define IDR_DEF_2MN                 20047
+#define IDR_DEF_3MN                 20048
+#define IDR_DEF_S_OMEGA2_MN         20049
+#define IDR_DEF_SA_OMEGA2_MN        20050
+#define IDR_DEF_S_OMEGA_POW_OMEGA_MN 20051
+#define IDR_DEF_UP1MN               20052
+#define IDR_DEF_UP2MN_V1A           20053
+#define IDR_DEF_UP2MN_V1B           20054
+#define IDR_DEF_UP2MN_V1B_PLUS      20055
+#define IDR_DEF_UP1DBMS             20056
+#define IDR_DEF_UP2DBMS_V1          20057
+#define IDR_DEF_UP2DBMS_V1B_PLUS    20058
+#define IDR_DEF_UP2DBMS_V1C         20059
+#define IDR_DEF_UP2DBMS_V2          20060
+#define IDR_DEF_S1DBMS              20061
+#define IDR_DEF_S2DBMS              20062
+#define IDR_DEF_S_OMEGA_DBMS        20063
+#define IDR_DEF_S_OMEGA_DBMS_V2     20064
+#define IDR_DEF_S_OMEGA_DBMS_V3     20065
+#define IDR_DEF_S_OMEGA_P1_DBMS     20066
+#define IDR_DEF_S_OMEGA2_DBMS       20067
+#define IDR_DEF_S_OMEGA_SQUARE_DBMS 20068
+#define IDR_DEF_A_OMEGA2_MN_2       20069
+#define IDR_DEF_WEAK_A_OMEGA2_MN_2  20070
+#define IDR_DEF_A_OMEGA2_MN_3       20071
+#define IDR_DEF_WEAK_A_OMEGA2_MN_3  20072
 
 
