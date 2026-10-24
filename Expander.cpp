@@ -21,6 +21,7 @@
 #include "Header/notation/BMSFamily.hpp"
 #include "Header/notation/upms.hpp"
 #include "Header/notation/bsm.hpp"
+#include "Header/notation/bhm.hpp"
 #include "Header/notation/gy.hpp"
 #include "Header/notation/xy-v1.hpp"
 #include "Header/notation/xy-v2.hpp"
@@ -407,6 +408,34 @@ namespace {
               .expand_text = &notation::BSMNotation::expand_text,
               .expand_text_alter = &notation::BSMNotation::expand_text,
               .tags = { L"BSM", L"BM-like", L"矩阵", L"文本" } },
+
+            { .display_name = L"BHM", .id = "bhm",
+              .expand = nullptr, .suffix = &notation::BHMNotation::suffix,
+              .definition_resource_id = IDR_DEF_BHM,
+              .expand_text = &notation::BHMNotation::expand_text,
+              .expand_text_alter = &notation::BHMNotation::expand_text_alter,
+              .tags = { L"BHM", L"BM-like", L"矩阵", L"文本" } },
+
+            { .display_name = L"1BM-BHM", .id = "1-bm-bhm",
+              .expand = nullptr, .suffix = &notation::BM_BHMNotation<1>::suffix,
+              .definition_resource_id = IDR_DEF_1BM_BHM,
+              .expand_text = &notation::BM_BHMNotation<1>::expand_text,
+              .expand_text_alter = &notation::BM_BHMNotation<1>::expand_text_alter,
+              .tags = { L"BM-BHM", L"BM-like", L"矩阵", L"文本" } },
+
+            { .display_name = L"2BM-BHM", .id = "2-bm-bhm",
+              .expand = nullptr, .suffix = &notation::BM_BHMNotation<2>::suffix,
+              .definition_resource_id = IDR_DEF_2BM_BHM,
+              .expand_text = &notation::BM_BHMNotation<2>::expand_text,
+              .expand_text_alter = &notation::BM_BHMNotation<2>::expand_text_alter,
+              .tags = { L"BM-BHM", L"BM-like", L"矩阵", L"文本" } },
+
+            { .display_name = L"3BM-BHM", .id = "3-bm-bhm",
+              .expand = nullptr, .suffix = &notation::BM_BHMNotation<3>::suffix,
+              .definition_resource_id = IDR_DEF_3BM_BHM,
+              .expand_text = &notation::BM_BHMNotation<3>::expand_text,
+              .expand_text_alter = &notation::BM_BHMNotation<3>::expand_text_alter,
+              .tags = { L"BM-BHM", L"BM-like", L"矩阵", L"文本" } },
 
             { .display_name = L"G-Y", .id = "g-y",
               .expand = &notation::GYNotation::expand,

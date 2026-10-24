@@ -210,6 +210,79 @@ namespace omegay::notation::bmlike {
     }
 
     // ------------------------------------------------------------------
+    // BM4（BMS v4）核心展开零件（BM.ts ascending_threshold / expand）
+    // BHM / nBM-BHM 等会直接复用；完整 BM4 记号本体见 BMSFamily.hpp。
+    // ------------------------------------------------------------------
+
+    // BM.ts ascending_threshold：给定根列 r 与顶行 j_max，返回每列的
+    // “上升高度” A[i]——第 i 列中首个不再相对 r 上升的行号。
+    [[nodiscard]] inline std::vector<int>
+        ascending_threshold(const std::vector<std::vector<int>>& P,
+                            int r, int j_max) {
+        const int nc = static_cast<int>(P.size());
+        std::vector<int> result(nc, 0);
+        result[r] = j_max;
+        for (int i = r + 1; i < nc; ++i) {
+            int found = j_max;
+            for (int j = 0; j < j_max; ++j) {
+                const int pij = parent_at(P, i, j);
+                if (pij < 0 || pij < r || j >= result[pij]) { found = j; break; }
+            }
+            result[i] = found;
+        }
+        return result;
+    }
+
+    // BM.ts expand（FS / FS_alter 共用的核心）。输入须为标准化矩形；
+    // shorter=true 为 FS（少一段），false 为 FS_alter（末段仅一列）。
+    // 调用方负责极限基本列与后继删列的外层分派，本函数只处理极限表达式。
+    [[nodiscard]] inline Matrix bm4_expand(const Matrix& m, int index,
+                                           bool shorter) {
+        const int nc = m.cols();
+        if (nc == 0) return m;
+        const int right = nc - 1;
+        int topmost = m.rows() - 1;
+        for (; topmost >= 0; --topmost)
+            if (m(topmost, right) > 0) break;
+        if (topmost < 0) return drop_last_column(m);  // 空末列（防御）
+
+        const auto P = parents(m);
+        const int r = parent_at(P, right, topmost);
+        if (r < 0) return drop_last_column(m);  // 防御：无父项
+        const std::vector<int> A = ascending_threshold(P, r, topmost);
+
+        std::vector<int> offset(static_cast<std::size_t>(topmost), 0);
+        for (int j = 0; j < topmost; ++j)
+            offset[j] = m(j, right) - at(m, j, r);
+
+        std::vector<std::vector<int>> cols;
+        for (int c = 0; c < right; ++c) cols.push_back(normalized_column(m, c));
+
+        for (int w = 1; w <= index + 1; ++w) {
+            if (shorter && w == index + 1) break;
+            for (int i = r; i < right; ++i) {
+                const int len = std::max(m.rows(), A[i]);
+                std::vector<int> col(static_cast<std::size_t>(len), 0);
+                for (int y = 0; y < len; ++y) {
+                    const int val = at(m, y, i);
+                    col[y] = y < A[i] ? val + offset[y] * w : val;
+                }
+                cols.push_back(std::move(col));
+                if (w == index + 1) break;  // 末段仅复制根列一列
+            }
+        }
+
+        int rows = 0;
+        for (const auto& col : cols)
+            rows = std::max(rows, static_cast<int>(col.size()));
+        Matrix out(rows, static_cast<int>(cols.size()));
+        for (int c = 0; c < static_cast<int>(cols.size()); ++c)
+            for (int y = 0; y < static_cast<int>(cols[c].size()); ++y)
+                out(y, c) = cols[c][y];
+        return normalize(out);
+    }
+
+    // ------------------------------------------------------------------
     // FS / FS_alter 公共分派（对应 notation_utils.ts 的
     // sequence_FS_variants / Y_FS_variants，去掉纯 UI 用的记忆化缓存）
     // ------------------------------------------------------------------

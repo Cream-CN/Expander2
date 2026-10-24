@@ -9,6 +9,16 @@
 
 namespace expander_defs {
 
+constexpr std::string_view kDef_IDR_DEF_1BM_BHM = R"DEFTXT(
+1BM-BHM（BMS(1 行) + BHM）
+
+nBM-BHM 系列（n=1）：在 BHM 的基础上，当末列顶行（最大非零行号）小于 n 时
+退化为普通 BMS(BM4) 展开，否则按 BHM 展开。
+
+输入格式：矩阵文本，列为 (v0,v1,...)，省略尾随零，例如 (0)(1,1)(2,1)。
+记号极限输入 Limit；最后一列全为零时为后继型，删去最后一列。
+)DEFTXT";
+
 constexpr std::string_view kDef_IDR_DEF_1MN = R"DEFTXT(
 1MN
 
@@ -37,6 +47,16 @@ copy_column（复制单列）：遍历源列每个条目；若该条目的岩浆
 记号极限：在本 C++ 移植中，模板参数 N 仅出现在 ∞ 基本列的分隔符 N−1 上，展开算法本身与 N 无关；记号对应的序数阶位以原始 TS 定义为准。
 )DEFTXT";
 
+constexpr std::string_view kDef_IDR_DEF_2BM_BHM = R"DEFTXT(
+2BM-BHM（BMS(2 行) + BHM）
+
+nBM-BHM 系列（n=2）：在 BHM 的基础上，当末列顶行（最大非零行号）小于 2 时
+退化为普通 BMS(BM4) 展开，否则按 BHM 展开。
+
+输入格式：矩阵文本，列为 (v0,v1,...)，省略尾随零，例如 (0)(1,1)(2,1)。
+记号极限输入 Limit；最后一列全为零时为后继型，删去最后一列。
+)DEFTXT";
+
 constexpr std::string_view kDef_IDR_DEF_2MN = R"DEFTXT(
 2MN
 
@@ -57,6 +77,16 @@ constexpr std::string_view kDef_IDR_DEF_2PPS4 = R"DEFTXT(
 2-pps4
 
 2-PPS4 。
+)DEFTXT";
+
+constexpr std::string_view kDef_IDR_DEF_3BM_BHM = R"DEFTXT(
+3BM-BHM（BMS(3 行) + BHM）
+
+nBM-BHM 系列（n=3）：在 BHM 的基础上，当末列顶行（最大非零行号）小于 3 时
+退化为普通 BMS(BM4) 展开，否则按 BHM 展开。
+
+输入格式：矩阵文本，列为 (v0,v1,...)，省略尾随零，例如 (0)(1,1)(2,1)。
+记号极限输入 Limit；最后一列全为零时为后继型，删去最后一列。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_3MN = R"DEFTXT(
@@ -135,6 +165,20 @@ subtract1 版本3（V3）：先删去末列最右上条目；alpha = 坏根列�
 (4) 极限分支的 J 构造：BR_separator = S(A, br, bj−1)；J = 若 BR_separator ≥ 被删分隔符则为单空列，否则 BR_separator 后接一个空列。版本3 随后进入 while 循环：只要 vertical_increase(alpha, J) 与 vertical_increase(working_vertical, J) 不相等，就向 J 追加一个空列，直到两侧竖向相等，最后向末列追加带 mark 的条目 (value, J, mark=true)；版本2 不循环加长 J，只在 vertical_increase(alpha, J) > working_vertical 时追加，且复制循环按 alpha > working_vertical 的条件嵌套在该极限分支内。
 
 记号极限：∞ 基本列与 Aω2MN2 相同（共用 infinity_fs）；版本3 的规则差异集中在 one 提前返回、复制循环前置、非极限分支的追加判据以及极限分支 J 的循环加长。本记号达到的极限序数以原始 TS 定义为准。
+)DEFTXT";
+
+constexpr std::string_view kDef_IDR_DEF_BHM = R"DEFTXT(
+BHM（Bashicu Hyper Matrix，Bashicu 高阶矩阵系统）
+
+输入格式：与 BMS 相同的矩阵文本，列为 (v0,v1,...)，省略尾随零，例如 (0)(1,1)(2,1)。
+记号极限输入 Limit，其第 n 个基本列为 (0)(1,1,...,1)。
+最后一列全为零时为后继型，删去最后一列。
+
+展开规则：取末列顶行 top，沿 top 行父链确定特殊根 special_root，
+再沿 top-1 行父链找出所有 top 行父项等于 special_root 的候选根；
+对每个候选根计算阶差向量 V 与上升阈值向量 A，比较各自“一次展开加末列”
+的阈值，取第一个严格更小的候选根；随后从该根起按 w·V（仅在前 A 行）
+复制坏部指定项数。FS 少复制一段，FS_alter 的末段只复制根列一列。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_BLP = R"DEFTXT(
@@ -1224,12 +1268,16 @@ PPS4 的弱化版本。
 
 struct Entry { int id; std::string_view utf8; };
 constexpr Entry kTable[] = {
+    { IDR_DEF_1BM_BHM, kDef_IDR_DEF_1BM_BHM },
     { IDR_DEF_1MN, kDef_IDR_DEF_1MN },
+    { IDR_DEF_2BM_BHM, kDef_IDR_DEF_2BM_BHM },
     { IDR_DEF_2MN, kDef_IDR_DEF_2MN },
     { IDR_DEF_2PPS4, kDef_IDR_DEF_2PPS4 },
+    { IDR_DEF_3BM_BHM, kDef_IDR_DEF_3BM_BHM },
     { IDR_DEF_3MN, kDef_IDR_DEF_3MN },
     { IDR_DEF_A_OMEGA2_MN_2, kDef_IDR_DEF_A_OMEGA2_MN_2 },
     { IDR_DEF_A_OMEGA2_MN_3, kDef_IDR_DEF_A_OMEGA2_MN_3 },
+    { IDR_DEF_BHM, kDef_IDR_DEF_BHM },
     { IDR_DEF_BLP, kDef_IDR_DEF_BLP },
     { IDR_DEF_BMS_V1, kDef_IDR_DEF_BMS_V1 },
     { IDR_DEF_BMS_V2, kDef_IDR_DEF_BMS_V2 },

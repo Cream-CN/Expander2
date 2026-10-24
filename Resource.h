@@ -109,5 +109,9 @@
 #define IDR_DEF_A_OMEGA2_MN_3       20071
 #define IDR_DEF_WEAK_A_OMEGA2_MN_3  20072
 #define IDR_DEF_BSM                 20073
+#define IDR_DEF_BHM                 20074
+#define IDR_DEF_1BM_BHM             20075
+#define IDR_DEF_2BM_BHM             20076
+#define IDR_DEF_3BM_BHM             20077
 
 
