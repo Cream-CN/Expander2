@@ -205,6 +205,21 @@ function Invoke-GenDefinitions {
         "def_dsm"               = "IDR_DEF_DSM"
         "def_blm"               = "IDR_DEF_BLM"
         "def_wmm"               = "IDR_DEF_WMM"
+        "def_gms-gbms-omega-p"  = "IDR_DEF_GMS_GBMS_OMEGA_P"
+        "def_gms-gbms-pqss"     = "IDR_DEF_GMS_GBMS_PQSS"
+        "def_gms-gbms-qss"      = "IDR_DEF_GMS_GBMS_QSS"
+        "def_gms-gbms-full"     = "IDR_DEF_GMS_GBMS_FULL"
+        "def_gms-gbms-weird"    = "IDR_DEF_GMS_GBMS_WEIRD"
+        "def_gms-upms-omega-p"  = "IDR_DEF_GMS_UPMS_OMEGA_P"
+        "def_gms-upms-pqss"     = "IDR_DEF_GMS_UPMS_PQSS"
+        "def_gms-upms-qss"      = "IDR_DEF_GMS_UPMS_QSS"
+        "def_gms-upms-full"     = "IDR_DEF_GMS_UPMS_FULL"
+        "def_gms-upms-weird"    = "IDR_DEF_GMS_UPMS_WEIRD"
+        "def_gms-lpms2-omega-p" = "IDR_DEF_GMS_LPMS2_OMEGA_P"
+        "def_gms-lpms2-pqss"    = "IDR_DEF_GMS_LPMS2_PQSS"
+        "def_gms-lpms2-qss"     = "IDR_DEF_GMS_LPMS2_QSS"
+        "def_gms-lpms2-full"    = "IDR_DEF_GMS_LPMS2_FULL"
+        "def_gms-lpms2-weird"   = "IDR_DEF_GMS_LPMS2_WEIRD"
     }
 
     $delim = "DEFTXT"  # 原始字符串字面量分隔符，须避开正文里的 ')'+$delim+'"'

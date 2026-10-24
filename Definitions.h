@@ -415,6 +415,186 @@ Ex. Weak PPS4
 扩展弱 PPS4。
 )DEFTXT";
 
+constexpr std::string_view kDef_IDR_DEF_GMS_GBMS_FULL = R"DEFTXT(
+GMS（General Matrix System，通用矩阵系统）— GBMS / Full
+
+输入格式：BM 矩阵文本，列为 (v0,v1,...)，省略尾随零，例如 (0,0,0)(1,1,0)(2,2,1)。
+极限 Limit 的基本列按层级逐段增长（Full 满矩阵）。
+最后一列全为零时为后继型，基本列退化为删去该末列（继续取更长项无定义）。
+
+展开规则：三者共用同一套多级父项（1-父列向左扫描，更高层父列按后缀字典序选取）。
+GBMS 用“祖先即施加阶差”的 GBMS 阶差矩阵 D：坏部中凡在第 row 层以根列为祖先的列，第 row-1 行都加上阶差 d[row-1]。
+每次基本列结果都会删除整列全为零的行（行间裁剪）；Weirdly Full 还按行数优先比较。
+)DEFTXT";
+
+constexpr std::string_view kDef_IDR_DEF_GMS_GBMS_OMEGA_P = R"DEFTXT(
+GMS（General Matrix System，通用矩阵系统）— GBMS / ω-P
+
+输入格式：BM 矩阵文本，列为 (v0,v1,...)，省略尾随零，例如 (0,0,0)(1,1,0)(2,2,1)。
+极限 Limit 的第 n 个基本列为 (0,0,0)(1,0,1)(2,1,1)...，列 (n, ⌊n/2⌋, ⌈n/2⌉)。
+最后一列全为零时为后继型，基本列退化为删去该末列（继续取更长项无定义）。
+
+展开规则：三者共用同一套多级父项（1-父列向左扫描，更高层父列按后缀字典序选取）。
+GBMS 用“祖先即施加阶差”的 GBMS 阶差矩阵 D：坏部中凡在第 row 层以根列为祖先的列，第 row-1 行都加上阶差 d[row-1]。
+保留全部行（零填充），不做整行删除。
+)DEFTXT";
+
+constexpr std::string_view kDef_IDR_DEF_GMS_GBMS_PQSS = R"DEFTXT(
+GMS（General Matrix System，通用矩阵系统）— GBMS / pQSS
+
+输入格式：BM 矩阵文本，列为 (v0,v1,...)，省略尾随零，例如 (0,0,0)(1,1,0)(2,2,1)。
+极限 Limit 的第 n 个基本列在四行上构造，列 (n, ⌊n/2⌋, ⌊(n-1)/2⌋, 1)。
+最后一列全为零时为后继型，基本列退化为删去该末列（继续取更长项无定义）。
+
+展开规则：三者共用同一套多级父项（1-父列向左扫描，更高层父列按后缀字典序选取）。
+GBMS 用“祖先即施加阶差”的 GBMS 阶差矩阵 D：坏部中凡在第 row 层以根列为祖先的列，第 row-1 行都加上阶差 d[row-1]。
+保留全部行（零填充），不做整行删除。
+)DEFTXT";
+
+constexpr std::string_view kDef_IDR_DEF_GMS_GBMS_QSS = R"DEFTXT(
+GMS（General Matrix System，通用矩阵系统）— GBMS / QSS
+
+输入格式：BM 矩阵文本，列为 (v0,v1,...)，省略尾随零，例如 (0,0,0)(1,1,0)(2,2,1)。
+极限 Limit 的第 n 个基本列在四行上构造，列 (n, ⌊(n+1)/3⌋, ⌊n/3⌋, ⌈n/3⌉)。
+最后一列全为零时为后继型，基本列退化为删去该末列（继续取更长项无定义）。
+
+展开规则：三者共用同一套多级父项（1-父列向左扫描，更高层父列按后缀字典序选取）。
+GBMS 用“祖先即施加阶差”的 GBMS 阶差矩阵 D：坏部中凡在第 row 层以根列为祖先的列，第 row-1 行都加上阶差 d[row-1]。
+保留全部行（零填充），不做整行删除。
+)DEFTXT";
+
+constexpr std::string_view kDef_IDR_DEF_GMS_GBMS_WEIRD = R"DEFTXT(
+GMS（General Matrix System，通用矩阵系统）— GBMS / Weirdly Full
+
+输入格式：BM 矩阵文本，列为 (v0,v1,...)，省略尾随零，例如 (0,0,0)(1,1,0)(2,2,1)。
+极限 Limit 的基本列为逐维增大的方阵（Weirdly Full）。
+最后一列全为零时为后继型，基本列退化为删去该末列（继续取更长项无定义）。
+
+展开规则：三者共用同一套多级父项（1-父列向左扫描，更高层父列按后缀字典序选取）。
+GBMS 用“祖先即施加阶差”的 GBMS 阶差矩阵 D：坏部中凡在第 row 层以根列为祖先的列，第 row-1 行都加上阶差 d[row-1]。
+每次基本列结果都会删除整列全为零的行（行间裁剪）；Weirdly Full 还按行数优先比较。
+)DEFTXT";
+
+constexpr std::string_view kDef_IDR_DEF_GMS_LPMS2_FULL = R"DEFTXT(
+GMS（General Matrix System，通用矩阵系统）— LPMS2 / Full
+
+输入格式：BM 矩阵文本，列为 (v0,v1,...)，省略尾随零，例如 (0,0,0)(1,1,0)(2,2,1)。
+极限 Limit 的基本列按层级逐段增长（Full 满矩阵）。
+最后一列全为零时为后继型，基本列退化为删去该末列（继续取更长项无定义）。
+
+展开规则：三者共用同一套多级父项（1-父列向左扫描，更高层父列按后缀字典序选取）。
+LPMS2 在 UPMS 的 v 标记基础上，用一次性基本列扫描确定 s 标记，构造修正列 X，再以 fs1+X 递归一次得到下一项。
+每次基本列结果都会删除整列全为零的行（行间裁剪）；Weirdly Full 还按行数优先比较。
+)DEFTXT";
+
+constexpr std::string_view kDef_IDR_DEF_GMS_LPMS2_OMEGA_P = R"DEFTXT(
+GMS（General Matrix System，通用矩阵系统）— LPMS2 / ω-P
+
+输入格式：BM 矩阵文本，列为 (v0,v1,...)，省略尾随零，例如 (0,0,0)(1,1,0)(2,2,1)。
+极限 Limit 的第 n 个基本列为 (0,0,0)(1,0,1)(2,1,1)...，列 (n, ⌊n/2⌋, ⌈n/2⌉)。
+最后一列全为零时为后继型，基本列退化为删去该末列（继续取更长项无定义）。
+
+展开规则：三者共用同一套多级父项（1-父列向左扫描，更高层父列按后缀字典序选取）。
+LPMS2 在 UPMS 的 v 标记基础上，用一次性基本列扫描确定 s 标记，构造修正列 X，再以 fs1+X 递归一次得到下一项。
+保留全部行（零填充），不做整行删除。
+)DEFTXT";
+
+constexpr std::string_view kDef_IDR_DEF_GMS_LPMS2_PQSS = R"DEFTXT(
+GMS（General Matrix System，通用矩阵系统）— LPMS2 / pQSS
+
+输入格式：BM 矩阵文本，列为 (v0,v1,...)，省略尾随零，例如 (0,0,0)(1,1,0)(2,2,1)。
+极限 Limit 的第 n 个基本列在四行上构造，列 (n, ⌊n/2⌋, ⌊(n-1)/2⌋, 1)。
+最后一列全为零时为后继型，基本列退化为删去该末列（继续取更长项无定义）。
+
+展开规则：三者共用同一套多级父项（1-父列向左扫描，更高层父列按后缀字典序选取）。
+LPMS2 在 UPMS 的 v 标记基础上，用一次性基本列扫描确定 s 标记，构造修正列 X，再以 fs1+X 递归一次得到下一项。
+保留全部行（零填充），不做整行删除。
+)DEFTXT";
+
+constexpr std::string_view kDef_IDR_DEF_GMS_LPMS2_QSS = R"DEFTXT(
+GMS（General Matrix System，通用矩阵系统）— LPMS2 / QSS
+
+输入格式：BM 矩阵文本，列为 (v0,v1,...)，省略尾随零，例如 (0,0,0)(1,1,0)(2,2,1)。
+极限 Limit 的第 n 个基本列在四行上构造，列 (n, ⌊(n+1)/3⌋, ⌊n/3⌋, ⌈n/3⌉)。
+最后一列全为零时为后继型，基本列退化为删去该末列（继续取更长项无定义）。
+
+展开规则：三者共用同一套多级父项（1-父列向左扫描，更高层父列按后缀字典序选取）。
+LPMS2 在 UPMS 的 v 标记基础上，用一次性基本列扫描确定 s 标记，构造修正列 X，再以 fs1+X 递归一次得到下一项。
+保留全部行（零填充），不做整行删除。
+)DEFTXT";
+
+constexpr std::string_view kDef_IDR_DEF_GMS_LPMS2_WEIRD = R"DEFTXT(
+GMS（General Matrix System，通用矩阵系统）— LPMS2 / Weirdly Full
+
+输入格式：BM 矩阵文本，列为 (v0,v1,...)，省略尾随零，例如 (0,0,0)(1,1,0)(2,2,1)。
+极限 Limit 的基本列为逐维增大的方阵（Weirdly Full）。
+最后一列全为零时为后继型，基本列退化为删去该末列（继续取更长项无定义）。
+
+展开规则：三者共用同一套多级父项（1-父列向左扫描，更高层父列按后缀字典序选取）。
+LPMS2 在 UPMS 的 v 标记基础上，用一次性基本列扫描确定 s 标记，构造修正列 X，再以 fs1+X 递归一次得到下一项。
+每次基本列结果都会删除整列全为零的行（行间裁剪）；Weirdly Full 还按行数优先比较。
+)DEFTXT";
+
+constexpr std::string_view kDef_IDR_DEF_GMS_UPMS_FULL = R"DEFTXT(
+GMS（General Matrix System，通用矩阵系统）— UPMS / Full
+
+输入格式：BM 矩阵文本，列为 (v0,v1,...)，省略尾随零，例如 (0,0,0)(1,1,0)(2,2,1)。
+极限 Limit 的基本列按层级逐段增长（Full 满矩阵）。
+最后一列全为零时为后继型，基本列退化为删去该末列（继续取更长项无定义）。
+
+展开规则：三者共用同一套多级父项（1-父列向左扫描，更高层父列按后缀字典序选取）。
+UPMS 先构造各层 Y_i 与标记向量 v_i，只有被 v 标记（经修正后缀与 Y_i 比较后仍不小于）的位置才施加阶差，从而抑制 GBMS 中部分过大的增量。
+每次基本列结果都会删除整列全为零的行（行间裁剪）；Weirdly Full 还按行数优先比较。
+)DEFTXT";
+
+constexpr std::string_view kDef_IDR_DEF_GMS_UPMS_OMEGA_P = R"DEFTXT(
+GMS（General Matrix System，通用矩阵系统）— UPMS / ω-P
+
+输入格式：BM 矩阵文本，列为 (v0,v1,...)，省略尾随零，例如 (0,0,0)(1,1,0)(2,2,1)。
+极限 Limit 的第 n 个基本列为 (0,0,0)(1,0,1)(2,1,1)...，列 (n, ⌊n/2⌋, ⌈n/2⌉)。
+最后一列全为零时为后继型，基本列退化为删去该末列（继续取更长项无定义）。
+
+展开规则：三者共用同一套多级父项（1-父列向左扫描，更高层父列按后缀字典序选取）。
+UPMS 先构造各层 Y_i 与标记向量 v_i，只有被 v 标记（经修正后缀与 Y_i 比较后仍不小于）的位置才施加阶差，从而抑制 GBMS 中部分过大的增量。
+保留全部行（零填充），不做整行删除。
+)DEFTXT";
+
+constexpr std::string_view kDef_IDR_DEF_GMS_UPMS_PQSS = R"DEFTXT(
+GMS（General Matrix System，通用矩阵系统）— UPMS / pQSS
+
+输入格式：BM 矩阵文本，列为 (v0,v1,...)，省略尾随零，例如 (0,0,0)(1,1,0)(2,2,1)。
+极限 Limit 的第 n 个基本列在四行上构造，列 (n, ⌊n/2⌋, ⌊(n-1)/2⌋, 1)。
+最后一列全为零时为后继型，基本列退化为删去该末列（继续取更长项无定义）。
+
+展开规则：三者共用同一套多级父项（1-父列向左扫描，更高层父列按后缀字典序选取）。
+UPMS 先构造各层 Y_i 与标记向量 v_i，只有被 v 标记（经修正后缀与 Y_i 比较后仍不小于）的位置才施加阶差，从而抑制 GBMS 中部分过大的增量。
+保留全部行（零填充），不做整行删除。
+)DEFTXT";
+
+constexpr std::string_view kDef_IDR_DEF_GMS_UPMS_QSS = R"DEFTXT(
+GMS（General Matrix System，通用矩阵系统）— UPMS / QSS
+
+输入格式：BM 矩阵文本，列为 (v0,v1,...)，省略尾随零，例如 (0,0,0)(1,1,0)(2,2,1)。
+极限 Limit 的第 n 个基本列在四行上构造，列 (n, ⌊(n+1)/3⌋, ⌊n/3⌋, ⌈n/3⌉)。
+最后一列全为零时为后继型，基本列退化为删去该末列（继续取更长项无定义）。
+
+展开规则：三者共用同一套多级父项（1-父列向左扫描，更高层父列按后缀字典序选取）。
+UPMS 先构造各层 Y_i 与标记向量 v_i，只有被 v 标记（经修正后缀与 Y_i 比较后仍不小于）的位置才施加阶差，从而抑制 GBMS 中部分过大的增量。
+保留全部行（零填充），不做整行删除。
+)DEFTXT";
+
+constexpr std::string_view kDef_IDR_DEF_GMS_UPMS_WEIRD = R"DEFTXT(
+GMS（General Matrix System，通用矩阵系统）— UPMS / Weirdly Full
+
+输入格式：BM 矩阵文本，列为 (v0,v1,...)，省略尾随零，例如 (0,0,0)(1,1,0)(2,2,1)。
+极限 Limit 的基本列为逐维增大的方阵（Weirdly Full）。
+最后一列全为零时为后继型，基本列退化为删去该末列（继续取更长项无定义）。
+
+展开规则：三者共用同一套多级父项（1-父列向左扫描，更高层父列按后缀字典序选取）。
+UPMS 先构造各层 Y_i 与标记向量 v_i，只有被 v 标记（经修正后缀与 Y_i 比较后仍不小于）的位置才施加阶差，从而抑制 GBMS 中部分过大的增量。
+每次基本列结果都会删除整列全为零的行（行间裁剪）；Weirdly Full 还按行数优先比较。
+)DEFTXT";
+
 constexpr std::string_view kDef_IDR_DEF_IBLP = R"DEFTXT(
 iblp
 
@@ -1355,6 +1535,21 @@ constexpr Entry kTable[] = {
     { IDR_DEF_EMPTY, kDef_IDR_DEF_EMPTY },
     { IDR_DEF_EPSILON_Y, kDef_IDR_DEF_EPSILON_Y },
     { IDR_DEF_EWPPS4, kDef_IDR_DEF_EWPPS4 },
+    { IDR_DEF_GMS_GBMS_FULL, kDef_IDR_DEF_GMS_GBMS_FULL },
+    { IDR_DEF_GMS_GBMS_OMEGA_P, kDef_IDR_DEF_GMS_GBMS_OMEGA_P },
+    { IDR_DEF_GMS_GBMS_PQSS, kDef_IDR_DEF_GMS_GBMS_PQSS },
+    { IDR_DEF_GMS_GBMS_QSS, kDef_IDR_DEF_GMS_GBMS_QSS },
+    { IDR_DEF_GMS_GBMS_WEIRD, kDef_IDR_DEF_GMS_GBMS_WEIRD },
+    { IDR_DEF_GMS_LPMS2_FULL, kDef_IDR_DEF_GMS_LPMS2_FULL },
+    { IDR_DEF_GMS_LPMS2_OMEGA_P, kDef_IDR_DEF_GMS_LPMS2_OMEGA_P },
+    { IDR_DEF_GMS_LPMS2_PQSS, kDef_IDR_DEF_GMS_LPMS2_PQSS },
+    { IDR_DEF_GMS_LPMS2_QSS, kDef_IDR_DEF_GMS_LPMS2_QSS },
+    { IDR_DEF_GMS_LPMS2_WEIRD, kDef_IDR_DEF_GMS_LPMS2_WEIRD },
+    { IDR_DEF_GMS_UPMS_FULL, kDef_IDR_DEF_GMS_UPMS_FULL },
+    { IDR_DEF_GMS_UPMS_OMEGA_P, kDef_IDR_DEF_GMS_UPMS_OMEGA_P },
+    { IDR_DEF_GMS_UPMS_PQSS, kDef_IDR_DEF_GMS_UPMS_PQSS },
+    { IDR_DEF_GMS_UPMS_QSS, kDef_IDR_DEF_GMS_UPMS_QSS },
+    { IDR_DEF_GMS_UPMS_WEIRD, kDef_IDR_DEF_GMS_UPMS_WEIRD },
     { IDR_DEF_IBLP, kDef_IDR_DEF_IBLP },
     { IDR_DEF_MRSS121, kDef_IDR_DEF_MRSS121 },
     { IDR_DEF_OMEGA_MN, kDef_IDR_DEF_OMEGA_MN },

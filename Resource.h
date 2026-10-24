@@ -118,4 +118,20 @@
 #define IDR_DEF_BLM                 20080
 #define IDR_DEF_WMM                 20081
 
+#define IDR_DEF_GMS_GBMS_OMEGA_P    20082
+#define IDR_DEF_GMS_GBMS_PQSS       20083
+#define IDR_DEF_GMS_GBMS_QSS        20084
+#define IDR_DEF_GMS_GBMS_FULL       20085
+#define IDR_DEF_GMS_GBMS_WEIRD      20086
+#define IDR_DEF_GMS_UPMS_OMEGA_P    20087
+#define IDR_DEF_GMS_UPMS_PQSS       20088
+#define IDR_DEF_GMS_UPMS_QSS        20089
+#define IDR_DEF_GMS_UPMS_FULL       20090
+#define IDR_DEF_GMS_UPMS_WEIRD      20091
+#define IDR_DEF_GMS_LPMS2_OMEGA_P   20092
+#define IDR_DEF_GMS_LPMS2_PQSS      20093
+#define IDR_DEF_GMS_LPMS2_QSS       20094
+#define IDR_DEF_GMS_LPMS2_FULL      20095
+#define IDR_DEF_GMS_LPMS2_WEIRD     20096
+
 
