@@ -29,6 +29,7 @@
 #include "Header/notation/gms.hpp"
 #include "Header/notation/lpms.hpp"
 #include "Header/notation/tbm.hpp"
+#include "Header/notation/tupms.hpp"
 #include "Header/notation/gy.hpp"
 #include "Header/notation/xy-v1.hpp"
 #include "Header/notation/xy-v2.hpp"
@@ -565,6 +566,11 @@ namespace {
               .definition_resource_id = IDR_DEF_TBM,
               .expand_text = &notation::TBMNotation::expand_text,
               .tags = { L"TBM", L"BM-like", L"树形矩阵", L"文本" } },
+            { .display_name = L"TUPMS 超限 UPMS", .id = "tupms",
+              .expand = nullptr, .suffix = &notation::TUPMSNotation::suffix,
+              .definition_resource_id = IDR_DEF_TUPMS,
+              .expand_text = &notation::TUPMSNotation::expand_text,
+              .tags = { L"TUPMS", L"BM-like", L"树形矩阵", L"文本" } },
 
             { .display_name = L"G-Y", .id = "g-y",
               .expand = &notation::GYNotation::expand,

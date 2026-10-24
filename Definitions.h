@@ -1283,6 +1283,20 @@ Third PPS4
 PPS4 的第三型变体。
 )DEFTXT";
 
+constexpr std::string_view kDef_IDR_DEF_TUPMS = R"DEFTXT(
+TUPMS（Transfinite UPMS，超限 UPMS）
+
+与 TBM 相同的树形矩阵记号：元素写成“数值^高度”，高度本身又是可嵌套矩阵；
+输入语法、极限 Limit 的基本列、极限型（末元素高度大于 1）展开规则与 TBM 完全
+一致——空列 ()、ω（可写 w）、逗号分隔列内元素、括号分列。
+
+唯一区别在后继型展开的“提升阈值”判定：TUPMS 不直接扫描，而是把各列按其竖直
+位置放入最小堆，按顺序处理；当某列的父列恰好是根列时暂缓（delay），转而执行
+一次 UPMS“升级测试”——构造阈值列、找出 X 段与 Y 段，分别加上偏移后逐列比较，
+据比较结果决定该列的提升阈值取整体 b 还是当前临界竖直序列。因此在较深的嵌套
+矩阵上，TUPMS 的复制结果可能与 TBM 不同（UPMS 升级）。
+)DEFTXT";
+
 constexpr std::string_view kDef_IDR_DEF_UP1DBMS = R"DEFTXT(
 UP1DBMS
 
@@ -1624,6 +1638,7 @@ constexpr Entry kTable[] = {
     { IDR_DEF_TON_MC, kDef_IDR_DEF_TON_MC },
     { IDR_DEF_TON_MPC, kDef_IDR_DEF_TON_MPC },
     { IDR_DEF_TPPS4, kDef_IDR_DEF_TPPS4 },
+    { IDR_DEF_TUPMS, kDef_IDR_DEF_TUPMS },
     { IDR_DEF_UP1DBMS, kDef_IDR_DEF_UP1DBMS },
     { IDR_DEF_UP1MN, kDef_IDR_DEF_UP1MN },
     { IDR_DEF_UP2DBMS_V1, kDef_IDR_DEF_UP2DBMS_V1 },

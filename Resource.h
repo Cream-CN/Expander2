@@ -139,4 +139,6 @@
 
 #define IDR_DEF_TBM                 20099
 
+#define IDR_DEF_TUPMS               20100
+
 
