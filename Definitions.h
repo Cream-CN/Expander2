@@ -1317,6 +1317,27 @@ term 复制并加上阶差；末元素高度为更高极限时，先对该高度
 序列，按空列切成若干段，替换末元素的高度。
 )DEFTXT";
 
+constexpr std::string_view kDef_IDR_DEF_TM1YNSS = R"DEFTXT(
+T(n+1)SS（超限 -1Y-(n+1)SS，T_Minus1_Y_nSS）
+
+参数化递归嵌套矩阵族。主窗口的参数框 n（0 到 25）决定每列父标号分量的个数；
+一列写作 (a_0,...,a_{n-1}, step)，但这里的 step 不再是整数，而是一个完整的
+“子表达式”，从而形成递归嵌套。n=0（即 1SS）时列里没有父标号分量，括号内整体
+就是子表达式。
+
+子表达式的简写（只能出现在某列的 step 位置）：
+- 一个非负整数 k，表示 k 个空列；
+- ω（也可输入小写 w），表示“一个空列再接一个一列”；
+- 也可以直接写出若干圆括号列。
+
+展开与基础 (-1)Y-(n+1)SS 相同地逐级求父、定根、按提升向量与阈值复制提升；区别在于：
+1. 比较两个 step 用的是递归子表达式的字典序，而不是整数大小；
+2. 若末列的 step 本身是极限表达式，则先递归展开该 step，再继续外层；
+3. 根用到 step 分量时，每份复制的根列 step 取原末列 step 删去最后一列。
+
+极限记为 Limit。第 n 个基本列同样是“空列 + 步长为更短基本列”的嵌套结构。
+)DEFTXT";
+
 constexpr std::string_view kDef_IDR_DEF_TON_DR = R"DEFTXT(
 Degrees of Reflection（TON_DoR）。
 )DEFTXT";
@@ -1709,6 +1730,7 @@ constexpr Entry kTable[] = {
     { IDR_DEF_STRONG_E0MN, kDef_IDR_DEF_STRONG_E0MN },
     { IDR_DEF_T_OMEGA_MN, kDef_IDR_DEF_T_OMEGA_MN },
     { IDR_DEF_TBM, kDef_IDR_DEF_TBM },
+    { IDR_DEF_TM1YNSS, kDef_IDR_DEF_TM1YNSS },
     { IDR_DEF_TON_DR, kDef_IDR_DEF_TON_DR },
     { IDR_DEF_TON_DRC, kDef_IDR_DEF_TON_DRC },
     { IDR_DEF_TON_DRP, kDef_IDR_DEF_TON_DRP },

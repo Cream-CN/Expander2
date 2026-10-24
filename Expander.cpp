@@ -34,6 +34,7 @@
 #include "Header/notation/btbw.hpp"
 #include "Header/notation/bbm.hpp"
 #include "Header/notation/m1ynss.hpp"
+#include "Header/notation/tm1ynss.hpp"
 #include "Header/notation/gy.hpp"
 #include "Header/notation/xy-v1.hpp"
 #include "Header/notation/xy-v2.hpp"
@@ -606,6 +607,13 @@ namespace {
               .param_min = 0, .param_max = 25, .param_default = 0,
               .param_label = L"n (0-25):",
               .tags = { L"Minus1", L"BM-like", L"参数化", L"文本" } },
+            { .display_name = L"T(n+1)SS 超限负一 Y 序列系统", .id = "t--1y-(n+1)ss",
+              .expand = nullptr, .suffix = &notation::TM1YnssNotation::suffix,
+              .definition_resource_id = IDR_DEF_TM1YNSS,
+              .expand_text_n = &notation::TM1YnssNotation::expand_text_n,
+              .param_min = 0, .param_max = 25, .param_default = 0,
+              .param_label = L"n (0-25):",
+              .tags = { L"Minus1", L"BM-like", L"参数化", L"递归嵌套", L"文本" } },
 
             { .display_name = L"G-Y", .id = "g-y",
               .expand = &notation::GYNotation::expand,
