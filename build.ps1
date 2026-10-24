@@ -202,6 +202,7 @@ function Invoke-GenDefinitions {
         "def_2bm-bhm"           = "IDR_DEF_2BM_BHM"
         "def_3bm-bhm"           = "IDR_DEF_3BM_BHM"
         "def_cms"               = "IDR_DEF_CMS"
+        "def_dsm"               = "IDR_DEF_DSM"
     }
 
     $delim = "DEFTXT"  # 原始字符串字面量分隔符，须避开正文里的 ')'+$delim+'"'

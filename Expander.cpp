@@ -23,6 +23,7 @@
 #include "Header/notation/bsm.hpp"
 #include "Header/notation/bhm.hpp"
 #include "Header/notation/cms.hpp"
+#include "Header/notation/dsm.hpp"
 #include "Header/notation/gy.hpp"
 #include "Header/notation/xy-v1.hpp"
 #include "Header/notation/xy-v2.hpp"
@@ -443,6 +444,13 @@ namespace {
               .definition_resource_id = IDR_DEF_CMS,
               .expand_text = &notation::CMSNotation::expand_text,
               .tags = { L"CMS", L"BM-like", L"矩阵", L"文本" } },
+
+            { .display_name = L"DSM", .id = "dsm",
+              .expand = nullptr, .suffix = &notation::DSMNotation::suffix,
+              .definition_resource_id = IDR_DEF_DSM,
+              .expand_text = &notation::DSMNotation::expand_text,
+              .expand_text_alter = &notation::DSMNotation::expand_text_alter,
+              .tags = { L"DSM", L"BM-like", L"矩阵", L"文本" } },
 
             { .display_name = L"G-Y", .id = "g-y",
               .expand = &notation::GYNotation::expand,
