@@ -27,6 +27,7 @@
 #include "Header/notation/blm.hpp"
 #include "Header/notation/wmm.hpp"
 #include "Header/notation/gms.hpp"
+#include "Header/notation/lpms.hpp"
 #include "Header/notation/gy.hpp"
 #include "Header/notation/xy-v1.hpp"
 #include "Header/notation/xy-v2.hpp"
@@ -546,6 +547,17 @@ namespace {
               .definition_resource_id = IDR_DEF_GMS_LPMS2_WEIRD,
               .expand_text = &notation::Lpms2WeirdlyFull::expand_text,
               .tags = { L"GMS", L"LPMS2", L"BM-like", L"矩阵", L"文本" } },
+
+            { .display_name = L"LPMS", .id = "lpms",
+              .expand = nullptr, .suffix = &notation::LPMSNotation::suffix,
+              .definition_resource_id = IDR_DEF_LPMS,
+              .expand_text = &notation::LPMSNotation::expand_text,
+              .tags = { L"LPMS", L"BM-like", L"矩阵", L"文本" } },
+            { .display_name = L"LPTSS", .id = "lptss",
+              .expand = nullptr, .suffix = &notation::LPTSSNotation::suffix,
+              .definition_resource_id = IDR_DEF_LPTSS,
+              .expand_text = &notation::LPTSSNotation::expand_text,
+              .tags = { L"LPTSS", L"LPMS", L"BM-like", L"矩阵", L"文本" } },
 
             { .display_name = L"G-Y", .id = "g-y",
               .expand = &notation::GYNotation::expand,

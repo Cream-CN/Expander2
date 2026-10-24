@@ -688,6 +688,26 @@ A_{r₊t} := sort ( Aᵣᵒˡᵈ ∪ s ∪ {r + 1, …, r + t} ), l_{r₊t} :=
 iblp的定义目前还有些问题，但是其在MHO下的停机是公认证实的。
 )DEFTXT";
 
+constexpr std::string_view kDef_IDR_DEF_LPMS = R"DEFTXT(
+LPMS（Lifting Projection Matrix System，提升投影矩阵系统）
+
+输入格式：合法矩阵的每一列自上而下不增，首列全为 0，例如 (0)(1,1)(2,1,1)。
+极限 Limit 的第 n 个基本列为 (0)(1,1,...,1)（n 个 1，n=0 时为 (0)(0)）。
+末列全为 0 时为后继型，删去末列；列不满足合法性时基本列同样退化为删末列。
+
+展开规则：计算末列的多级父列根与阶差；不足三行或末列第三行为 0 时直接按
+祖先是否含根逐份复制坏部（投影）；否则执行“提升”——用阶段列（缺失列视为
+全 -1）划分若干情形，必要时递归调用一次投影并插入后继常数列，把表达式
+提升到可投影形态后再投影。特殊地 (0^n)(1^n)（n>1）先收缩一行。
+)DEFTXT";
+
+constexpr std::string_view kDef_IDR_DEF_LPTSS = R"DEFTXT(
+LPTSS（Lifting Projection Triple Sequence System，提升投影三列序列系统）
+
+有限矩阵的展开、合法性与提升规则与 LPMS 完全相同；唯一区别在极限 Limit 的
+基本列：第 n 个基本列为 (0)(1,1,1)(2,2,2)...(n,n,n)（n+1 列三元组）。
+)DEFTXT";
+
 constexpr std::string_view kDef_IDR_DEF_MRSS121 = R"DEFTXT(
 MrSS1.2.1（山脉结构序列）
 )DEFTXT";
@@ -1551,6 +1571,8 @@ constexpr Entry kTable[] = {
     { IDR_DEF_GMS_UPMS_QSS, kDef_IDR_DEF_GMS_UPMS_QSS },
     { IDR_DEF_GMS_UPMS_WEIRD, kDef_IDR_DEF_GMS_UPMS_WEIRD },
     { IDR_DEF_IBLP, kDef_IDR_DEF_IBLP },
+    { IDR_DEF_LPMS, kDef_IDR_DEF_LPMS },
+    { IDR_DEF_LPTSS, kDef_IDR_DEF_LPTSS },
     { IDR_DEF_MRSS121, kDef_IDR_DEF_MRSS121 },
     { IDR_DEF_OMEGA_MN, kDef_IDR_DEF_OMEGA_MN },
     { IDR_DEF_OMEGA_Y_MEDIUM, kDef_IDR_DEF_OMEGA_Y_MEDIUM },

@@ -220,6 +220,8 @@ function Invoke-GenDefinitions {
         "def_gms-lpms2-qss"     = "IDR_DEF_GMS_LPMS2_QSS"
         "def_gms-lpms2-full"    = "IDR_DEF_GMS_LPMS2_FULL"
         "def_gms-lpms2-weird"   = "IDR_DEF_GMS_LPMS2_WEIRD"
+        "def_lpms"              = "IDR_DEF_LPMS"
+        "def_lptss"             = "IDR_DEF_LPTSS"
     }
 
     $delim = "DEFTXT"  # 原始字符串字面量分隔符，须避开正文里的 ')'+$delim+'"'

@@ -134,4 +134,7 @@
 #define IDR_DEF_GMS_LPMS2_FULL      20095
 #define IDR_DEF_GMS_LPMS2_WEIRD     20096
 
+#define IDR_DEF_LPMS                20097
+#define IDR_DEF_LPTSS               20098
+
 
