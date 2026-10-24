@@ -210,6 +210,7 @@
 <ClInclude Include="Header\notation\up2dbms_v1.hpp" />
 <ClInclude Include="Header\notation\up2dbms_v1b_plus.hpp" />
 <ClInclude Include="Header\notation\up2dbms_v1c.hpp" />
+<ClInclude Include="Header\notation\up2dbms_v2.hpp" />
     <ClInclude Include="Header\notation\tonshare.hpp" />
     <ClInclude Include="Header\notation\ton.hpp" />
     <ClInclude Include="Header\notation\ton_i.hpp" />
