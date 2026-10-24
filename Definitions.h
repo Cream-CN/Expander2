@@ -762,6 +762,29 @@ LPTSS（Lifting Projection Triple Sequence System，提升投影三列序列系�
 基本列：第 n 个基本列为 (0)(1,1,1)(2,2,2)...(n,n,n)（n+1 列三元组）。
 )DEFTXT";
 
+constexpr std::string_view kDef_IDR_DEF_M1YNSS = R"DEFTXT(
+(-1)Y-(n+1)SS（负一 Y 序列系统，Minus1 Y n-SS）
+
+参数化平面矩阵族。主窗口会多出一个参数输入框 n（0 到 25 的整数），它决定每列
+元组的宽度：一列写作 (a_0,a_1,...,a_{n-1},s)，即 n 个父标号分量加末尾步长 s。
+省略的分量按 0 补齐；只含尾随 0 的列可简写为空列 ()；多列直接相邻书写，例如
+n=1 时 (0)(1,1)。极限记为 Limit。
+
+第 n 个基本列（在 Limit 上展开得到）：第一列是 n 个 0 加步长 0 的空列，第二列是
+n 个 1 加当前展开下标作步长。
+
+展开规则：
+1. 先按各分量逐级求每列每项的“父列”，父链要满足对应分量严格小于当前值。
+2. 取末列步长的父作为根 (r,b=n)；若步长无父，则退而取末列父标号中最深的
+   非负分量作为根 (r,b<n)；若整列无根，则删去末列（后继）。
+3. 以根列为基准算提升向量（末列与根列各前 b 个分量之差），并为 r 之后的每列
+   算可用的提升分量数（提升阈值）。
+4. 按项数复制从根列到末列前一列的这一段，逐份整体提升；当根用到步长分量
+   (b=n) 时，每份的根列步长取“末列步长减一”。
+
+n=0 时没有父标号分量，单列若不含步长父会被直接删去，这是该族的正常行为。
+)DEFTXT";
+
 constexpr std::string_view kDef_IDR_DEF_MRSS121 = R"DEFTXT(
 MrSS1.2.1（山脉结构序列）
 )DEFTXT";
@@ -1662,6 +1685,7 @@ constexpr Entry kTable[] = {
     { IDR_DEF_IBLP, kDef_IDR_DEF_IBLP },
     { IDR_DEF_LPMS, kDef_IDR_DEF_LPMS },
     { IDR_DEF_LPTSS, kDef_IDR_DEF_LPTSS },
+    { IDR_DEF_M1YNSS, kDef_IDR_DEF_M1YNSS },
     { IDR_DEF_MRSS121, kDef_IDR_DEF_MRSS121 },
     { IDR_DEF_OMEGA_MN, kDef_IDR_DEF_OMEGA_MN },
     { IDR_DEF_OMEGA_Y_MEDIUM, kDef_IDR_DEF_OMEGA_Y_MEDIUM },

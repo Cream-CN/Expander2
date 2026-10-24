@@ -33,6 +33,7 @@
 #include "Header/notation/btbm.hpp"
 #include "Header/notation/btbw.hpp"
 #include "Header/notation/bbm.hpp"
+#include "Header/notation/m1ynss.hpp"
 #include "Header/notation/gy.hpp"
 #include "Header/notation/xy-v1.hpp"
 #include "Header/notation/xy-v2.hpp"
@@ -134,6 +135,15 @@ namespace {
         // 非空时，FS 使用 expand_text、FS_alter 使用本入口，两者均由记号自身实现，
         // UI 不再对 FS 结果做通用截断（DEN1 / blp / iblp 即属此类）。
         std::string(*expand_text_alter)(std::string_view, int) = nullptr;
+
+        // 可选的“参数化族”文本展开入口。非空时，选中该记号会在主窗口显示一个
+        // 额外的整数参数输入框（如 Minus1 系列的元组宽度 n），展开时把参数一并传入。
+        // 签名约定：std::string expand_text_n(std::string_view text, int term, int param)
+        std::string(*expand_text_n)(std::string_view, int, int) = nullptr;
+        int param_min = 0;          // 参数允许的最小整数值（含）
+        int param_max = 25;         // 参数允许的最大整数值（含）
+        int param_default = 0;      // 选中该记号时输入框的默认值
+        const wchar_t* param_label = L"n:";  // 参数输入框前的标签
 
         // 记号标签（用于选择窗体的搜索与展示）。最多 16 个，以 nullptr 结尾；
         // 未用的槽位保持 nullptr。可在下表按需增删。
@@ -589,6 +599,13 @@ namespace {
               .definition_resource_id = IDR_DEF_BBM,
               .expand_text = &notation::BBMNotation::expand_text,
               .tags = { L"BBM", L"BM-like", L"分层树形矩阵", L"文本" } },
+            { .display_name = L"(-1)Y-(n+1)SS 负一 Y 序列系统", .id = "-1y-(n+1)ss",
+              .expand = nullptr, .suffix = &notation::M1YnssNotation::suffix,
+              .definition_resource_id = IDR_DEF_M1YNSS,
+              .expand_text_n = &notation::M1YnssNotation::expand_text_n,
+              .param_min = 0, .param_max = 25, .param_default = 0,
+              .param_label = L"n (0-25):",
+              .tags = { L"Minus1", L"BM-like", L"参数化", L"文本" } },
 
             { .display_name = L"G-Y", .id = "g-y",
               .expand = &notation::GYNotation::expand,
@@ -1256,6 +1273,8 @@ namespace {
         HWND hBtnFSalter{};
         HWND hBtnNotation{};    // “选择记号…”按钮
         HWND hNotationLabel{};  // 当前记号（含标签）显示
+        HWND hStaticParam{};    // 参数化记号的参数标签
+        HWND hEditParam{};      // 参数化记号的参数输入框
         int notation_index = 0; // 当前选中的记号表索引
         BrushPtr background;
     };
@@ -1273,6 +1292,19 @@ namespace {
             label += L"]";
         }
         ::SetWindowTextW(ui->hNotationLabel, label.c_str());
+
+        // 仅参数化记号显示额外的参数输入框，并在切入时填入默认值。
+        if (ui->hStaticParam && ui->hEditParam) {
+            const bool hasParam = (e.expand_text_n != nullptr);
+            const int show = hasParam ? SW_SHOW : SW_HIDE;
+            ::ShowWindow(ui->hStaticParam, show);
+            ::ShowWindow(ui->hEditParam, show);
+            if (hasParam) {
+                ::SetWindowTextW(ui->hStaticParam, e.param_label);
+                ::SetWindowTextW(ui->hEditParam,
+                    std::to_wstring(e.param_default).c_str());
+            }
+        }
     }
 
     [[nodiscard]] UiState* getUi(HWND h) {
@@ -1685,6 +1717,17 @@ namespace {
                 60, mh + 55, 80, 20,
                 hwnd, nullptr, hInst, nullptr);
 
+            // 参数化记号（如 Minus1 系列）使用的额外整数参数输入框，默认隐藏；
+            // 选中带 expand_text_n 的记号时由 updateNotationLabel 显示。
+            ui->hStaticParam = ::CreateWindowExW(0, L"STATIC", L"",
+                WS_CHILD | SS_LEFT,
+                150, mh + 55, 100, 20,
+                hwnd, nullptr, hInst, nullptr);
+            ui->hEditParam = ::CreateWindowExW(0, L"EDIT", L"",
+                WS_CHILD | WS_BORDER | ES_LEFT,
+                250, mh + 55, 60, 20,
+                hwnd, nullptr, hInst, nullptr);
+
             ::CreateWindowExW(0, L"STATIC", L"记号:",
                 WS_CHILD | WS_VISIBLE | SS_LEFT,
                 10, mh + 85, 80, 20,
@@ -1879,6 +1922,52 @@ namespace {
                             }
                         }
                     }
+                }
+                else if (entry.expand_text_n) {
+                    // 参数化记号：读取序列、项数与额外整数参数 n。
+                    wchar_t bufSeq[512]{};
+                    wchar_t bufTerm[64]{};
+                    wchar_t bufParam[64]{};
+                    ::GetWindowTextW(ui->hEditSeq, bufSeq, 512);
+                    ::GetWindowTextW(ui->hEditTerm, bufTerm, 64);
+                    ::GetWindowTextW(ui->hEditParam, bufParam, 64);
+
+                    std::string utf8Seq = wstring_to_utf8(bufSeq);
+                    int term = 0;
+                    int param = 0;
+                    try {
+                        term = std::stoi(wstring_to_utf8(bufTerm));
+                        param = std::stoi(wstring_to_utf8(bufParam));
+                    }
+                    catch (...) {
+                        ::MessageBoxW(hwnd,
+                            L"项数与参数都必须是整数，\n所以说你为什么要这样输入", L"错误",
+                            MB_OK | MB_ICONERROR);
+                        break;
+                    }
+                    if (term < 1) {
+                        ::MessageBoxW(hwnd, L"项数必须为正整数，\n你难道要尝试向内存反方向写入序列吗",
+                            L"错误", MB_OK | MB_ICONERROR);
+                        break;
+                    }
+                    if (param < entry.param_min || param > entry.param_max) {
+                        std::wstring msg = L"参数必须是 ";
+                        msg += std::to_wstring(entry.param_min);
+                        msg += L" 到 ";
+                        msg += std::to_wstring(entry.param_max);
+                        msg += L" 之间的整数";
+                        ::MessageBoxW(hwnd, msg.c_str(), L"错误",
+                            MB_OK | MB_ICONERROR);
+                        break;
+                    }
+                    if (utf8Seq.empty()) {
+                        ::MessageBoxW(hwnd, L"序列不能为空", L"错误",
+                            MB_OK | MB_ICONERROR);
+                        break;
+                    }
+
+                    // 参数化族的展开已包含完整 LNZ 语义，直接调用，不做通用截断。
+                    text = entry.expand_text_n(utf8Seq, term, param);
                 }
                 else {
                     std::vector<int> seq;
