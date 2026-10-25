@@ -157,4 +157,6 @@
 
 #define IDR_DEF_BT1YNSS             20108
 
+#define IDR_DEF_BT2YNSS             20109
+
 

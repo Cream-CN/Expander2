@@ -37,6 +37,7 @@
 #include "Header/notation/tm1ynss.hpp"
 #include "Header/notation/bm1ynss.hpp"
 #include "Header/notation/bt1ynss.hpp"
+#include "Header/notation/bt2ynss.hpp"
 #include "Header/notation/gy.hpp"
 #include "Header/notation/xy-v1.hpp"
 #include "Header/notation/xy-v2.hpp"
@@ -620,6 +621,13 @@ namespace {
               .expand = nullptr, .suffix = &notation::BT1Notation::suffix,
               .definition_resource_id = IDR_DEF_BT1YNSS,
               .expand_text_n = &notation::BT1Notation::expand_text_n,
+              .param_min = 1, .param_max = 25, .param_default = 1,
+              .param_label = L"n (1-25):",
+              .tags = { L"Minus1", L"BM-like", L"参数化", L"递归嵌套", L"文本" } },
+            { .display_name = L"strong BT*(n+1)SS v2 超限星负一 Y 序列系统", .id = "bt2ynss",
+              .expand = nullptr, .suffix = &notation::BT2Notation::suffix,
+              .definition_resource_id = IDR_DEF_BT2YNSS,
+              .expand_text_n = &notation::BT2Notation::expand_text_n,
               .param_min = 1, .param_max = 25, .param_default = 1,
               .param_label = L"n (1-25):",
               .tags = { L"Minus1", L"BM-like", L"参数化", L"递归嵌套", L"文本" } },
