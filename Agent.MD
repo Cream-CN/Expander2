@@ -45,7 +45,7 @@ Minus1_Y_nSS 系列在 TS 侧是“参数为 n 的工厂”，网页可无限生
 
 ## 2. 进度总览
 
-任务在内部任务表中编号。#1–#12、#15、#16、#17 已完成并提交；#13、#18、#14 未完成。
+任务在内部任务表中编号。#1–#12、#15、#16、#17、#18 已完成并提交；#13、#14 未完成。
 
 ### 已完成（均已 commit 到 dev，仅供界定边界）
 
@@ -69,7 +69,7 @@ Minus1_Y_nSS 系列在 TS 侧是“参数为 n 的工厂”，网页可无限生
 |------|------|------|
 | #13  | Minus1_Y_nSS 全系列（共 8 族）的总任务 | 进行中（已完成基础族与 T 族，余 6 族） |
 | #17  | Abs_B / Rel_B_Minus1_Y_nSS | **已完成**（golden 1518 例全过） |
-| #18  | BT_star Minus1 v1 / v2 / v3（v3 含 FS_short）、BTL | **进行中（v1/v2/v3 已完成，余 BTL）** |
+| #18  | BT_star Minus1 v1 / v2 / v3（v3 含 FS_short）、BTL | **已完成**（v1/v2/v3/BTL 全部提交） |
 | #14  | 全部记号完成后的全量 rebuild + Docs 收尾 | 未开始 |
 
 需要移植的族共 8 个，TS 文件均位于
@@ -84,8 +84,9 @@ Minus1_Y_nSS 系列在 TS 侧是“参数为 n 的工厂”，网页可无限生
 7. `BT_star_...-v3.ts`（v3 / weak，start=1，**同时提供 FS 与 FS_short**，**已完成**，IDR `20110`；
    v3 显示依赖 `BM.ts` 的 `column_display`，FS_short 已通过新增
    `expand_text_n_alter` 字段接入 FS_alter 按钮）
-8. `BTL_Minus1_Y_nSS.ts`（start=1，使用 `ExprCompact` +
-   `compactify/decompactify`，FS 为 `compactify(FS(decompactify(e),i,n))`，#18）
+8. `BTL_Minus1_Y_nSS.ts`（start=1，**已完成**，IDR `20111`，golden 366 例；
+   使用 `ExprCompact` + `compactify/decompactify`，C++ 以 `mark` 字段直接建模，
+   无需显式 compact 往返）
 
 建议续作顺序：先收尾 #17（Abs/Rel）→ 再做 #18 的 v1→v2→v3→BTL → 最后 #14。
 依赖关系：Abs_B、Rel_B 复用 T 族的解析；v3 依赖 `BM.ts`；其余 v1/v2/BTL 仅依赖
@@ -145,26 +146,51 @@ Minus1_Y_nSS 系列在 TS 侧是“参数为 n 的工厂”，网页可无限生
 
 ---
 
-## 4. #18 与 #14 的具体待办
+## 4. #18 完成记录与 #14 待办
 
-### #18 BT_star v1/v2/v3 与 BTL
+### #18 BT_star v1/v2/v3 与 BTL（已完成）
 
-- 续作前**重新 Read 对应 TS 源当下内容**（源可能被外部更新）：
-  `BT_star_Minus1_Y_nSS.ts`、`...-v2.ts`、`...-v3.ts`、
-  `BTL_Minus1_Y_nSS.ts`；`utils.ts` / `notation_utils.ts` 语义以
-  `C:\Users\Administrator\Desktop\ne-rewritten\src` 下源文件为准。
-- 四族 `start=1`，注册记号时 `param_min=1`（不是 0）。
-- v3 同时提供 `FS` 与 `FS_short`：
-  - 评估是否映射到现有 `expand_text`（FS 按钮）与 `expand_text_alter`
-    （FS_alter 按钮）；由于参数化族目前只接了 `expand_text_n`，可能需要再增加
-    一个 `expand_text_n_alter(text,term,n)` 并在参数化分派分支中按
-    `id==IDM_FSALTER` 选择。落地前先回看 `FS_default_LNZ_variant` 中
-    `FS_short` 的 LNZ 截断语义（`notation_utils.ts`）。
-  - v3 的显示依赖 `BM.ts` 的 `column_display`，移植时一并核对，不要臆造格式。
-- BTL 使用 `ExprCompact` + `compactify/decompactify`：核心 Expand 外层包一层
-  压缩 / 解压缩，C++ 需新增对应的紧凑表示与双向转换，并用 golden 覆盖往返。
-- 每族独立：node 引擎 → golden（跨 n，建议至少覆盖 n=1..4）→ C++ 头 → smoke
-  → 登记 → gen → rebuild → 一个 commit。
+- v1（`BT_star_Minus1_Y_nSS.ts`，IDR `20108`，golden 750 例，commit `174c46c`）：
+  higher 为数组；显示 `*^expr` 前缀（裸 `*`=空子表达式，无 ω/数字简写）；
+  顶层父 = `highest_without_base` + `forbidden_stack`；`is_special_column` → FS_special。
+  产出 `bt1_m1ynss_engine.mjs`、`bt1ynss.hpp`（namespace bt1_detail / BT1Notation，
+  kParamMin=1，Parser 支持 `*`/`∗`/`^`，数字部分必须凑满 n 个）。
+- v2（`...-v2.ts`，IDR `20109`，golden 750 例，commit `71980c8`）：
+  与 v1 同构，唯一差异 = 顶层父 `compute_lower_parents` + `fill_top_parents`
+  （rel 风格阈值树取 AT → to_relative 差分 key → rel_compare，排除 outer_stack；
+  fill_top 步进 `parent_stack[p][n-1]`）。头文件首版 fill_top 参数结构写错
+  （阈值子树当数组、key 用 vector<RKeyC>），修正为
+  `std::vector<std::vector<RKeyPtr>>` + 单个 ANodePtr。
+- v3（`...-v3.ts`，IDR `20110`，golden 708 例带 mode 列 fs/fs_short，commit `2311eb6`）：
+  显示依赖 `BM.ts` 的 `column_display`（无 higher 截尾零、有 higher 全量+`*^`）；
+  顶层父 `compute_top_parents` 用 vertical（to_height + height_compare）；
+  `ascend_replace` 带 critical_vert；同时提供 FS 与 FS_short（lnz_m1 布尔分支）。
+  UI 侧新增 `expand_text_n_alter` 字段并按 `id==IDM_FSALTER` 分派。
+- BTL（`BTL_Minus1_Y_nSS.ts`，IDR `20111`，golden 366 例）：
+  - 每列 `{lower, mark, higher}`；显示 use_sc=true：有 higher → `(lower全量;u^e0,u^e1)`，
+    无 higher → `(lower截尾零)`；空子表达式 top_display = 裸 mark 数字；
+    同一列内 mark 值须一致，有 higher 时 mark 必 >0（解析即错）。
+  - 父计算除 n 个 entry_parents 外求出 type（lower/higher/star/mark/mark*/undefined）
+    与 is_tail；mark = 祖先 mark<col.mark 且在外链；higher = mark<=col.mark 且
+    higher 去基化字典序更小；p<0 时若 `is_one_line_column(col, 栈底列 lower[0]+1)`
+    则 star 否则 lower，均 is_tail=true；p>=0 时若末 higher 为空表达式则 is_tail=true。
+  - FS：undefined 删末列；star → FS_star；否则 root→r_layer→V→A→copy_part 组装
+    （mark 时重组第一列 lower+mark0 无 higher + 首 higher 展开）；tail_top/tail_mark →
+    循环 ascend_replace（higher/mark 时回填 result[0].mark=tail_mark、higher=tail_top）。
+  - **C++ 关键教训（勿重蹈）**：`btl_compute_parents` 首版把 `&result_i`（栈上对象）
+    塞进 parent_stack，随后 `P->cols.push_back(std::move(result_i))` 使地址失效，
+    递归子表达式扫描读到悬垂 entry_parents → 死循环（无异常、15s 超时被杀）。
+    修复 = parent_stack 存 `std::shared_ptr<PColC>`，结果 `P->cols.push_back(*result_i)`
+    值拷贝（entry_parents 共享同一 shared_ptr）。j 循环语义照搬引擎
+    （j==0 用 `p-1`，j>0 沿 `entry_parents[p][j-1]`，`if (p<0) break` 保留）。
+    另按 TS `col.higher[-1]` 抛 TypeError 的语义给 `higher_right<0` 与
+    btl_next_layer 越界加异常守卫（→ kParseError），避免 UB。
+  - C++ 以 `mark` 字段直接建模 ExprCompact，无需显式 compactify/decompactify 往返
+    （Agent.MD 旧 §4 提示的紧凑表示与双向转换，以 mark 携带等价落地）。
+- 四族各自：node 引擎 → golden → C++ 头 → smoke → 登记 → gen → rebuild → 一个 commit。
+  smoke 命名 `tools/_bt{1,2,3,l}_m1ynss_smoke.cpp`；golden 为
+  `tools/bml_golden/bt{1,2,3,l}_m1ynss_out.txt`（bt1/bt2/btl 无 mode 列 split4，
+  bt3 带 mode 列 split5）。
 
 ### #14 整体构建验证与文档收尾
 

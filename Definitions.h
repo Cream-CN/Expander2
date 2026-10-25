@@ -479,6 +479,30 @@ BTBM-weak（weak Bubby3's Transfinite BMS，弱版 Bubby3 超限巴斯丘矩阵�
 更早结束提升，二者展开结果可能不同。后继型（末层为空）直接删去末列。
 )DEFTXT";
 
+constexpr std::string_view kDef_IDR_DEF_BTLYNSS = R"DEFTXT(
+BTL(n+1)SS（带标记超限星负一 Y 序列系统）
+
+参数化递归嵌套矩阵族。主窗口的参数框 n（1 到 25）决定每列父标号分量的个数；
+一列写作 (a_0,...,a_{n-1}; u^e_0, u^e_1, ...)，即 n 个父标号分量之后可以跟
+任意多个“标记子表达式”e_i，每个以 u^ 前缀标记（u 为正整数标记，u^ 后跟
+子表达式；u 与 u^ 均允许，同一列内标记值须一致；有子表达式时标记必须大于 0，
+否则解析即错）。n=1 即 2SS 起。
+
+显示：带子表达式的列显示完整父标号分量与 u^ 项，例如 (1;2^(0))；没有子表达
+式的列去掉尾部 0 后列出数字（全 0 显示为 (0)）；空子表达式显示为裸标记数字
+u（例如 (1;2)）。无 ω / 数字简写。
+
+展开按标记（mark）求父：沿祖先链找“标记更小且在外链上”的列为 mark 父，
+找“标记不超过且子表达式字典序更小”的列为 higher 父；找不到时若本列是
+“首分量为栈底列首分量加一”的单行列则 star 父，否则 lower 父，并记 is_tail。
+沿最右侧子表达式下钻直到 is_tail，得到尾层与类型；undefined 型删末列，
+star 型复制首尾，其余按标记/父提升路径用提升向量与阈值组装结果列
+（higher/mark 时回填尾标记与尾子表达式后再提升）。复制的列若子表达式为空
+则标记归 0。
+
+极限记为 Limit。
+)DEFTXT";
+
 constexpr std::string_view kDef_IDR_DEF_CMS = R"DEFTXT(
 CMS（Crane Matrix System，Crane 矩阵系统）
 
@@ -1787,6 +1811,7 @@ constexpr Entry kTable[] = {
     { IDR_DEF_BT3YNSS, kDef_IDR_DEF_BT3YNSS },
     { IDR_DEF_BTBM, kDef_IDR_DEF_BTBM },
     { IDR_DEF_BTBM_WEAK, kDef_IDR_DEF_BTBM_WEAK },
+    { IDR_DEF_BTLYNSS, kDef_IDR_DEF_BTLYNSS },
     { IDR_DEF_CMS, kDef_IDR_DEF_CMS },
     { IDR_DEF_DEN1, kDef_IDR_DEF_DEN1 },
     { IDR_DEF_DSM, kDef_IDR_DEF_DSM },

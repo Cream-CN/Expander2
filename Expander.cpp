@@ -39,6 +39,7 @@
 #include "Header/notation/bt1ynss.hpp"
 #include "Header/notation/bt2ynss.hpp"
 #include "Header/notation/bt3ynss.hpp"
+#include "Header/notation/btlynss.hpp"
 #include "Header/notation/gy.hpp"
 #include "Header/notation/xy-v1.hpp"
 #include "Header/notation/xy-v2.hpp"
@@ -640,6 +641,13 @@ namespace {
               .definition_resource_id = IDR_DEF_BT3YNSS,
               .expand_text_n = &notation::BT3Notation::expand_text_n,
               .expand_text_n_alter = &notation::BT3Notation::expand_text_n_alter,
+              .param_min = 1, .param_max = 25, .param_default = 1,
+              .param_label = L"n (1-25):",
+              .tags = { L"Minus1", L"BM-like", L"参数化", L"递归嵌套", L"文本" } },
+            { .display_name = L"BTL(n+1)SS 带标记超限星负一 Y 序列系统", .id = "btlynss",
+              .expand = nullptr, .suffix = &notation::BTlNotation::suffix,
+              .definition_resource_id = IDR_DEF_BTLYNSS,
+              .expand_text_n = &notation::BTlNotation::expand_text_n,
               .param_min = 1, .param_max = 25, .param_default = 1,
               .param_label = L"n (1-25):",
               .tags = { L"Minus1", L"BM-like", L"参数化", L"递归嵌套", L"文本" } },
