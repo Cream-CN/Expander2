@@ -142,13 +142,13 @@ private:
                 int cmp = 0;
                 for (std::size_t t = 0; t < nk; ++t) {
                     const auto& a = Xk[t];
-                    const auto& b = Yk[t];
-                    if (a.first != b.first) {
+                    const auto& bk = Yk[t];
+                    if (a.first != bk.first) {
                         cmp = a.first ? 1 : -1;
                         break;
                     }
-                    if (a.second != b.second) {
-                        cmp = a.second < b.second ? -1 : 1;
+                    if (a.second != bk.second) {
+                        cmp = a.second < bk.second ? -1 : 1;
                         break;
                     }
                 }

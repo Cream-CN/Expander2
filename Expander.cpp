@@ -285,8 +285,11 @@ namespace {
         return out;
     }
 
-    [[nodiscard]] const std::vector<NotationEntry>& notationTable() {
-        static const std::vector<NotationEntry> table = {
+    // 记号表用普通静态数组承载。用 std::vector 花括号初始化会让 MSVC 在
+    // 动态初始化函数中构造 initializer_list 后备数组（111 项 × 224 字节 ≈
+    // 24 KB），被 /analyze 建模为栈占用并逐条重复报告 C6262；数组方式下
+    // 数据位于静态存储区（常量初始化，无栈开销），再一次性搬入 vector。
+    static const NotationEntry kNotationTable[] = {
             { .display_name = L"空记号", .id = "empty",
               .expand = &notation::EmptyNotation::expand,
               .suffix = &notation::EmptyNotation::suffix,
@@ -999,7 +1002,12 @@ namespace {
               .expand_text_alter = &notation::WAw2MN3Notation::expand_text_alter,
               .tags = { L"MN", L"文本" } },
         };
-        return table;
+
+    static const std::vector<NotationEntry> notation_table(
+        kNotationTable, kNotationTable + sizeof(kNotationTable) / sizeof(kNotationTable[0]));
+
+    [[nodiscard]] const std::vector<NotationEntry>& notationTable() {
+        return notation_table;
     }
 
     struct MenuDeleter { void operator()(HMENU m)  const noexcept { if (m) ::DestroyMenu(m); } };
@@ -2010,12 +2018,12 @@ namespace {
                         break;
                     }
                     if (param < entry.param_min || param > entry.param_max) {
-                        std::wstring msg = L"参数必须是 ";
-                        msg += std::to_wstring(entry.param_min);
-                        msg += L" 到 ";
-                        msg += std::to_wstring(entry.param_max);
-                        msg += L" 之间的整数";
-                        ::MessageBoxW(hwnd, msg.c_str(), L"错误",
+                        std::wstring paramMsg = L"参数必须是 ";
+                        paramMsg += std::to_wstring(entry.param_min);
+                        paramMsg += L" 到 ";
+                        paramMsg += std::to_wstring(entry.param_max);
+                        paramMsg += L" 之间的整数";
+                        ::MessageBoxW(hwnd, paramMsg.c_str(), L"错误",
                             MB_OK | MB_ICONERROR);
                         break;
                     }
@@ -2071,7 +2079,8 @@ namespace {
 
 } // namespace
 
-int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int nCmdShow) {
+int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance,
+                    _In_ PWSTR lpCmdLine, _In_ int nCmdShow) {
     ::LoadLibraryW(L"Msftedit.dll");
 
     INITCOMMONCONTROLSEX icc{};
