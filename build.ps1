@@ -233,6 +233,7 @@ function Invoke-GenDefinitions {
         "def_rel-bm1ynss"       = "IDR_DEF_REL_BM1YNSS"
         "def_bt1ynss"           = "IDR_DEF_BT1YNSS"
         "def_bt2ynss"           = "IDR_DEF_BT2YNSS"
+        "def_bt3ynss"           = "IDR_DEF_BT3YNSS"
     }
 
     $delim = "DEFTXT"  # 原始字符串字面量分隔符，须避开正文里的 ')'+$delim+'"'

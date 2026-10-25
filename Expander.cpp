@@ -38,6 +38,7 @@
 #include "Header/notation/bm1ynss.hpp"
 #include "Header/notation/bt1ynss.hpp"
 #include "Header/notation/bt2ynss.hpp"
+#include "Header/notation/bt3ynss.hpp"
 #include "Header/notation/gy.hpp"
 #include "Header/notation/xy-v1.hpp"
 #include "Header/notation/xy-v2.hpp"
@@ -144,6 +145,9 @@ namespace {
         // 额外的整数参数输入框（如 Minus1 系列的元组宽度 n），展开时把参数一并传入。
         // 签名约定：std::string expand_text_n(std::string_view text, int term, int param)
         std::string(*expand_text_n)(std::string_view, int, int) = nullptr;
+        // 可选的“参数化族”FS_alter 文本展开入口（如 BT v3 的 FS_short）。
+        // 非空且按下 FS_alter 按钮时使用本入口，否则使用 expand_text_n。
+        std::string(*expand_text_n_alter)(std::string_view, int, int) = nullptr;
         int param_min = 0;          // 参数允许的最小整数值（含）
         int param_max = 25;         // 参数允许的最大整数值（含）
         int param_default = 0;      // 选中该记号时输入框的默认值
@@ -628,6 +632,14 @@ namespace {
               .expand = nullptr, .suffix = &notation::BT2Notation::suffix,
               .definition_resource_id = IDR_DEF_BT2YNSS,
               .expand_text_n = &notation::BT2Notation::expand_text_n,
+              .param_min = 1, .param_max = 25, .param_default = 1,
+              .param_label = L"n (1-25):",
+              .tags = { L"Minus1", L"BM-like", L"参数化", L"递归嵌套", L"文本" } },
+            { .display_name = L"weak BT*(n+1)SS v3 超限星负一 Y 序列系统", .id = "bt3ynss",
+              .expand = nullptr, .suffix = &notation::BT3Notation::suffix,
+              .definition_resource_id = IDR_DEF_BT3YNSS,
+              .expand_text_n = &notation::BT3Notation::expand_text_n,
+              .expand_text_n_alter = &notation::BT3Notation::expand_text_n_alter,
               .param_min = 1, .param_max = 25, .param_default = 1,
               .param_label = L"n (1-25):",
               .tags = { L"Minus1", L"BM-like", L"参数化", L"递归嵌套", L"文本" } },
@@ -2006,7 +2018,11 @@ namespace {
                     }
 
                     // 参数化族的展开已包含完整 LNZ 语义，直接调用，不做通用截断。
-                    text = entry.expand_text_n(utf8Seq, term, param);
+                    // FS_alter 按钮：若记号自带参数化 FS_alter（如 BT v3 的
+                    // FS_short），使用该入口，否则与 FS 相同。
+                    text = (id == IDM_FSALTER && entry.expand_text_n_alter)
+                        ? entry.expand_text_n_alter(utf8Seq, term, param)
+                        : entry.expand_text_n(utf8Seq, term, param);
                 }
                 else {
                     std::vector<int> seq;
