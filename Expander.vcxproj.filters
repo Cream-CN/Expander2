@@ -99,6 +99,141 @@
     <ClInclude Include="Header\notation\iblp.hpp">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="Header\notation\omega_mn.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Header\notation\t_omega_mn.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Header\notation\aw2mn2.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Header\notation\waw2mn2.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Header\notation\aw2mn3.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Header\notation\waw2mn3.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Header\notation\e0mn.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Header\notation\strong_e0mn.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Header\notation\pcf_omega_mn.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Header\notation\n_mn.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Header\notation\s_omega2_mn.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Header\notation\sa_omega2_mn.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Header\notation\s_omega_pow_omega_mn.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Header\notation\smnshare.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Header\notation\sdbms_core.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Header\notation\mn_smn_share.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Header\notation\mnup2share.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Header\notation\aw2mn_share.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Header\notation\s1dbms.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Header\notation\s2dbms.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Header\notation\s_omega_dbms_v1.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Header\notation\s_omega_dbms_v2.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Header\notation\s_omega_dbms_v3.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Header\notation\s_omega2_dbms.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Header\notation\s_omega_square_dbms.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Header\notation\s_omega_p1_dbms.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Header\notation\up1mn.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Header\notation\up1dbms.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Header\notation\up2mn_v1a.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Header\notation\up2mn_v1b.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Header\notation\up2mn_v1b_plus.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Header\notation\up2dbms_v1.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Header\notation\up2dbms_v1b_plus.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Header\notation\up2dbms_v1c.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Header\notation\up2dbms_v2.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Header\notation\tonshare.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Header\notation\ton.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Header\notation\ton_i.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Header\notation\ton_dor.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Header\notation\ton_drc.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Header\notation\ton_drp.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Header\notation\ton_drpc.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Header\notation\ton_ibp.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Header\notation\ton_mc.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Header\notation\ton_mpc.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Expander.cpp">
