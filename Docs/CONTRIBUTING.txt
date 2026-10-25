@@ -170,6 +170,34 @@ expand_text_alter 非空时，FS 与 FS_alter 均由记号自身实现，UI 直�
 解析失败时文本接口返回错误提示字符串（不以异常报告），例如
 "解析失败，请确认你没有使用全角括号，逗号"。
 
+3.4 参数化文本记号（expand_text_n / param_*）
+
+Minus1_Y_nSS 系列是“参数为 n 的工厂”记号（n = 父标号分量个数），
+不走编译期枚举，而是在运行时由 UI 输入 n。此类记号在 NotationEntry
+上走扩展槽：
+
+    std::string(*expand_text_n)(std::string_view, int term, int n);
+    int param_min, param_max, param_default;
+    const wchar_t* param_label;
+
+约定：
+
+    param_min=0 的族（基础族、T 族、Abs/Rel）n 从 0 起（1SS 起）；
+    param_min=1 的族（BT v1/v2/v3、BTL）n 从 1 起（2SS 起）；
+    上限统一 25；param_default 为输入框默认值。
+
+    选中此类记号时，UI 显示参数输入框；IDM_FS / IDM_FSALTER 分支
+    读取并校验 n ∈ [param_min, param_max] 后调用 expand_text_n。
+
+    expand_text_n 与 expand_text 同为纯函数、不抛异常；解析失败或
+    内部异常统一返回 bmlike::kParseError（提示字符串），不以异常报告。
+
+    有 FS_short 的族（BT v3）额外提供 expand_text_n_alter，
+    经 NotationEntry::expand_text_n_alter 槽接入 FS_alter 按钮，
+    由记号自身实现两种展开，UI 不做通用截断。
+
+    “Limit” 表示极限；展开结果按各族显示规则渲染。
+
 UI 层与记号层的边界
 
 ┌─────────────────────────────────────────┐
@@ -277,6 +305,15 @@ XxxNotation（kName / expand / suffix）。当前已包含：
     den1.hpp           — DEN1（Defective embedding notation，逻辑移植自 DEN.ts；文本接口）
     blp.hpp            — blp（即 DEN2 / IBLP，逻辑移植自 DEN2.ts；文本接口）
     iblp.hpp           — iblp（即 DEN3，逻辑移植自 DEN3.ts；文本接口）
+    m1ynss.hpp         — Minus1_Y_nSS 基础族（IDR 20104，参数化，见 3.4）
+    tm1ynss.hpp        — T_Minus1_Y_nSS（IDR 20105，参数化）
+    bm1ynss.hpp        — Abs_B / Rel_B_Minus1_Y_nSS（IDR 20106 / 20107，参数化，
+                          共享模板 BranchNotation<bool kRel>）
+    bt1ynss.hpp        — BT*(n+1)SS v1（IDR 20108，参数化，start=1）
+    bt2ynss.hpp        — strong BT*(n+1)SS v2（IDR 20109，参数化，start=1）
+    bt3ynss.hpp        — weak BT*(n+1)SS v3（IDR 20110，参数化，start=1；
+                          同时提供 expand_text_n / expand_text_n_alter）
+    btlynss.hpp        — BTL(n+1)SS（IDR 20111，参数化，start=1）
 
 Expander.cpp — 唯一调用点（IDM_FS / IDM_FSALTER 分支，经 notationTable() 分派）
 

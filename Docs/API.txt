@@ -699,3 +699,79 @@ parse_sequence 内部捕获 std::stoi 异常并跳过；
 指针有效性：
 EntryArena 返回的 Entry* 在 clear 或 arena 析构后失效；
 Entry 之间的 leg 指针不参与生命周期管理，需自行保证不悬空。
+
+====================================================================
+文件：m1ynss.hpp / tm1ynss.hpp / bm1ynss.hpp / bt1ynss.hpp / bt2ynss.hpp / bt3ynss.hpp / btlynss.hpp
+命名空间：omegay::notation
+功能：Minus1_Y_nSS 系列（由 TypeScript 记号库移植的“参数化递归嵌套”记号）
+====================================================================
+
+一、接口约定（参数化文本记号）
+
+本系列每个记号在 omegay::notation 下提供
+XxxNotation（例如 M1YnssNotation / TM1YnssNotation / AbsBM1Notation /
+RelBM1Notation / BT1Notation / BT2Notation / BT3Notation / BTlNotation），
+统一签名：
+
+struct XxxNotation {
+    static std::string expand_text_n(std::string_view text, int term, int n);
+    static std::string suffix();   // 空串
+};
+
+expand_text_n 契约：
+    纯函数，不抛异常；解析失败或内部异常统一返回
+    bmlike::kParseError（“解析失败，请确认你没有使用全角括号，逗号”）。
+    text 为记号文本；term 为展开项数（>= 1）；n 为父标号分量个数（参数）。
+
+    全部记号以 “Limit” 表示极限；展开结果按各族的显示规则渲染。
+
+UI 参数约定（Expander.cpp notationTable 条目）：
+    param_min / param_max / param_default / param_label：
+    选中该记号时主窗口显示参数输入框；展开时经 IDM_FS / IDM_FSALTER
+    分支读取并校验 n ∈ [param_min, param_max] 后调用 expand_text_n。
+    param_min=0 的族（基础族、T 族、Abs/Rel）n 从 0 起（1SS 起）；
+    param_min=1 的族（BT v1/v2/v3、BTL）n 从 1 起（2SS 起），上限均为 25。
+    参数化族的结果不做通用截断。
+
+二、各族说明
+
+m1ynss.hpp — 基础族 Minus1_Y_nSS（IDR 20104）。
+    平面元组结构 Column=[arr, step:int]；n 决定父标号分量个数。
+
+tm1ynss.hpp — T 族 T_Minus1_Y_nSS（IDR 20105）。
+    递归嵌套 Column=[arr, step:子表达式]；子表达式支持裸数字 / ω(w) 简写；
+    显示为 T 族宽松语义。
+
+bm1ynss.hpp — Abs_B / Rel_B_Minus1_Y_nSS（IDR 20106 / 20107）。
+    共享模板 BranchNotation<bool kRel>，别名 AbsBM1Notation / RelBM1Notation。
+    父计算为活动栈语义：绝对 step 比较 + forbidden_stack（Abs）；
+    相对差分 key + outer_stack（Rel）。显示为独立严格实现 br_render。
+
+bt1ynss.hpp — BT*(n+1)SS v1（IDR 20108）。
+    Column.higher 是数组；显示用 *^ 前缀（裸 * = 空子表达式，无 ω/数字简写）；
+    顶层父 = highest_without_base + forbidden_stack；is_special_column → FS_special。
+
+bt2ynss.hpp — strong BT*(n+1)SS v2（IDR 20109）。
+    与 v1 同构，顶层父 = compute_lower_parents + fill_top_parents
+    （相对差分 key + rel_compare，排除 outer_stack）。
+
+bt3ynss.hpp — weak BT*(n+1)SS v3（IDR 20110）。
+    显示依赖 BM 的 column_display（无 higher 截尾零 / 有 higher 全量+*^）；
+    顶层父 = compute_top_parents（vertical 差分高度比较）；
+    同时提供 FS 与 FS_short：expand_text_n 对应 FS，
+    expand_text_n_alter 对应 FS_short（经 expand_text_n_alter 槽接入 FS_alter 按钮）。
+
+btlynss.hpp — BTL(n+1)SS（IDR 20111）。
+    每列 {lower, mark, higher}；显示：有 higher → (lower全量;u^e0,u^e1)，
+    无 higher → (lower截尾零)；空子表达式 → 裸 mark 数字；
+    同一列内 mark 值须一致，有 higher 时 mark 必 > 0。
+    父计算求出 type（lower/higher/star/mark/mark*/undefined）与 is_tail；
+    标记型展开经 copy_part 重组 + tail_top/tail_mark 回填的 ascend_replace。
+    核心 Expand 直接以 mark 字段建模（TS 侧 ExprCompact 的等价落地）。
+
+三、内部实现（各族 detail 命名空间）
+
+    m1_detail / tm1_detail / br_（bm1_detail）/ bt1_detail / bt2_detail /
+    bt3_detail / btl_detail。
+    族内函数一律加族前缀（btl_ / bt3_ 等），避免 ADL 歧义；
+    Node/Column 为 std::shared_ptr 树，深拷贝隔离。
