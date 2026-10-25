@@ -35,6 +35,7 @@
 #include "Header/notation/bbm.hpp"
 #include "Header/notation/m1ynss.hpp"
 #include "Header/notation/tm1ynss.hpp"
+#include "Header/notation/bm1ynss.hpp"
 #include "Header/notation/gy.hpp"
 #include "Header/notation/xy-v1.hpp"
 #include "Header/notation/xy-v2.hpp"
@@ -611,6 +612,20 @@ namespace {
               .expand = nullptr, .suffix = &notation::TM1YnssNotation::suffix,
               .definition_resource_id = IDR_DEF_TM1YNSS,
               .expand_text_n = &notation::TM1YnssNotation::expand_text_n,
+              .param_min = 0, .param_max = 25, .param_default = 0,
+              .param_label = L"n (0-25):",
+              .tags = { L"Minus1", L"BM-like", L"参数化", L"递归嵌套", L"文本" } },
+            { .display_name = L"AbsB(n+1)SS 绝对分支负一 Y 序列系统", .id = "abs-bm1ynss",
+              .expand = nullptr, .suffix = &notation::AbsBM1Notation::suffix,
+              .definition_resource_id = IDR_DEF_ABS_BM1YNSS,
+              .expand_text_n = &notation::AbsBM1Notation::expand_text_n,
+              .param_min = 0, .param_max = 25, .param_default = 0,
+              .param_label = L"n (0-25):",
+              .tags = { L"Minus1", L"BM-like", L"参数化", L"递归嵌套", L"文本" } },
+            { .display_name = L"RelB(n+1)SS 相对分支负一 Y 序列系统", .id = "rel-bm1ynss",
+              .expand = nullptr, .suffix = &notation::RelBM1Notation::suffix,
+              .definition_resource_id = IDR_DEF_REL_BM1YNSS,
+              .expand_text_n = &notation::RelBM1Notation::expand_text_n,
               .param_min = 0, .param_max = 25, .param_default = 0,
               .param_label = L"n (0-25):",
               .tags = { L"Minus1", L"BM-like", L"参数化", L"递归嵌套", L"文本" } },
