@@ -1,11 +1,4 @@
-// Header/notation/strong_e0mn.hpp
-// strong e0MN 记号（display 名 "strong e0MN"，TS id "strong-e0mn"）。
-// 逻辑移植自 notation-explorer（hypcos）的 src/notations/MN/strong_e0MN.ts
-// （家族/类别：category-ta0-mn，credit.e0mn；原作者 test_alpha0）。
-// 与 e0MN 共享 mnordshare.hpp 核心；仅三处实质差异（见 mnordshare.hpp 头注）：
-//   1. shiftOrdNumbers：strong 版把指数项也递归移位，判据为 coeff >= cutoff；
-//   2. down 的 omit 判据：ordEq(xnL, last[n-2].x)（相等）而非 <= 0；
-//   3. shortExpansion 的 omit 判据：ordEq(xnL, prev) 而非 <= 0。
+
 #pragma once
 
 #include <optional>

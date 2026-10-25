@@ -1,10 +1,4 @@
-// Header/notation/up1mn.hpp
-// UP1MN 记号（display 名 "UP1MN"，TS id "up1mn"）。
-// 逻辑移植自 notation-explorer（hypcos）的 src/notations/MN/UPMN/UP1MN.ts
-// （家族/类别：category-upmn，credit.up1mn）。
-// 表达式结构（TS）：Entry=number（0-based）；Column=Entry[]；Expr=Column[]。
-// 显示/解析经 n-MN（smnshare）转换（value+1, sep=0；解析要求 sep 全为 0）。
-// ∞ 用 bool 标志表示（display "Limit"）。
+
 #pragma once
 
 #include <optional>

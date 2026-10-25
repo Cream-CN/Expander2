@@ -1,12 +1,4 @@
-// Header/notation/tonshare.hpp
-// TON（Taranovsky 序数记号）系列九种变体的公共基础：
-//   术语表示（树）、扁平化、比较、显示文本、解析、基本列(FS)生成器引擎与惰性缓存。
-// 文本格式约定（本移植自定，TS 原版只有 display 方向、没有 from_display）：
-//   叶子   -1 / -2        -> "0"
-//   叶子   >= 0（整数）    -> noraise 家族: "Ω"；raise 家族(TON/TON_MC/TON_MPC): "Ω<数字>"
-//   叶子   Infinity       -> "Limit"（记号极限；仅作为输入/init 出现）
-//   节点   [l, r, -2]     -> display(l) + display(r) + "C"
-// 解析用后缀栈（term term C 无歧义文法），线性时间。
+
 #pragma once
 
 #include <cmath>

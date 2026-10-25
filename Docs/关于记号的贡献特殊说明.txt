@@ -1,0 +1,29 @@
+关于记号的贡献特殊说明
+
+以下说明针对"新增 / 移植一个记号"这一场景，与 Docs/CONTRIBUTING.txt 的
+通用贡献流程互补，按记号贡献者视角强调几点：
+
+1. 来源与许可证
+   新增记号的代码来源必须是与 Unlicense 兼容且署名（无论是否被要求）的；
+   移植自 TypeScript 记号库（如 ne-rewritten 的 BM-like 系列）时，请保留
+   原记号名、作者署名与移植来源说明（建议写入 defs/<name>.txt 或头文件注释）。
+
+2. 文件落位
+   - 核心逻辑：Header/notation/<name>.hpp，命名空间 omegay::notation，
+     族内 detail 命名空间与函数一律加族前缀（例如 btl_、bt3_），避免 ADL 歧义；
+   - 定义文本：defs/<name>.txt（UTF-8 无 BOM，真实换行，勿写 \n）；
+   - 登记：Resource.h 的 IDR_DEF_* + build.ps1 的 $fileToId + Expander.cpp
+     的 notationTable()；
+   - 生成与构建：.\build.ps1 -Mode gen 再 -Mode rebuild（Definitions.h
+     为生成文件，勿手工编辑）。
+
+3. 接口形态
+   向量记号走 expand(seq, term)；文本记号走 expand_text / expand_text_alter；
+   参数化记号（n 输入框）走 expand_text_n + param_min/max/default/label，
+   详见 Docs/CONTRIBUTING.txt 3.4 节。所有展开接口必须纯函数、不抛异常，
+   解析失败返回 bmlike::kParseError 提示字符串。
+
+4. 验证
+   移植类记号建议保留 golden 对照：node 引擎 → golden 文本 →
+   tools/_<族>_smoke.cpp 逐例比对；本地验证资产（tools/bml_golden/、
+   tools/_*.cpp/.exe/.obj）按惯例不入库。

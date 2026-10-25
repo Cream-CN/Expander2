@@ -1,9 +1,3 @@
-// Header/notation/up2mn_v1b_plus.hpp
-// UP2MN v1B+ 记号（display 名 "UP2MN v1B+"，TS id "up2mn-v1b+"）。
-// 逻辑移植自 notation-explorer（hypcos）的 src/notations/MN/UPMN/UP2MN-v1b-plus.ts
-// （家族/类别：category-upmn，credit.upmn）。
-// 与 v1B 的唯一差异：compute_up_2mn 中 p!=Ri 时沿用 result[p]（v1B 为 false），
-// 以及 infinity_FS 每列仅一个 [i-1,1] 条目。共享核心见 mnup2share.hpp。
 #pragma once
 
 #include <optional>

@@ -1,9 +1,4 @@
-// Header/notation/s_omega_p1_dbms.hpp
-// S ω+1 DBMS 记号（display 名 "S ω+1 DBMS"）。
-// 逻辑移植自 notation-explorer（hypcos）的 src/notations/MN/SDBMS/S_omega_p1_DBMS.ts
-// （TS id "s-omega+1-dbms"，家族/类别：category-sdbms）。
-// 表达式结构（TS）：HeightPos = number | 'w'（'w'=ω 位置）；HeightEntry=[v, p]（[值, 位置]）；
-// Height=HeightEntry[]；Entry=[value, Height]。显示 v+1^(v+1@p / v+1@ω)；"(0)" 表示空列。∞ 用 bool 标志表示。
+
 #pragma once
 
 #include <optional>

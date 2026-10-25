@@ -1,10 +1,4 @@
-// Header/notation/s_omega2_dbms.hpp
-// S ω2 DBMS 记号（display 名 "S ω2 DBMS"）。
-// 逻辑移植自 notation-explorer（hypcos）的 src/notations/MN/SDBMS/S_omega2_DBMS.ts
-// （TS id "s-omega2-dbms"，家族/类别：category-sdbms）。
-// 表达式结构（TS）：HeightPos = number | [number]（高阶位置）；HeightEntry=[v, p]（[值, 位置]）；
-// Height=HeightEntry[]；Entry=[value, Height]。显示 v+1^(v+1@pos)（pos: n+1 或 ω/ω+n）；
-// "(0)" 表示空列。∞ 用 bool 标志表示。
+
 #pragma once
 
 #include <optional>

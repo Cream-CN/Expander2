@@ -1,31 +1,3 @@
-// Header/notation/xy-v1.hpp
-// X-Y V1 记号（维度参数 D_XY = [1,0,1]）的 C++20 头文件实现。
-// 逻辑忠实移植自 X-Y1.js（桌面上的参考实现），记号显示名 "X-Y V1"。
-//
-// 规范：omegay::notation::XYV1Notation
-//  - kName    UTF-8 显示名
-//  - expand   对整数序列执行 term 项展开，纯函数、不抛异常
-//  - suffix   结果后缀（空）
-// 依赖：仅标准库。不包含 <windows.h>，无 UI 依赖。
-//
-// 移植说明：
-//  - 参考 JS 是 n-Y 通用展开器，维度由用户输入；X-Y V1 固定取 X-Y 的
-//    维度序列 [1,0,1]（与 xy-v3.hpp 同一 D_XY）。
-//  - UI/显示逻辑（displayMt、expandmultilimited、DOM 等）不属于记号接口，
-//    按 CONTRIBUTING 约定一并去除；其中仅控制显示的参数 f 也被省略。
-//  - 参考 JS 存在若干“vibe coding”遗留，本文件按可观察行为等价的方式
-//    整理为直观的 C++20 实现，并在相应位置加注：
-//      1) toSequence 中“无更小左邻的元素”在 JS 里被当作数组空洞丢弃
-//         （如 [2,1] 展开得 []，丢失前导 2；[2,3] 甚至直接崩溃）；本移植
-//         保留全部元素，以合成根为父，数学上更一致（[2,1] 得 [2]）。
-//      2) drawMountain 增加“脚值必须严格下降”护栏，避免退化输入（前导
-//         元素 >1 且无更小左邻）因根父节点 value=0 而无法终止。
-//      3) 展开主循环与 fetchDimensionSequence/calcMaxCopyrow/copyItem 中
-//         对空指针（head/parent 缺失）与越界列索引增加护栏，保证任意
-//         输入都不崩溃；对正常输入（各元素均有更小左邻）这些护栏均不生效，
-//         结果与参考 JS 完全一致。
-//  - 与原 ε-Y 移植相同，使用 detail 命名空间 + deque Arena 管理 Entry
-//    生命周期，函数间相互递归（expand / expandDimensionSequence）。
 #pragma once
 #include <cstddef>
 #include <deque>

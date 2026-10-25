@@ -1,13 +1,4 @@
-// Header/notation/up2dbms_v2.hpp
-// UP2DBMS v2 记号（display 名 "UP2DBMS v2"，TS id "up2dbms-v2"）。
-// 逻辑移植自 notation-explorer（hypcos）的 src/notations/MN/UPMN/UP2DBMS-v2.ts
-// （家族/类别：category-upmn，credit.up2dbms-v2）。
-// 表达式结构（TS）：Height=[h0,h1]（内部 0-based；显示 '(h1,h0+1)'）；
-// Entry=[value(0-based), Height]；Column=Entry[]；Expr=Column[]；∞ 用 bool 标志表示。
-// 与 UP2DBMS-v1 不同：显示/解析为高度对形式（非 n-MN 分隔符形式）；
-// compute_new_height/merge_column 同 SDBMS 家族；compute_up 为 v2 专属版本；
-// copy_column 带 BMS 升级（entry[0]==r 且 !up 时分两支）。UI 视图（dbms/RMN/Y/layer、
-// draw_diagram、from_y_seq）未移植。
+
 #pragma once
 
 #include <cstddef>

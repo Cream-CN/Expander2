@@ -1,10 +1,4 @@
-// Header/notation/up2mn_v1a.hpp
-// UP2MN v1A 记号（display 名 "UP2MN v1A"，TS id "up2mn-v1a"）。
-// 逻辑移植自 notation-explorer（hypcos）的 src/notations/MN/UPMN/UP2MN-v1a.ts
-// （家族/类别：category-upmn-test，credit.upmn）。
-// 表达式结构（TS）：与 nMN 相同 —— Sep=int；Vertical=Sep[]；Entry=[value(1-based),Sep]；
-// Column=Entry[]；Mountain=Column[]。∞ 用 bool 标志表示（display "Limit"）。
-// 复用了 smnshare（n-MN 全套）的显示/解析/vertical/parent/expand。
+
 #pragma once
 
 #include <optional>

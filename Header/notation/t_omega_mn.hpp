@@ -1,14 +1,4 @@
-// Header/notation/t_omega_mn.hpp
-// TωMN 记号（display 名 "TωMN"，TS id "t-omega-mn"）。
-// 逻辑移植自 notation-explorer（hypcos）的 src/notations/MN/T_omega_MN.ts
-// （家族/类别：category-mn，credit.hypcos_mn）。
-// 表达式结构（TS）：Sep=Expr（递归！）；Entry=[int,Sep]；Column=Entry[]；
-// Expr=Column[]。∞ 用顶层标志表示（display 为 "Limit"）。
-// C++ 递归类型：struct TEntry { int value; TExpr sep; } 通过
-// TColumn=vector<TEntry>、TExpr=vector<TColumn> 形成合法递归（vector 支持不完整元素）。
-// 与 ωMN 相比的关键差异：分隔符本身是 Expr，且其"极限分隔符"要递归展开
-// （threshold 取最小 n 使 low/high 两个竖向在该基本列下汇合）。
-// TS 的 memo 缓存为纯函数优化，本移植省略；FS_short 为 UI 等价表示，不移植。
+
 #pragma once
 
 #include <cstddef>
