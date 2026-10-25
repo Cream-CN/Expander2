@@ -1,13 +1,1 @@
 UP2DBMS v1B+
-
-UP2DBMS v1B+ 是 notation-explorer（hypcos）中 category-upmn 家族的 UP 型 DBMS 山记号（credit.upmn，TS 源：src/notations/MN/UPMN/UP2DBMS-v1b-plus.ts），C++ 实现见 Header/notation/up2dbms_v1b_plus.hpp，共享核心 Header/notation/mnup2share.hpp。表达式结构、合法性、极限与后继判定、∞ 基本列、新末列构造与 y_offset 规则均与 UP2DBMS v1 相同，仅在有限情形 up 判定与复制值平移两处不同（以代码为准）。
-
-共同部分：Expr 为列序列，条目 (value 0 起列标, sep 层号)，空表达式表示 0，∞ 标志显示 "Limit"；非空且末列非空为极限表达式，末列为空为后继表达式，后继展开即删去末列；value 须落在 [0, 列数) 内。Limit[n] 为第一列空列，第 i=1..n 列先含 i 个引用第 i−1 列、sep=0 的条目，末项为引用第 i−1 列、sep=1 的条目。展开时末项 sep=0 为有限情形，否则为无限情形；新末列由末列删去末项后拼回第 Ri 列自 Rj 项起的尾部，y_offset 恒为 top−Rj，随后对 w=1..m 复制第 Ri+1 到 right 列，FS 较短删末列、FS_alter 较长保留。
-
-与 v1 的两处差异：
-
-(1) 有限情形 up 判定：v1 把第 Ri 列及其右侧全部记为 up=1；v1B+ 改用真实的 up2mn_compute_up_1mn 算法（与 UP2MN v1B 的有限情形同一套坏根判定：列项数分档、父列继承、j>0 前置列检查、Y_start 上溯到父列等于 Ri 的列、后缀列与相对列比较，未决记 1）。无限情形的 compute_up_2mn 与 v1 完全相同：项数 ≤Rj+1 记 0，≥Rj+3 继承 P[i][Rj+1].i 列，有限末项同样继承父列，p≠Ri 继承 p 列，p=Ri 时上溯到项数恰为 Rj+2 的列再做后缀与相对列比较。
-
-(2) copy_column 的值平移：value 等于 Ri 时，v1B+ 仅当 up 为真才加 offset，不再含 v1 的 j≤Rj 位置判据；value 大于 Ri 加 offset、小于 Ri 保持不变的规则，以及 up 为真时在第 Rj 项前补 y_offset 个填充条目（sep=0）的规则，均与 v1 相同。
-
-记号极限：实现未给出该记号所对应序数上界，具体极限以原始 TS 定义为准。

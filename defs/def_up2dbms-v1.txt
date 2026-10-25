@@ -1,19 +1,2 @@
 UP2DBMS v1
 
-UP2DBMS v1 是 notation-explorer（hypcos）中 category-upmn 家族的 UP 型 DBMS 山记号（credit.upmn，TS 源：src/notations/MN/UPMN/UP2DBMS-v1.ts），C++ 实现见 Header/notation/up2dbms_v1.hpp，共享核心 Header/notation/mnup2share.hpp。表达式结构与 UP2MN v1B 同属 mnup2 骨架，但展开时行高偏移恒为 top−Rj，且有限情形的 up 判定采用恒真简化规则。
-
-表达式结构：一个表达式 Expr 是若干列 Column 的序列；每列是若干条目 Entry=(value, sep) 的序列；value 是从 0 起的列标引用，sep 是分隔符层号（非负整数），显示时列标加 1 交给 n-MN 骨架。空表达式表示 0；另外用 ∞ 标志表示极限，显示为 "Limit"。竖向表与父位置表 P 的生成规则与 mnup2share 相同：vertical_increase 生成竖向，父位置 pi=value、pj 为父列竖向表中第一个小于本条目竖向的位置。
-
-合法性：展开前校验所有 value 落在 [0, 表达式列数) 内，越界按解析失败处理。
-
-极限与后继：非空且末列非空的表达式是极限表达式；末列为空的表达式是后继表达式，它的展开就是删去末列。
-
-∞ 的基本列：Limit[n]（n 为正整数）展开为第一列空列；第 i=1..n 列先含 i 个引用第 i−1 列、sep=0 的条目，末项为引用第 i−1 列、sep=1 的条目。
-
-展开（参数 m≥1；FS 较短 shorter=true，FS_alter 较长 shorter=false）：空表达式原样返回；末列为空时删去末列。否则取末列列标 right 与末项位置 top，计算竖向表 V 与父位置表 P；rp=P[right][top] 记为 (Ri, Rj)。末项 sep=0 为有限情形 is_finite=true，否则为无限情形。有限情形调用 v1 专用的 compute_up_1mn：列标小于 Ri 记 0，第 Ri 列及其右侧全部记 1；无限情形调用 compute_up_2mn（v1c=false 分支）。构造新表达式：保留除末列外各列，新末列由末列删去末项后，拼回第 Ri 列自第 Rj 项起的所有条目（本记号不在新末列补入 (Ri, 0) 条目）。y_offset 恒为 top−Rj。对 w=1..m 逐轮把第 Ri+1 到 right 列按 copy_column 复制，列标偏移 (right−Ri)·w，高度偏移 y_offset·w；较短展开删去最后一列，较长展开保留全部复制列。
-
-compute_up_2mn（v1 与 v1B+ 相同，v1C 的差异另见其定义）：列标小于 Ri 为 0，第 Ri 列为 1。对 i=Ri+1 到末列：列项数不超过 Rj+1 记 0；项数不少于 Rj+3 时继承 P[i][Rj+1].i 列的标志；末项 sep=0 的有限列同样继承 P[i][Rj+1].i 列的标志；其余取 p=P[i][Rj+1].i，p 不等于 Ri 时继承 p 列标志。p 等于 Ri 时进入坏根比较：X_start=i，Y_start=末列，沿父位置上溯直到找到项数恰为 Rj+2 的列 Y_start；Y_start 不大于 X_start 时相等记 1、否则记 0；否则先比较两列自对应位置起的后缀列，再对 k=1,2,... 比较相对列（value 不小于起点的条目标记为相对项、值改为减起点），先比标记再比 value 与 sep，首次不一致决定；全部一致记 1。
-
-copy_column(col, rp, offset, y_offset, up, v1_flag=true)：value 大于 Ri 加 offset，小于 Ri 保持不变；value 等于 Ri 时，只要 up 为真或位置 j 不超过 Rj 即加 offset，否则保持（j≤Rj 判据是 v1 相对 v1B+ 的特有规则）。若 up 为真且 y_offset 大于 0、Rj 未超出结果列范围，在第 Rj 项位置前补入 y_offset 个填充条目（value 取第 Rj 项平移后的值，sep=0），头部 Rj 项与尾部其余条目依次保留。
-
-记号极限：实现未给出该记号所对应序数上界，具体极限以原始 TS 定义为准。

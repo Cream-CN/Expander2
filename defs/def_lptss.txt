@@ -1,4 +1,1 @@
 LPTSS（Lifting Projection Triple Sequence System，提升投影三列序列系统）
-
-有限矩阵的展开、合法性与提升规则与 LPMS 完全相同；唯一区别在极限 Limit 的
-基本列：第 n 个基本列为 (0)(1,1,1)(2,2,2)...(n,n,n)（n+1 列三元组）。
