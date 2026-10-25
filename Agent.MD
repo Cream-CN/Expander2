@@ -45,7 +45,7 @@ Minus1_Y_nSS 系列在 TS 侧是“参数为 n 的工厂”，网页可无限生
 
 ## 2. 进度总览
 
-任务在内部任务表中编号。#1–#12、#15、#16、#17、#18 已完成并提交；#13、#14 未完成。
+任务在内部任务表中编号。#1–#18 全部已完成并提交；仅 #13（总任务收尾）随其子任务完成。
 
 ### 已完成（均已 commit 到 dev，仅供界定边界）
 
@@ -67,10 +67,10 @@ Minus1_Y_nSS 系列在 TS 侧是“参数为 n 的工厂”，网页可无限生
 
 | 编号 | 内容 | 状态 |
 |------|------|------|
-| #13  | Minus1_Y_nSS 全系列（共 8 族）的总任务 | 进行中（已完成基础族与 T 族，余 6 族） |
+| #13  | Minus1_Y_nSS 全系列（共 8 族）的总任务 | **已完成**（8 族全部移植并提交） |
 | #17  | Abs_B / Rel_B_Minus1_Y_nSS | **已完成**（golden 1518 例全过） |
 | #18  | BT_star Minus1 v1 / v2 / v3（v3 含 FS_short）、BTL | **已完成**（v1/v2/v3/BTL 全部提交） |
-| #14  | 全部记号完成后的全量 rebuild + Docs 收尾 | 未开始 |
+| #14  | 全部记号完成后的全量 rebuild + Docs 收尾 | **已完成**（rebuild 21442 函数，Docs 已增补） |
 
 需要移植的族共 8 个，TS 文件均位于
 `...\BM-like\Minus1_Y_nSS-series\`：
@@ -192,16 +192,19 @@ Minus1_Y_nSS 系列在 TS 侧是“参数为 n 的工厂”，网页可无限生
   `tools/bml_golden/bt{1,2,3,l}_m1ynss_out.txt`（bt1/bt2/btl 无 mode 列 split4，
   bt3 带 mode 列 split5）。
 
-### #14 整体构建验证与文档收尾
+### #14 整体构建验证与文档收尾（已完成）
 
-- 全部记号并入后执行一次完整 `build.ps1 -Mode rebuild`，确认链接生成
-  `x64/Release/Expander.exe` 且无新增警告（既有 `wWinMain` SAL 批注 C28251
-  警告为历史遗留）。
-- 更新 `Docs/`：
-  - 增补新记号接口说明（尤其“参数化记号 + n 输入框”的
-    `expand_text_n / param_*` 约定）；
-  - 核对 `CONTRIBUTING` / API 类文档（以 `Docs/` 下实际文件名为准）；
-  - `Docs/` 下存在一个 0 字节空文件“关于记号的贡献特殊说明.txt”，按需补写或保留。
+- 全量 rebuild：`build.ps1 -Mode rebuild` 输出
+  `Expander.vcxproj -> x64\Release\Expander.exe`，`All 21442 functions were compiled`，
+  `构建完成。`；无新增警告（既有 C6246/C6262/C28251 为历史遗留）。
+- Docs 增补：
+  - `Docs/API.txt` 追加 Minus1_Y_nSS 系列小节（m1ynss / tm1ynss / bm1ynss /
+    bt1ynss / bt2ynss / bt3ynss / btlynss 的接口约定、expand_text_n/param_*、
+    各族说明与 detail 命名空间）；
+  - `Docs/CONTRIBUTING.txt` 新增 3.4 参数化文本记号（expand_text_n / param_*），
+    "附：当前记号实现位置" 补入 Minus1/BT 系列头文件；
+  - `Docs/关于记号的贡献特殊说明.txt`（原 0 字节空文件）补写记号贡献要点
+    （来源许可 / 文件落位 / 接口形态 / golden 验证）。
 
 ---
 
