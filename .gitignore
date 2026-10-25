@@ -399,3 +399,4 @@ FodyWeavers.xsd
 *.exe
 *.txt
 *.cpp
+/tools/bml_golden
