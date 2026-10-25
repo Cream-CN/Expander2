@@ -1,11 +1,3 @@
-// Header/notation/waw2mn3.hpp
-// wAω2MN3 记号（display 名 "wAω2MN3"，TS id "weak-a-omega2-mn-3"）。
-// 逻辑移植自 notation-explorer（hypcos）的 src/notations/MN/Aw2MN3.ts
-// （家族/类别：category-hypcos-w2mn，credit.hypcos_mn）。
-// 表达式结构：与 Aw2MN2 相同 —— Sep=Expr（递归）；Vertical=Sep[]；
-// Entry=[value(1-based), Sep, mark?]；Column=Entry[]；Expr=Column[]；∞ 用 bool 标志表示。
-// 核心实现与普通版/版本2 共享 Header/notation/aw2mn_share.hpp
-// （本记号：subtract1 版3、弱版 —— stretch 时 V0[x][y] 不低于 top_vertical 的条目保持原分隔符）。
 #pragma once
 
 #include <optional>

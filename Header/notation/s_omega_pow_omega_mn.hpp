@@ -1,10 +1,4 @@
-// Header/notation/s_omega_pow_omega_mn.hpp
-// Sω^ωMN 记号（display 名 "Sω^ωMN"，TS id "S-omega^omega-MN"）。
-// 逻辑移植自 notation-explorer（hypcos）的 src/notations/MN/SMN/S_omega_pow_omega_MN.ts
-// （家族/类别：category-smile-mn，credit.n_mn）。
-// 表达式结构（TS）：Sep=number[]（parse 时去掉尾部 0 归一；长度>2 时显示为
-// [倒序,逗号分隔]）；Vertical=Sep[]；Entry=[int,Sep]；Column=Entry[]；
-// Mountain=Column[]；∞ 用顶层 "Limit" 表示。UI 能力未移植。
+
 #pragma once
 
 #include <cstddef>

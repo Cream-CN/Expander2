@@ -1,28 +1,4 @@
-// Header/notation/xy-v3.hpp
-// X-Y V3 记号（维度参数 D_XY = [1,0,1]）的 C++20 头文件实现。
-// 逻辑忠实移植自 X-Y.js（桌面上的参考实现），记号显示名 "X-Y V3"。
-//
-// 规范：omegay::notation::XYV3Notation
-//  - kName    UTF-8 显示名
-//  - expand   对整数序列执行 term 项展开，纯函数、不抛异常
-//  - suffix   结果后缀（空）
-// 依赖：仅标准库。不包含 <windows.h>，无 UI 依赖。
-//
-// 移植说明：
-//  - 参考 JS 中存在若干“vibe coding”遗留，本文件按可观察行为等价的方式
-//    整理为直观的 C++20 实现，并在相应位置加注：
-//      1) expand 中 `const idxVal = t.idx; idx: idxVal++` 对 const 自增，
-//         参考 JS 会抛 “Assignment to constant variable” 使多数输入崩溃；
-//         本移植按 ε-Y 惯例取 t.idx+1。
-//      2) copyElement 中 `if (it.no > 0){...}` 计算的 max_row 立即被
-//         `max_row = it.row` 覆盖（死代码），本移植仅保留最终语义。
-//      3) toSequence 中“无更小左邻的元素”在 JS 里被当作数组空洞丢弃
-//         （如 [2,1] 展开得 []，丢失前导 2）；本移植保留全部元素，以根
-//         节点为父，数学上更一致（[2,1] 得 [2]）。
-//      4) drawMountain 增加“脚值必须严格下降”护栏，避免退化输入
-//         （前导元素 >1 且无更小左邻）因根父节点 value=0 而无法终止。
-//  - 与原 ε-Y 移植相同，使用 detail 命名空间 + deque Arena 管理 Entry
-//    生命周期，函数间相互递归（expand / getBootIndex / expandDimensionSequnece）。
+
 #pragma once
 #include <cstddef>
 #include <deque>

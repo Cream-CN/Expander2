@@ -1,10 +1,4 @@
-// Header/notation/sa_omega2_mn.hpp
-// SAω2MN 记号（display 名 "SAω2MN"，TS id "SA-omega2-MN"）。
-// 逻辑移植自 notation-explorer（hypcos）的 src/notations/MN/SMN/SA_omega2_MN.ts
-// （家族/类别：category-smile-mn，credit.n_mn）。
-// 表达式结构（TS）：Sep=number[]（parse 时去掉尾部 0 归一）；Vertical=Sep[]；
-// Entry=[int,Sep,bool]（第三项为标记）；Column=Entry[]；Mountain=Column[]；
-// ∞ 用顶层 "Limit" 表示。display_equiv/draw_diagram 等 UI 能力未移植。
+
 #pragma once
 
 #include <cstddef>

@@ -1,9 +1,4 @@
-// Header/notation/up1dbms.hpp
-// UP1DBMS 记号（display 名 "UP1DBMS"，TS id "up1dbms"）。
-// 逻辑移植自 notation-explorer（hypcos）的 src/notations/MN/UPMN/UP1DBMS.ts
-// （家族/类别：category-upmn-test）。
-// 表达式结构（TS）：Entry=[value(0-based), height(0-based)]；Column=Entry[]；
-// Expr=Column[]。显示 v+1 ^ h+1；"(0)" 表示空列。∞ 用 bool 标志表示。
+
 #pragma once
 
 #include <array>

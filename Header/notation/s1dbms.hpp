@@ -1,9 +1,4 @@
-// Header/notation/s1dbms.hpp
-// S1DBMS 记号（display 名 "S1DBMS"，TS id "s1dbms"）。
-// 逻辑移植自 notation-explorer（hypcos）的 src/notations/MN/SDBMS/S1DBMS.ts
-// （家族/类别：category-sdbms）。
-// 表达式结构（TS）：Entry=[value(0-based), height(0-based)]；Column=Entry[]；
-// Expr=Column[]。显示 v+1 ^ h+1；"(0)" 表示空列。∞ 用 bool 标志表示。
+
 #pragma once
 
 #include <optional>

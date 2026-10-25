@@ -1,11 +1,4 @@
-// Header/notation/s_omega2_mn.hpp
-// Sω2MN 记号（display 名 "Sω2MN"，TS id "S-omega2-MN"）。
-// 逻辑移植自 notation-explorer（hypcos）的 src/notations/MN/SMN/S_omega2_MN.ts
-// （家族/类别：category-smile-mn，credit.n_mn）。
-// 表达式结构（TS）：Sep=number[]（parse 时去掉尾部 0 归一）；Vertical=Sep[]；
-// Entry=[int,Sep]；Column=Entry[]；Mountain=Column[]；∞ 用顶层 "Limit" 表示。
-// 范围：文本接口（FS/FS_alter/parse/to_string）+ 展开核心；display_equiv
-// （layer/marked）、draw_diagram 等 UI 能力不在 C++ 文本记号契约内，未移植。
+
 #pragma once
 
 #include <cstddef>

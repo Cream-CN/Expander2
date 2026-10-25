@@ -1,13 +1,4 @@
-// Header/notation/pcf_omega_mn.hpp
-// PCF's ωMN 记号（display 名 "PCF's ωMN"，TS id "pcf-omega-mn"）。
-// 逻辑移植自 notation-explorer（hypcos）的 src/notations/MN/pcf-omega_MN.ts
-// （家族/类别：category-mn，credit.pcf-omega-mn）。
-// 表达式结构（TS）：Vertical=number[]（Cantor 系数数组，小端：v[j]=ω^j 系数，
-// 反字典序比较）；Entry=[int,Vertical]（p 为 0 起列标）；Column=Entry[]；
-// Expr=Column[]。∞ 用顶层标志表示（display 为 "Limit"）。
-// 展开是"坏根复制"的变体：stretch/normalize_col/magma_verticals/base_vertical。
-// "MN" 显示等价（convert_to_mn）与 FS_short 为 UI 特性，不移植。
-// TS 的 memo 缓存为纯函数优化，本移植省略。
+
 #pragma once
 
 #include <cstddef>

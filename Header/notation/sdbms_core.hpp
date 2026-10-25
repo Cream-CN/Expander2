@@ -1,19 +1,4 @@
-// Header/notation/sdbms_core.hpp
-// SDBMS 家族共享核心：DBMS 矩阵机（列/项/矩阵类型、比较、复制、合并、基本列展开）。
-// 逻辑移植自 notation-explorer（hypcos）的 src/notations/MN/SDBMS/*.ts（8 个记号）。
-// 8 个记号共享同一展开骨架（right/top/r、merge_column、copy 循环、∞FS），
-// 仅行高类型与行高运算不同；本头以模板 Ops 参数化行高运算，各记号头文件提供各自 Ops：
-//   using Height;                                  // 行高类型
-//   static std::optional<Height> height_of(const Column&);
-//   static int compare_height(const Height&, const Height&);
-//   static Height copy_height(const Height&, int r, int offset);
-//   static std::optional<Height> compute_new_height(const Height&, const Expr&, int r);
-//   static Expr infinity_fs(int index);             // 极限展开
-//   static std::optional<Entry> parse_entry(Parser&);   // 项解析（含上标）
-//   static std::string entry_to_string(const Entry&);   // plain 显示
-// 其中 Column/Entry/Expr/Parser 由本头定义。
-// 说明：纯函数、不抛异常；非法输入在解析层返回 nullopt；∞ 由外层 Expr 结构
-// 的标志表示（display 为 "Limit"）。UI 等价表示（dbms/rmn/Y/层化等）未移植。
+
 #pragma once
 
 #include <cstddef>

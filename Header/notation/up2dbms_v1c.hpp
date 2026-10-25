@@ -1,10 +1,4 @@
-// Header/notation/up2dbms_v1c.hpp
-// UP2DBMS v1C 记号（display 名 "UP2DBMS v1C"，TS id "up2dbms-v1c"）。
-// 逻辑移植自 notation-explorer（hypcos）的 src/notations/MN/UPMN/UP2DBMS-v1c.ts
-// （家族/类别：category-upmn，credit.upmn）。
-// 表达式结构（TS）：Entry=[value(0-based), sep]；Column=Entry[]；Expr=Column[]。
-// 共享核心见 mnup2share.hpp（与 v1b+ 唯一差异：compute_up_2mn 的 while 循环
-// 用 Rj 索引且追加 P[Y][Rj][0] !== Ri 条件，即 v1c=true）。
+
 #pragma once
 
 #include <optional>

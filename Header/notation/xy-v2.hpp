@@ -1,36 +1,4 @@
-// Header/notation/xy-v2.hpp
-// X-Y V2 记号（维度参数 D_XY = [1,0,1]）的 C++20 头文件实现。
-// 逻辑忠实移植自 X-Y2.js（桌面上的参考实现），记号显示名 "X-Y V2"。
-//
-// 规范：omegay::notation::XYV2Notation
-//  - kName    UTF-8 显示名
-//  - expand   对整数序列执行 term 项展开，纯函数、不抛异常
-//  - suffix   结果后缀（空）
-// 依赖：仅标准库。不包含 <windows.h>，无 UI 依赖。
-//
-// 移植说明：
-//  - 参考 JS 是 n-Y 通用展开器，维度由用户输入；X-Y V2 固定取 X-Y 的
-//    维度序列 [1,0,1]（与 xy-v3.hpp 同一 D_XY）。
-//  - UI/显示逻辑（displayMt、handleClick、expandmultilimited、DOM 等）不属于
-//    记号接口，按 CONTRIBUTING 约定一并去除；其中仅控制显示的参数 f 被省略。
-//  - V2 的维度序列展开使用 memo 表（JS 的全局 mm）。为使 expand 保持纯函数、
-//    无全局状态，本移植把 memo 作为栈上局部对象随递归传递；memo 仅做
-//    (序列, 项数, 维度) 精确键命中，局部与否不影响结果，只影响性能。
-//  - 参考 JS 存在若干“vibe coding”遗留，本文件按可观察行为等价的方式
-//    整理为直观的 C++20 实现，并在相应位置加注：
-//      1) toSequence 中“无更小左邻的元素”在 JS 里被当作数组空洞丢弃
-//         （[2,3] 等直接崩溃）；本移植保留全部元素，以合成根为父。
-//      2) drawMountain 增加“脚值必须严格下降”护栏，避免退化输入（前导
-//         元素 >1 且无更小左邻）因根父节点 value=0 而无法终止。
-//      3) getBootCloumn / expand 要求末列至少两个元素（t 为倒数第二个）；
-//         退化输入不满足时本移植返回“删去末项”。参考 JS 在此类输入上
-//         会直接崩溃。
-//      4) getReferenceChain / setElementNo / copyElement / copyCloumn 中
-//         对空指针（head/parent 缺失）与越界列索引增加护栏，保证任意
-//         输入都不崩溃。对正常输入（各元素均有更小左邻、维度链可达）
-//         这些护栏均不生效，结果与参考 JS 完全一致。
-//  - 与原 ε-Y / xy-v3 移植相同，使用 detail 命名空间 + deque Arena 管理
-//    Entry 生命周期，函数间相互递归（expand / expandElementDimensionSequence）。
+
 #pragma once
 #include <cstddef>
 #include <deque>

@@ -1,9 +1,4 @@
-// Header/notation/s_omega_dbms_v3.hpp
-// SωDBMS v3 记号（display 名 "SωDBMS v3"）。
-// 逻辑移植自 notation-explorer（hypcos）的 src/notations/MN/SDBMS/S_omega_DBMS-v3.ts
-// （TS id "s-omega-dbms-v3"，家族/类别：category-sdbms）。
-// 表达式结构（TS）：HeightEntry=[v, p]（内部 [值, 位置] 顺序）；Height=HeightEntry[]；
-// Entry=[value, Height]；Column/Expr 常规。显示 v+1^(v+1@p)；"(0)" 表示空列。∞ 用 bool 标志表示。
+
 #pragma once
 
 #include <optional>

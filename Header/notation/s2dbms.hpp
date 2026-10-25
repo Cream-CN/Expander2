@@ -1,10 +1,4 @@
-// Header/notation/s2dbms.hpp
-// S2DBMS 记号（display 名 "S2DBMS"）。
-// 逻辑移植自 notation-explorer（hypcos）的 src/notations/MN/SDBMS/S2DBMS.ts
-// （TS id "s2dbms"，家族/类别：category-sdbms）。
-// 表达式结构（TS）：Height=[h0, h1]（二元行高，内部 [h0,h1] 存放）；
-// Entry=[value(0-based), Height]；Column=Entry[]；Expr=Column[]。
-// 显示 v+1^(h1,h0+1)；"(0)" 表示空列。∞ 用 bool 标志表示。
+
 #pragma once
 
 #include <optional>

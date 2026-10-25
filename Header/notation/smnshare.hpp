@@ -1,10 +1,4 @@
-// Header/notation/smnshare.hpp
-// SMN 家族共享核心：n-MN（n_MN.ts）的表达式类型、显示/解析、比较与展开机制。
-// 逻辑移植自 notation-explorer（hypcos）的 src/notations/MN/SMN/n_MN.ts。
-// 表达式结构（TS）：Sep=int；Vertical=Sep[]；Entry=[number,Sep]；
-// Column=Entry[]；Mountain=Column[]；∞ 用顶层标志表示（display 为 "Limit"）。
-// 说明：TS 的 memoization 缓存（按 display 键）为纯函数优化，本移植省略；
-// fill_ghost 中 "undefined" Sep 用 kUndefSep 哨兵表达（undefined>任意值、==自身）。
+
 #pragma once
 
 #include <cstddef>

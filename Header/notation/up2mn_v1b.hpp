@@ -1,9 +1,4 @@
-// Header/notation/up2mn_v1b.hpp
-// UP2MN v1B 记号（display 名 "UP2MN v1B"，TS id "up2mn-v1b"）。
-// 逻辑移植自 notation-explorer（hypcos）的 src/notations/MN/UPMN/UP2MN-v1b.ts
-// （家族/类别：category-upmn-test，credit.upmn）。
-// 表达式结构（TS）：Entry=[value(0-based), sep]；Column=Entry[]；Expr=Column[]。
-// 显示/解析复用 mnup2share（n-MN 转换）。∞ 用 bool 标志表示。
+
 #pragma once
 
 #include <optional>
