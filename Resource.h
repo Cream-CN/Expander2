@@ -155,4 +155,6 @@
 
 #define IDR_DEF_REL_BM1YNSS         20107
 
+#define IDR_DEF_BT1YNSS             20108
+
 

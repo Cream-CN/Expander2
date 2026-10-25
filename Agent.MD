@@ -69,7 +69,7 @@ Minus1_Y_nSS 系列在 TS 侧是“参数为 n 的工厂”，网页可无限生
 |------|------|------|
 | #13  | Minus1_Y_nSS 全系列（共 8 族）的总任务 | 进行中（已完成基础族与 T 族，余 6 族） |
 | #17  | Abs_B / Rel_B_Minus1_Y_nSS | **已完成**（golden 1518 例全过） |
-| #18  | BT_star Minus1 v1 / v2 / v3（v3 含 FS_short）、BTL | 未开始 |
+| #18  | BT_star Minus1 v1 / v2 / v3（v3 含 FS_short）、BTL | **进行中（v1 已完成，余 v2/v3/BTL）** |
 | #14  | 全部记号完成后的全量 rebuild + Docs 收尾 | 未开始 |
 
 需要移植的族共 8 个，TS 文件均位于
@@ -79,7 +79,7 @@ Minus1_Y_nSS 系列在 TS 侧是“参数为 n 的工厂”，网页可无限生
 2. `T_Minus1_Y_nSS.ts`（**已完成**；Abs/Rel 依赖其 `from_display`）
 3. `Abs_B_Minus1_Y_nSS.ts`（**已完成**）
 4. `Rel_B_Minus1_Y_nSS.ts`（**已完成**）
-5. `BT_star_Minus1_Y_nSS.ts`（v1，start=1，#18）
+5. `BT_star_Minus1_Y_nSS.ts`（v1，start=1，**已完成**，IDR `20108`）
 6. `BT_star_...-v2.ts`（v2 / strong，start=1，#18）
 7. `BT_star_...-v3.ts`（v3 / weak，start=1，**同时提供 FS 与 FS_short**，#18；
    v3 额外 import `BM.ts` 的 `column_display`）

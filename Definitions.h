@@ -381,6 +381,25 @@ BSM（Bashicu Sudden Matrix，Bashicu 突变矩阵系统）
 并且仅对相对根“上升”的行施加增量。
 )DEFTXT";
 
+constexpr std::string_view kDef_IDR_DEF_BT1YNSS = R"DEFTXT(
+BT*(n+1)SS v1（超限星负一 Y 序列系统，Bubby3's Transfinite* -1Y-nSS v1）
+
+参数化递归嵌套矩阵族。主窗口的参数框 n（1 到 25）决定每列父标号分量的个数；
+一列写作 (a_0,...,a_{n-1}, *^e_0, *^e_1, ...)，即 n 个父标号分量之后可以跟
+任意多个“子表达式”e_i，每个以 *^ 前缀标记（* 表示空子表达式），形成
+递归嵌套。n=1 即 2SS 起。
+
+显示：子表达式以 *^expr 形式显示（空子表达式为裸 *），无 ω / 数字简写。
+
+展开逐级求父、定根、按提升向量与阈值复制提升；与 T(n+1)SS 的区别：
+1. 顶层父的比较用“去基化”后的子表达式数组（highest_without_base），
+   即把每个子表达式的首分量减去本列首分量加一后做字典序比较，并排除祖先链；
+2. 若末子表达式的末列是“本列首分量加一”的单行列（special column），
+   走 FS_special 分支直接复制末子表达式的末列。
+
+极限记为 Limit。
+)DEFTXT";
+
 constexpr std::string_view kDef_IDR_DEF_BTBM = R"DEFTXT(
 BTBM（Bubby3's Transfinite BMS，Bubby3 超限巴斯丘矩阵，又称 BTBMS）
 
@@ -1720,6 +1739,7 @@ constexpr Entry kTable[] = {
     { IDR_DEF_BMS_V33, kDef_IDR_DEF_BMS_V33 },
     { IDR_DEF_BMS_V4, kDef_IDR_DEF_BMS_V4 },
     { IDR_DEF_BSM, kDef_IDR_DEF_BSM },
+    { IDR_DEF_BT1YNSS, kDef_IDR_DEF_BT1YNSS },
     { IDR_DEF_BTBM, kDef_IDR_DEF_BTBM },
     { IDR_DEF_BTBM_WEAK, kDef_IDR_DEF_BTBM_WEAK },
     { IDR_DEF_CMS, kDef_IDR_DEF_CMS },
