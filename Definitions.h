@@ -10,67 +10,19 @@
 namespace expander_defs {
 
 constexpr std::string_view kDef_IDR_DEF_1BM_BHM = R"DEFTXT(
-1BM-BHM（BMS(1 行) + BHM）
-
-nBM-BHM 系列（n=1）：在 BHM 的基础上，当末列顶行（最大非零行号）小于 n 时
-退化为普通 BMS(BM4) 展开，否则按 BHM 展开。
-
-输入格式：矩阵文本，列为 (v0,v1,...)，省略尾随零，例如 (0)(1,1)(2,1)。
-记号极限输入 Limit；最后一列全为零时为后继型，删去最后一列。
+1BM-BHM
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_1MN = R"DEFTXT(
 1MN
-
-1MN 是 n-MN 家族（TS 类别 category-n-mn，credit.n_mn）中模板参数 N=1 的实例，逻辑移植自 notation-explorer（hypcos）的 src/notations/MN/SMN/n_MN.ts（TS id "1-MN"）；C++ 实现为模板 NMnNotation<N>，见 Header/notation/n_mn.hpp，展开核心与共享机制见 Header/notation/smnshare.hpp。2MN、3MN 是同一模板 N=2、N=3 的实例，表达式结构、竖向机制与展开流程完全相同，唯一差异在 ∞ 基本列的分隔符参数（见各自定义文件）。
-
-表达式结构：一个表达式 Expr 是若干列 Column 的序列（Mountain）；每列是若干条目 Entry=(value, sep) 的序列；value 是从 1 起的列标引用（决定父位置；0 仅作为展开过程中补出的幽灵条目哨兵），sep 是非负整数分隔符，显示为 sep+1 个逗号。空表达式表示 0；另外用 ∞ 标志表示记号的极限，显示为 "Limit"。解析时逗号个数减 1 得到 sep（零个逗号对应 sep=0），列可带括号也可不带括号，单独的 "0" 表示空列；每个列在显示时都包裹在一对括号中。
-
-竖向机制：一列中每个条目对应一个竖向（Vertical，分隔符序列）：按条目顺序做 vertical_increase 得到，vertical_increase(v, s) 从 v 末尾向前删除所有小于 s 的分隔符再追加 s。条目 (i,j) 的父位置为 (pi, pj)：pi = value−1；当 pi=−1 时 pj=0，否则 pj = find_index_below(V[pi], V[i][j])，即在父列（列标 value）的竖向表中二分查找第一个严格小于该条目竖向的位置。
-
-极限与后继：空表达式表示 0；末列为空的表达式是后继表达式，它的展开（前驱）就是删去末列；其余非空表达式为极限表达式。
-
-∞ 的基本列：Limit[n]（n 为正整数）展开为第一列空列、第二列含 n 个条目 (value=1, sep=N−1) 的表达式。本记号 N=1，分隔符为 0，每个条目显示为一个逗号加列标，即 Limit[1] = ()(,1)，Limit[2] = ()(,1,1)，余类推。解析 "Limit" 得到 ∞ 标志。
-
-展开（参数 m≥1；FS 采用较短展开 shorter=true，FS_alter 采用较长展开 shorter=false）：对极限表达式依次执行 fill_ghost 补幽灵行，随后连续 m 次应用 extend；较短展开在最后删去末列，较长展开再做一次 subtract_1；最后 clear_ghost 删去所有 value=0 的幽灵条目。
-
-fill_ghost（补幽灵行）：先计算各列竖向表；对每个条目求父位置，若父位置恰为父列末尾，比较 vertical_increase(v_parent, sep) 与当前条目竖向：若前者更小，则在父列末尾追加一个幽灵条目 Entry{0, undef_sep}（undef_sep 是大于任意值的哨兵，仅在取不到父列前一项竖向时产生），其竖向为当前竖向删去末元素。
-
-extend（一次反射式扩展）：设 right 为末列列标、top 为末列最右上条目下标；求该条目父位置 p=(Ri, Rj)；用 magma_indices 计算岩浆检查表 MI0；先调用 subtract_1 得到中间山形 m，重算末列竖向，取 MI0 的前 right 列部分继续计算 magma_indices 得到 MI；offset = right − Ri；随后对列 Ri+1 到 right 依次调用 copy_column，把源列复制到列标加 offset 的新位置。
-
-magma_indices（岩浆检查表）：对坏根列 Ri 右侧每一列的每个条目沿父链上溯：若父列标 pi < Ri 则中断；若 pi == Ri，记录 min(pj, Rj)；否则转记父条目对应的检查值（父位置等于父列末尾时退到前一项，若超出结果表则中断）。
-
-subtract_1（取前驱并拼接坏根列）：删去末列末项；若末项分隔符 top_right_sep > 0，令 new_sep = top_right_sep−1，比较 vertical_increase(v_parent, new_sep) 与末列倒数第二项竖向 v_bottom：若前者更大，则在末列追加条目 Entry{Ri+1, new_sep}；随后把坏根列从 Rj 起的全部条目拼接到末列末尾。
-
-copy_column（复制单列）：遍历源列每个条目；若该条目的岩浆检查值在表内，新列标为 value+offset，mi 切换时按末列 mr 中同 mi 的记录做行提升：当 current_mi == Rj，或 mr 中下一项的 mi 也等于 current_mi 时，复制 mr[ref_j] 的分隔符到新条目；检查表之外的条目保持原分隔符，仅当 value ≥ Ri+1 时列标加 offset。
-
-记号极限：在本 C++ 移植中，模板参数 N 仅出现在 ∞ 基本列的分隔符 N−1 上，展开算法本身与 N 无关；记号对应的序数阶位以原始 TS 定义为准。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_2BM_BHM = R"DEFTXT(
-2BM-BHM（BMS(2 行) + BHM）
-
-nBM-BHM 系列（n=2）：在 BHM 的基础上，当末列顶行（最大非零行号）小于 2 时
-退化为普通 BMS(BM4) 展开，否则按 BHM 展开。
-
-输入格式：矩阵文本，列为 (v0,v1,...)，省略尾随零，例如 (0)(1,1)(2,1)。
-记号极限输入 Limit；最后一列全为零时为后继型，删去最后一列。
+2BM-BHM
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_2MN = R"DEFTXT(
 2MN
-
-2MN 是 n-MN 家族（TS 类别 category-n-mn，credit.n_mn）中模板参数 N=2 的实例，逻辑移植自 notation-explorer（hypcos）的 src/notations/MN/SMN/n_MN.ts（TS id "2-MN"）；C++ 实现为模板 NMnNotation<N>，见 Header/notation/n_mn.hpp，共享核心见 Header/notation/smnshare.hpp。表达式结构、竖向机制、极限与后继判定、fill_ghost/extend/subtract_1/copy_column 展开流程均与 1MN 完全相同（同一模板、同一份 smnshare 核心），本文件只列出口径与 N=2 的差异。
-
-表达式结构：Expr 是若干列 Column 的序列；每列是若干条目 Entry=(value, sep) 的序列；value 是从 1 起的列标引用（0 仅为幽灵条目哨兵），sep 是非负整数分隔符，显示为 sep+1 个逗号；空表达式表示 0；∞ 标志显示为 "Limit"。竖向由 vertical_increase 逐条目生成；父位置 pi = value−1，pi=−1 时 pj=0，否则在父列竖向表中二分查找第一个严格小于当前竖向的位置。
-
-极限与后继：末列为空的表达式是后继表达式，展开就是删去末列；其余非空表达式为极限表达式。
-
-∞ 的基本列：Limit[n] 展开为第一列空列、第二列含 n 个条目 (value=1, sep=N−1) 的表达式。本记号 N=2，分隔符为 1，每个条目显示为两个逗号加列标，即 Limit[1] = ()(,,1)，Limit[2] = ()(,,1,,1)，余类推。解析 "Limit" 得到 ∞ 标志。
-
-展开（参数 m≥1；FS 较短展开、FS_alter 较长展开）：先 fill_ghost 补幽灵行，连续 m 次 extend；较短展开删去末列，较长展开再做一次 subtract_1；最后 clear_ghost 删去 value=0 的幽灵条目。extend 中先求末列最右上条目的父位置 (Ri,Rj) 与岩浆检查表，subtract_1 删去末项后按竖向比较决定是否追加 (Ri+1, new_sep) 条目，再把坏根列从 Rj 起的条目拼接到末列，随后把坏根列右侧各列按 offset = right−Ri 复制到新位置；copy_column 中按岩浆检查表做行提升复制分隔符，表外条目仅在 value ≥ Ri+1 时列标加 offset。
-
-记号极限：模板参数 N 在本移植中仅作用于 ∞ 基本列分隔符 N−1；记号对应的序数阶位以原始 TS 定义为准。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_2PPS4 = R"DEFTXT(
@@ -80,13 +32,7 @@ constexpr std::string_view kDef_IDR_DEF_2PPS4 = R"DEFTXT(
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_3BM_BHM = R"DEFTXT(
-3BM-BHM（BMS(3 行) + BHM）
-
-nBM-BHM 系列（n=3）：在 BHM 的基础上，当末列顶行（最大非零行号）小于 3 时
-退化为普通 BMS(BM4) 展开，否则按 BHM 展开。
-
-输入格式：矩阵文本，列为 (v0,v1,...)，省略尾随零，例如 (0)(1,1)(2,1)。
-记号极限输入 Limit；最后一列全为零时为后继型，删去最后一列。
+3BM-BHM
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_3MN = R"DEFTXT(
@@ -107,40 +53,6 @@ constexpr std::string_view kDef_IDR_DEF_3MN = R"DEFTXT(
 
 constexpr std::string_view kDef_IDR_DEF_A_OMEGA2_MN_2 = R"DEFTXT(
 Aω2MN2
-
-Aω2MN2 是 hypcos_mn 在 notation-explorer 中提出的 MN 型记号（家族 category-hypcos-w2mn，TS 源：src/notations/MN/Aw2MN2.ts），C++ 移植见 Header/notation/aw2mn2.hpp，与弱版 wAω2MN2 及版本3 Aω2MN3、wAω2MN3 共享核心 Header/notation/aw2mn_share.hpp。本记号采用 subtract1 版本2 规则，非弱版。
-
-表达式结构：一个表达式 Expr 是若干列 Column 的序列；每列是若干条目 Entry 的序列；条目由三元组 (value, sep, mark) 组成：value 是从 1 起的列标引用，sep 是分隔符，递归地也是一个 Expr（分隔符本身仍是表达式），mark 是可选的星号标志。竖向 Vertical 是分隔符 Sep 的序列。空表达式表示 0；另外用 ∞ 标志表示记号的极限，显示为 "Limit"。
-
-显示规则：一列用圆括号包裹，条目按顺序先显示分隔符 sep_display，再在 mark 为真时显示 "*"，最后显示 value。分隔符若所有列皆空，显示为与列数等长的逗号串；若为 ω 分隔符（结构 [[], [[1, [[]]]] 再接若干空列），显示为 ";" 加上剩余空列数目的逗号；否则按普通表达式显示。
-
-合法性：展开前对表达式做值域校验，每个条目的 value 必须满足 1 ≤ value ≤ 列数（即父列标 value−1 落在现有列范围内），否则返回解析失败；括号、逗号、分号不匹配的输入同样解析失败。
-
-极限与后继：非空且末列非空的表达式是极限表达式；末列为空的表达式是后继表达式，它的展开（前驱）就是删去末列；空表达式展开为空。
-
-∞ 的基本列：Limit[n]（n 为正整数）展开为 [[], [[1, sep_n]]]，其中 sep_n = [[], [[1, [[]]]]] 再接 n 个空列；显示为 ()(; 后接 n 个逗号再接 1。解析 "Limit" 得到 ∞ 标志；对 ∞ 调用展开时直接返回 infinity_fs(term) 作为第 term 个基本列。
-
-展开（参数 m≥1，FS 用较短展开 shorter=true，FS_alter 用较长展开 shorter=false）：两者都先对极限表达式反复调用 extend 共 m 次；较短展开随后删去末列；较长展开则再调用一次 extend（is_small=true，不新增列）。
-
-extend 的步骤：
-(1) 计算各列竖向 V0：一列从空竖向起，逐条目应用 vertical_increase——从竖向末尾向前删去所有小于该条目分隔符的竖向，再追加该分隔符。
-(2) 取末列最右上条目，经 Parent 得到坏根位置 BRij=(br, bj)：父列标为 value−1；父列内位置 bj 由 find_index_below_row 在父列竖向表中二分查找第一个小于该条目竖向的位置得到。
-(3) top_separators 与 top_verticals：坏根列前 bj 个条目的分隔符与竖向，再分别加上末列最右上条目的分隔符与竖向。width = 末列列标 − br。
-(4) 岩浆检查 magma_checks_list：对坏根列右侧每一列的每个条目，沿父链上溯直到列标不大于 br；若最终落在坏根列、位置不超过 bj，且该位置上一项的竖向与该条目左侧竖向相等，则记录该坏根列内位置，否则记 −1；坏根本列全部记 −1。
-(5) 调用 subtract1（版本2，见下）修改表达式。
-(6) get_references：对 subtract1 后的末列竖向（前置一个空竖向）与 top_verticals 做双指针匹配，记录每个 top 竖向在末列中对应的位置引用 refs。
-(7) stretch 拉伸阈值与拉伸量：对每个为极限表达式的 top 分隔符，取 S(A0, br, i−1) 作为参照（mark 条目取自身分隔符，否则沿本列向上回溯到上一个 mark 条目，越界为空分隔符）；阈值 = 若参照 ≥ 该 top 分隔符则为单空列，否则参照后接一个空列；在 refs 给出的末列引用区间内自上而下寻找第一个落在阈值与该 top 分隔符之间的分隔符 M，拉伸量 stretch_value = M 的列数 − 阈值列数 + 1；非极限的 top 分隔符拉伸量为 0。
-(8) stretched 拉伸判定（本记号非弱版）：若拉伸量为 0，或条目分隔符 ≥ top 分隔符，或条目分隔符 < 阈值，保持原分隔符；否则在条目分隔符后追加 stretch_value 个空列。
-(9) 复制：dx 从 0 到 width（is_small 时仅 dx=0），目标列标 = x + width；dx>0 时新建一个空列；dx=0 时跳过坏根列前 bj 个条目。岩浆检查命中（magma ≠ −1）的条目按引用区间 [ref(BR_index−1)+1, ref(BR_index)] 展开为多个条目：区间末项使用 stretched 处理后的自身分隔符，其余项复制目标列对应位置条目的分隔符与 mark；未命中条目复制单个条目，value 加 width（value ≤ br 时不加），分隔符经 stretched 处理，mark 保持不变。
-
-subtract1 版本2（V2）：先删去末列最右上条目；alpha = 坏根列第 bj−1 项的竖向（bj=0 时为空竖向）；working_vertical = 末列最右上条目前一项的竖向（无前一项时为空竖向）。
-copy_entries_loop：若 alpha ≤ working_vertical 直接返回；否则在坏根列竖向表中定位 working_vertical 下方位置，把该位置之后、bj 之前的条目依次复制到末列，value 取被删条目的 value，working_vertical 随复制逐条 vertical_increase。
-随后按被删条目分隔符分三种情况：
-(a) 分隔符为极限表达式：BR_separator = S(A, br, bj−1)；J = 若 BR_separator ≥ 被删分隔符则为单空列，否则 BR_separator 后接一个空列；若 vertical_increase(alpha, J) > working_vertical，则当 alpha > working_vertical 时先执行 copy_entries_loop，再向末列追加带 mark 的条目 (value, J, mark=true)。
-(b) 分隔符不是极限且不是 one（one 指单空列表达式 [[]]）：truncated = 被删分隔符删去末列；先执行 copy_entries_loop；若 alpha == working_vertical，向末列追加不带 mark 的条目 (value, truncated, mark=false)。
-(c) 分隔符为 one：本分支不追加条目。
-
-记号极限：∞ 的第 n 个基本列 ()(; 后接 n 个逗号再接 1，随 n 增长的是 ω 分隔符后追加的空列数目；本记号达到的极限序数以原始 TS 定义为准。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_A_OMEGA2_MN_3 = R"DEFTXT(
@@ -577,182 +489,62 @@ Ex. Weak PPS4
 
 constexpr std::string_view kDef_IDR_DEF_GMS_GBMS_FULL = R"DEFTXT(
 GMS（General Matrix System，通用矩阵系统）— GBMS / Full
-
-输入格式：BM 矩阵文本，列为 (v0,v1,...)，省略尾随零，例如 (0,0,0)(1,1,0)(2,2,1)。
-极限 Limit 的基本列按层级逐段增长（Full 满矩阵）。
-最后一列全为零时为后继型，基本列退化为删去该末列（继续取更长项无定义）。
-
-展开规则：三者共用同一套多级父项（1-父列向左扫描，更高层父列按后缀字典序选取）。
-GBMS 用“祖先即施加阶差”的 GBMS 阶差矩阵 D：坏部中凡在第 row 层以根列为祖先的列，第 row-1 行都加上阶差 d[row-1]。
-每次基本列结果都会删除整列全为零的行（行间裁剪）；Weirdly Full 还按行数优先比较。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_GMS_GBMS_OMEGA_P = R"DEFTXT(
 GMS（General Matrix System，通用矩阵系统）— GBMS / ω-P
-
-输入格式：BM 矩阵文本，列为 (v0,v1,...)，省略尾随零，例如 (0,0,0)(1,1,0)(2,2,1)。
-极限 Limit 的第 n 个基本列为 (0,0,0)(1,0,1)(2,1,1)...，列 (n, ⌊n/2⌋, ⌈n/2⌉)。
-最后一列全为零时为后继型，基本列退化为删去该末列（继续取更长项无定义）。
-
-展开规则：三者共用同一套多级父项（1-父列向左扫描，更高层父列按后缀字典序选取）。
-GBMS 用“祖先即施加阶差”的 GBMS 阶差矩阵 D：坏部中凡在第 row 层以根列为祖先的列，第 row-1 行都加上阶差 d[row-1]。
-保留全部行（零填充），不做整行删除。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_GMS_GBMS_PQSS = R"DEFTXT(
 GMS（General Matrix System，通用矩阵系统）— GBMS / pQSS
-
-输入格式：BM 矩阵文本，列为 (v0,v1,...)，省略尾随零，例如 (0,0,0)(1,1,0)(2,2,1)。
-极限 Limit 的第 n 个基本列在四行上构造，列 (n, ⌊n/2⌋, ⌊(n-1)/2⌋, 1)。
-最后一列全为零时为后继型，基本列退化为删去该末列（继续取更长项无定义）。
-
-展开规则：三者共用同一套多级父项（1-父列向左扫描，更高层父列按后缀字典序选取）。
-GBMS 用“祖先即施加阶差”的 GBMS 阶差矩阵 D：坏部中凡在第 row 层以根列为祖先的列，第 row-1 行都加上阶差 d[row-1]。
-保留全部行（零填充），不做整行删除。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_GMS_GBMS_QSS = R"DEFTXT(
 GMS（General Matrix System，通用矩阵系统）— GBMS / QSS
-
-输入格式：BM 矩阵文本，列为 (v0,v1,...)，省略尾随零，例如 (0,0,0)(1,1,0)(2,2,1)。
-极限 Limit 的第 n 个基本列在四行上构造，列 (n, ⌊(n+1)/3⌋, ⌊n/3⌋, ⌈n/3⌉)。
-最后一列全为零时为后继型，基本列退化为删去该末列（继续取更长项无定义）。
-
-展开规则：三者共用同一套多级父项（1-父列向左扫描，更高层父列按后缀字典序选取）。
-GBMS 用“祖先即施加阶差”的 GBMS 阶差矩阵 D：坏部中凡在第 row 层以根列为祖先的列，第 row-1 行都加上阶差 d[row-1]。
-保留全部行（零填充），不做整行删除。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_GMS_GBMS_WEIRD = R"DEFTXT(
 GMS（General Matrix System，通用矩阵系统）— GBMS / Weirdly Full
-
-输入格式：BM 矩阵文本，列为 (v0,v1,...)，省略尾随零，例如 (0,0,0)(1,1,0)(2,2,1)。
-极限 Limit 的基本列为逐维增大的方阵（Weirdly Full）。
-最后一列全为零时为后继型，基本列退化为删去该末列（继续取更长项无定义）。
-
-展开规则：三者共用同一套多级父项（1-父列向左扫描，更高层父列按后缀字典序选取）。
-GBMS 用“祖先即施加阶差”的 GBMS 阶差矩阵 D：坏部中凡在第 row 层以根列为祖先的列，第 row-1 行都加上阶差 d[row-1]。
-每次基本列结果都会删除整列全为零的行（行间裁剪）；Weirdly Full 还按行数优先比较。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_GMS_LPMS2_FULL = R"DEFTXT(
 GMS（General Matrix System，通用矩阵系统）— LPMS2 / Full
-
-输入格式：BM 矩阵文本，列为 (v0,v1,...)，省略尾随零，例如 (0,0,0)(1,1,0)(2,2,1)。
-极限 Limit 的基本列按层级逐段增长（Full 满矩阵）。
-最后一列全为零时为后继型，基本列退化为删去该末列（继续取更长项无定义）。
-
-展开规则：三者共用同一套多级父项（1-父列向左扫描，更高层父列按后缀字典序选取）。
-LPMS2 在 UPMS 的 v 标记基础上，用一次性基本列扫描确定 s 标记，构造修正列 X，再以 fs1+X 递归一次得到下一项。
-每次基本列结果都会删除整列全为零的行（行间裁剪）；Weirdly Full 还按行数优先比较。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_GMS_LPMS2_OMEGA_P = R"DEFTXT(
 GMS（General Matrix System，通用矩阵系统）— LPMS2 / ω-P
-
-输入格式：BM 矩阵文本，列为 (v0,v1,...)，省略尾随零，例如 (0,0,0)(1,1,0)(2,2,1)。
-极限 Limit 的第 n 个基本列为 (0,0,0)(1,0,1)(2,1,1)...，列 (n, ⌊n/2⌋, ⌈n/2⌉)。
-最后一列全为零时为后继型，基本列退化为删去该末列（继续取更长项无定义）。
-
-展开规则：三者共用同一套多级父项（1-父列向左扫描，更高层父列按后缀字典序选取）。
-LPMS2 在 UPMS 的 v 标记基础上，用一次性基本列扫描确定 s 标记，构造修正列 X，再以 fs1+X 递归一次得到下一项。
-保留全部行（零填充），不做整行删除。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_GMS_LPMS2_PQSS = R"DEFTXT(
 GMS（General Matrix System，通用矩阵系统）— LPMS2 / pQSS
-
-输入格式：BM 矩阵文本，列为 (v0,v1,...)，省略尾随零，例如 (0,0,0)(1,1,0)(2,2,1)。
-极限 Limit 的第 n 个基本列在四行上构造，列 (n, ⌊n/2⌋, ⌊(n-1)/2⌋, 1)。
-最后一列全为零时为后继型，基本列退化为删去该末列（继续取更长项无定义）。
-
-展开规则：三者共用同一套多级父项（1-父列向左扫描，更高层父列按后缀字典序选取）。
-LPMS2 在 UPMS 的 v 标记基础上，用一次性基本列扫描确定 s 标记，构造修正列 X，再以 fs1+X 递归一次得到下一项。
-保留全部行（零填充），不做整行删除。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_GMS_LPMS2_QSS = R"DEFTXT(
 GMS（General Matrix System，通用矩阵系统）— LPMS2 / QSS
-
-输入格式：BM 矩阵文本，列为 (v0,v1,...)，省略尾随零，例如 (0,0,0)(1,1,0)(2,2,1)。
-极限 Limit 的第 n 个基本列在四行上构造，列 (n, ⌊(n+1)/3⌋, ⌊n/3⌋, ⌈n/3⌉)。
-最后一列全为零时为后继型，基本列退化为删去该末列（继续取更长项无定义）。
-
-展开规则：三者共用同一套多级父项（1-父列向左扫描，更高层父列按后缀字典序选取）。
-LPMS2 在 UPMS 的 v 标记基础上，用一次性基本列扫描确定 s 标记，构造修正列 X，再以 fs1+X 递归一次得到下一项。
-保留全部行（零填充），不做整行删除。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_GMS_LPMS2_WEIRD = R"DEFTXT(
 GMS（General Matrix System，通用矩阵系统）— LPMS2 / Weirdly Full
-
-输入格式：BM 矩阵文本，列为 (v0,v1,...)，省略尾随零，例如 (0,0,0)(1,1,0)(2,2,1)。
-极限 Limit 的基本列为逐维增大的方阵（Weirdly Full）。
-最后一列全为零时为后继型，基本列退化为删去该末列（继续取更长项无定义）。
-
-展开规则：三者共用同一套多级父项（1-父列向左扫描，更高层父列按后缀字典序选取）。
-LPMS2 在 UPMS 的 v 标记基础上，用一次性基本列扫描确定 s 标记，构造修正列 X，再以 fs1+X 递归一次得到下一项。
-每次基本列结果都会删除整列全为零的行（行间裁剪）；Weirdly Full 还按行数优先比较。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_GMS_UPMS_FULL = R"DEFTXT(
 GMS（General Matrix System，通用矩阵系统）— UPMS / Full
-
-输入格式：BM 矩阵文本，列为 (v0,v1,...)，省略尾随零，例如 (0,0,0)(1,1,0)(2,2,1)。
-极限 Limit 的基本列按层级逐段增长（Full 满矩阵）。
-最后一列全为零时为后继型，基本列退化为删去该末列（继续取更长项无定义）。
-
-展开规则：三者共用同一套多级父项（1-父列向左扫描，更高层父列按后缀字典序选取）。
-UPMS 先构造各层 Y_i 与标记向量 v_i，只有被 v 标记（经修正后缀与 Y_i 比较后仍不小于）的位置才施加阶差，从而抑制 GBMS 中部分过大的增量。
-每次基本列结果都会删除整列全为零的行（行间裁剪）；Weirdly Full 还按行数优先比较。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_GMS_UPMS_OMEGA_P = R"DEFTXT(
 GMS（General Matrix System，通用矩阵系统）— UPMS / ω-P
-
-输入格式：BM 矩阵文本，列为 (v0,v1,...)，省略尾随零，例如 (0,0,0)(1,1,0)(2,2,1)。
-极限 Limit 的第 n 个基本列为 (0,0,0)(1,0,1)(2,1,1)...，列 (n, ⌊n/2⌋, ⌈n/2⌉)。
-最后一列全为零时为后继型，基本列退化为删去该末列（继续取更长项无定义）。
-
-展开规则：三者共用同一套多级父项（1-父列向左扫描，更高层父列按后缀字典序选取）。
-UPMS 先构造各层 Y_i 与标记向量 v_i，只有被 v 标记（经修正后缀与 Y_i 比较后仍不小于）的位置才施加阶差，从而抑制 GBMS 中部分过大的增量。
-保留全部行（零填充），不做整行删除。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_GMS_UPMS_PQSS = R"DEFTXT(
 GMS（General Matrix System，通用矩阵系统）— UPMS / pQSS
-
-输入格式：BM 矩阵文本，列为 (v0,v1,...)，省略尾随零，例如 (0,0,0)(1,1,0)(2,2,1)。
-极限 Limit 的第 n 个基本列在四行上构造，列 (n, ⌊n/2⌋, ⌊(n-1)/2⌋, 1)。
-最后一列全为零时为后继型，基本列退化为删去该末列（继续取更长项无定义）。
-
-展开规则：三者共用同一套多级父项（1-父列向左扫描，更高层父列按后缀字典序选取）。
-UPMS 先构造各层 Y_i 与标记向量 v_i，只有被 v 标记（经修正后缀与 Y_i 比较后仍不小于）的位置才施加阶差，从而抑制 GBMS 中部分过大的增量。
-保留全部行（零填充），不做整行删除。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_GMS_UPMS_QSS = R"DEFTXT(
 GMS（General Matrix System，通用矩阵系统）— UPMS / QSS
-
-输入格式：BM 矩阵文本，列为 (v0,v1,...)，省略尾随零，例如 (0,0,0)(1,1,0)(2,2,1)。
-极限 Limit 的第 n 个基本列在四行上构造，列 (n, ⌊(n+1)/3⌋, ⌊n/3⌋, ⌈n/3⌉)。
-最后一列全为零时为后继型，基本列退化为删去该末列（继续取更长项无定义）。
-
-展开规则：三者共用同一套多级父项（1-父列向左扫描，更高层父列按后缀字典序选取）。
-UPMS 先构造各层 Y_i 与标记向量 v_i，只有被 v 标记（经修正后缀与 Y_i 比较后仍不小于）的位置才施加阶差，从而抑制 GBMS 中部分过大的增量。
-保留全部行（零填充），不做整行删除。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_GMS_UPMS_WEIRD = R"DEFTXT(
 GMS（General Matrix System，通用矩阵系统）— UPMS / Weirdly Full
-
-输入格式：BM 矩阵文本，列为 (v0,v1,...)，省略尾随零，例如 (0,0,0)(1,1,0)(2,2,1)。
-极限 Limit 的基本列为逐维增大的方阵（Weirdly Full）。
-最后一列全为零时为后继型，基本列退化为删去该末列（继续取更长项无定义）。
-
-展开规则：三者共用同一套多级父项（1-父列向左扫描，更高层父列按后缀字典序选取）。
-UPMS 先构造各层 Y_i 与标记向量 v_i，只有被 v 标记（经修正后缀与 Y_i 比较后仍不小于）的位置才施加阶差，从而抑制 GBMS 中部分过大的增量。
-每次基本列结果都会删除整列全为零的行（行间裁剪）；Weirdly Full 还按行数优先比较。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_IBLP = R"DEFTXT(
@@ -850,45 +642,16 @@ iblp的定义目前还有些问题，但是其在MHO下的停机是公认证实�
 
 constexpr std::string_view kDef_IDR_DEF_LPMS = R"DEFTXT(
 LPMS（Lifting Projection Matrix System，提升投影矩阵系统）
-
-输入格式：合法矩阵的每一列自上而下不增，首列全为 0，例如 (0)(1,1)(2,1,1)。
-极限 Limit 的第 n 个基本列为 (0)(1,1,...,1)（n 个 1，n=0 时为 (0)(0)）。
-末列全为 0 时为后继型，删去末列；列不满足合法性时基本列同样退化为删末列。
-
-展开规则：计算末列的多级父列根与阶差；不足三行或末列第三行为 0 时直接按
-祖先是否含根逐份复制坏部（投影）；否则执行“提升”——用阶段列（缺失列视为
-全 -1）划分若干情形，必要时递归调用一次投影并插入后继常数列，把表达式
-提升到可投影形态后再投影。特殊地 (0^n)(1^n)（n>1）先收缩一行。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_LPTSS = R"DEFTXT(
 LPTSS（Lifting Projection Triple Sequence System，提升投影三列序列系统）
-
-有限矩阵的展开、合法性与提升规则与 LPMS 完全相同；唯一区别在极限 Limit 的
-基本列：第 n 个基本列为 (0)(1,1,1)(2,2,2)...(n,n,n)（n+1 列三元组）。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_M1YNSS = R"DEFTXT(
 (-1)Y-(n+1)SS（负一 Y 序列系统，Minus1 Y n-SS）
 
-参数化平面矩阵族。主窗口会多出一个参数输入框 n（0 到 25 的整数），它决定每列
-元组的宽度：一列写作 (a_0,a_1,...,a_{n-1},s)，即 n 个父标号分量加末尾步长 s。
-省略的分量按 0 补齐；只含尾随 0 的列可简写为空列 ()；多列直接相邻书写，例如
-n=1 时 (0)(1,1)。极限记为 Limit。
-
-第 n 个基本列（在 Limit 上展开得到）：第一列是 n 个 0 加步长 0 的空列，第二列是
-n 个 1 加当前展开下标作步长。
-
-展开规则：
-1. 先按各分量逐级求每列每项的“父列”，父链要满足对应分量严格小于当前值。
-2. 取末列步长的父作为根 (r,b=n)；若步长无父，则退而取末列父标号中最深的
-   非负分量作为根 (r,b<n)；若整列无根，则删去末列（后继）。
-3. 以根列为基准算提升向量（末列与根列各前 b 个分量之差），并为 r 之后的每列
-   算可用的提升分量数（提升阈值）。
-4. 按项数复制从根列到末列前一列的这一段，逐份整体提升；当根用到步长分量
-   (b=n) 时，每份的根列步长取“末列步长减一”。
-
-n=0 时没有父标号分量，单列若不含步长父会被直接删去，这是该族的正常行为。
+*n=0 时没有父标号分量
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_MRSS121 = R"DEFTXT(
@@ -981,32 +744,6 @@ constexpr std::string_view kDef_IDR_DEF_OMEGA_Y_STRONG = R"DEFTXT(
 
 constexpr std::string_view kDef_IDR_DEF_PCF_OMEGA_MN = R"DEFTXT(
 PCF's ωMN
-
-PCF's ωMN（TS 源：src/notations/MN/pcf-omega_MN.ts，家族 category-mn，credit pcf-omega-mn；C++ 实现见 Header/notation/pcf_omega_mn.hpp）属于 MN 家族，展开算法是"坏根复制"的一个变体，核心运算包括 base_vertical、stretch、normalize_col 与 magma_verticals。
-
-表达式结构：一个表达式 Expr 是若干列 Column 的序列；每列是若干条目 Entry=(p,v) 的序列；p 是 0 起列标（显示时加 1），v 是竖向 Vertical，即 Cantor 系数数组（小端存储：v[j] 为 ω^j 的系数，空数组表示 0）。空表达式表示 0；另外用 ∞ 标志表示记号极限，显示为 "Limit"。竖向按反字典序比较：长度优先，长度相同则从末元素向前逐项比较；条目先比较 p 再比较竖向；列按条目字典序比较；表达式按列字典序比较。
-
-显示规则：条目显示为 p+1 后接冒号与竖向的 Cantor 形式（ω^j·c，j=0 时为纯数字 c，系数 1 省略乘号，高次项之间用加号连接）；一列用括号括起，条目间以逗号分隔；表达式为各列直接拼接。
-
-合法性与标准形：解析时条目列标显示值必须不小于 1；竖向由 ω^j·c 项与纯数字项经加号组合而成。展开过程中每列都要经过 normalize_col 规整：自上而下只保留竖向严格大于此前最大竖向的条目，即规整后同一列内竖向严格递增，每个保留条目都是新的最大值。
-
-极限与后继：非空且末列非空的表达式是极限表达式；末列为空的表达式是后继表达式，后继表达式的展开（前驱）就是删去末列；空表达式展开结果仍为空。
-
-∞ 的基本列：Limit[n]（n 为正整数）展开为 ()(1:ω^n)，即第一列为空列、第二列为单个条目（p=0，竖向 v 的前 n 项为 0、第 n 项为 1，对应 ω^n）；解析 "Limit" 直接得到 ∞ 标志，展开时按上述基本列规则给出。
-
-展开（参数 m≥1；FS 采用较短展开 shorter=true，FS_alter 采用较长展开 shorter=false；expand 的前置条件是输入为极限表达式）：
-(1) 设末列列标为 right，末列末项为 top_entry=(r, top)，令 s 为 top_sep(top)，即 top 中首个正系数的下标（空竖向为 −1）。
-(2) threshold = base_vertical(expr, top, r)：先令 bottom = vertical_decrease(top)，从第 r 列开始循环：在当前列用 find_index_below_row 查找竖向小于 top 的最大位置 j（即列中最大的 j 使第 j−1 条目的竖向小于 top）；把 bottom 与第 j−1 条目的竖向取较大者；若 j 已到列尾则返回 bottom，否则跳到第 j 条目的 p 所指列继续循环。
-(3) target_candidate：当 s=0 时取 threshold；否则取 vertical_increase(threshold, s−1)。
-(4) 构造新末列：把原末列去掉末项，追加条目 (r, target_candidate)，再拼上第 r 列的全部条目，然后用 normalize_col 规整；prev_vert 为原末列倒数第二项的竖向（无则为空），target 取 target_candidate 与 prev_vert 的较大者。
-(5) magma = magma_verticals(expr, r)：对第 r 列右侧的每一列，自上而下扫描条目：若条目 p<r 则中断；若 p=r 则记录该条目竖向并中断；否则取 p 列的岩浆竖向 mv_p 与当前条竖向比较，当 mv_p 不大于当前竖向时把该列岩浆竖向取为 mv_p 与已有值的较大者后中断，否则记录当前条竖向。
-(6) offset = right − r；对 w=1,2,…,m，把第 r+1 列到第 right 列逐列复制为新列。copy_column 中：新列标 p1 = e.p ≥ r 时为 e.p + offset·w，否则保持 e.p；若 e.v ≤ magma，竖向取 stretch(e.v, threshold, target, w)；若 e.p < r，竖向原样保留；其余情形竖向取 e.v 与 stretched_magma 的较大者，其中 stretched_magma = stretch(magma, threshold, target, w)；复制结果再经 normalize_col 规整。
-(7) stretch(v, threshold, target, w)：若 v ≤ threshold 则原样返回；否则重复 w 次 result = vertical_add(target, vertical_sub(result, threshold))。
-(8) 较短展开（FS）在复制完成后删去末列；较长展开（FS_alter）保留末列。
-
-竖向辅助运算：vertical_increase(v,s)：当 size(v) ≤ s 时返回 s 个 0 后接 1；否则把 v[s] 加 1，并把下标 0 到 s−1 全部清零。vertical_decrease(v)：取 top_sep 处系数减 1；若该系数为 1 且位于数组末位，则返回空数组。vertical_add(v,a) 按 Cantor 系数合并：低位项取自 a，顶部系数相加，更高位取自 v；vertical_sub(v,base) 从高位向下逐项相减，遇不足返回空数组，两项系数全部相等也返回空数组。
-
-记号极限：∞ 第 n 个基本列的竖向为 ω^n，其上确界为 ω^ω；记号最终极限以原始 TS 定义为准。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_PPS = R"DEFTXT(
@@ -1046,192 +783,31 @@ PPS4治好了无穷降链的问题，但是其地府段的特色减弱，并且�
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_REL_BM1YNSS = R"DEFTXT(
-RelB(n+1)SS（相对分支 (-1)Y-(n+1)SS，Rel_B_Minus1_Y_nSS）
-
-参数化递归嵌套矩阵族。主窗口的参数框 n（0 到 25）决定每列父标号分量的个数；
-一列写作 (a_0,...,a_{n-1}, step)，但这里的 step 不再是整数，而是一个完整的
-“子表达式”，从而形成递归嵌套。n=0（即 1SS）时列里没有父标号分量，括号内整体
-就是子表达式。
-
-子表达式的简写（只能出现在某列的 step 位置）：
-- 一个非负整数 k，表示 k 个空列；
-- ω（也可输入小写 w），表示“一个空列再接一个一列”；
-- 也可以直接写出若干圆括号列。
-
-展开与 T(n+1)SS 相同地逐级求父、定根、按提升向量与阈值复制提升；与 T 族的唯一
-区别是“第 n 个（步长 / 顶层）父”的求法：本族先把候选列相对根列做差分得到
-布尔/数值 key，按 key 比较候选列，并排除祖先链（outer_stack）。
-
-极限记为 Limit。第 n 个基本列同样是“空列 + 步长为更短基本列”的嵌套结构。
+RelB(n+1)SS
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_S_OMEGA_DBMS = R"DEFTXT(
 SωDBMS v1
-
-SωDBMS v1 是 SDBMS 家族中第一个变长行高版本，TS 源为 src/notations/MN/SDBMS/S_omega_DBMS-v1.ts（TS id s-omega-dbms），C++ 移植见 Header/notation/s_omega_dbms_v1.hpp，展开骨架与共享核心 Header/notation/sdbms_core.hpp 一致。与 v2、v3 的区别：行高是纯整数序列，位置信息由序列前缀与长度编码，没有独立的 (值, 位置) 二元条目。
-
-表达式结构：Expr 是若干 Column 的序列；Column 是若干 Entry 的序列；Entry=(value, height)，value 为 0 基列标引用（显示 value+1）；Height 为 0 基整数序列，内部存储顺序与显示顺序相反，整条显示为 value+1^(反序后各分量 +1)，例如内部 [0,2] 显示为 (3,1)。空表达式表示 0；空列显示为 "(0)"；省略上标即空行高，列尾 value=−1 的条目被删去。另外用 ∞ 标志表示记号极限，显示为 "Limit"。
-
-合法性：每个条目的 value 与行高首分量 h[0] 必须落在 [0, 列数) 内，行高不允许为空；越界输入返回解析失败提示。
-
-极限与后继：非空且末列非空为极限表达式；末列为空为后继表达式，前驱即删去末列。
-
-∞ 的基本列：Limit[n] 展开为 (0)(1^(1,…,1))，括号内共有 n+1 个 1：第一列为空列，第二列为单个条目 value=0、行高为 n+1 个 0 的序列。
-
-行高比较 compare_height（v1 特有）：先比长度，短者小；等长时从末项起向前逐分量比较（反字典序），数值大者大。height(col) 为末项行高，空列返回未定义（视为空序列）。合并 merge_column：col1 非空时追加 col2 中行高严格大于 height(col1) 的条目；col1 为空时整列拼接（空序列在比较中长度最小，等价于全保留）。复制规则：value ≥ r 时加 offset；行高每个分量 ≥ r 时加 offset，否则不变。
-
-compute_new_height(h, expr, r)（v1 特有）：设 rh=h[0]，取第 rh 列 col_rh；s = top_separator(h)，即 h[0] 开头连续等于 h[0] 的前缀长度；hj = col_rh 中行高严格小于 h 的条目个数（二分查找）。
-(1) 若 hj 等于 col_rh 长度（整列都小于 h）：取 col_rh 末项行高 h_candidate；若其长度小于 s，则把 new_h 末项弹出；否则把 new_h 的第 s−1 分量改为 h_candidate 的第 s−1 分量；col_rh 为空时，若 s>0 则弹出末项。
-(2) 否则：基项 base_ref 为 col_rh[hj−1] 的行高（hj=0 时无）；若基项与 h 等长且从第 s 分量起逐项相同，则 new_h[s−1] 取 base_ref[s−1]，否则取 col_rh[hj].value。
-最后把 new_h 的前 s−1 个分量全部置为 r，返回 new_h。
-
-展开骨架：right 为末列下标，末列末项为 (r, h)；以 rh=h[0] 所指列作为 col_rh 求出 new_h；末列删去末项后并入中项 (r, new_h) 与第 r 列；复制循环 w=1..m，i=r+1..right，偏移量 (right−r)·w；FS 删去末列，FS_alter 保留末列。
-
-记号极限：Limit[n] 的行高长度随 n 增长；实现只给出基本列与展开，其上确界序数以原始 TS 定义为准。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_S_OMEGA_DBMS_V2 = R"DEFTXT(
 SωDBMS v2
-
-SωDBMS v2 是 SDBMS 家族中带位置 p 与值 v 分量、且允许 ω 的行高版本，TS 源为 src/notations/MN/SDBMS/S_omega_DBMS-v2.ts（TS id s-omega-dbms-v2），C++ 移植见 Header/notation/s_omega_dbms_v2.hpp。与 v1 的区别：行高每个位置是 (p, v) 二元条目，p 或 v 均可为未定义（显示 ω）；与 v3 的区别：v2 保留 undefined-last 语义，p、v 都可缺省，行高比较为较长者大。
-
-表达式结构：Expr 是若干 Column 的序列；Column 是若干 Entry 的序列；Entry=(value, height)；Height 为 HEntry 序列，每个 HEntry=(p, v)，分量未定义时表示 ω。整条显示为 value+1^((v 项),…)：v 定义显示 v+1，未定义显示 ω；p 定义时附 "@p"，省略 "@p" 只允许在序列首位（表示 p 未定义）。空表达式表示 0；空列显示为 "(0)"；省略上标即空行高，列尾 value=−1 的条目被删去。另外用 ∞ 标志表示记号极限，显示为 "Limit"。
-
-合法性：value 落在 [0, 列数)；行高非空；每个定义的 v 落在 [0, 列数) 内；未定义的 v 必须 p 有定义（否则对应 TS 的 Illegal state，按解析失败处理）；越界输入返回解析失败提示。
-
-极限与后继：非空且末列非空为极限表达式；末列为空为后继表达式，前驱即删去末列。
-
-∞ 的基本列：Limit[n] 展开为 (0)(1^(1, ω@n))：第一列为空列；第二列为单个条目 value=0，行高两项：首项 p 未定义、v=0（显示 1），次项 p=n、v 未定义（显示 ω@n）。
-
-分量比较：未定义（ω）视为最大；HEntry 先比 p 再比 v。行高比较 compare_height 为字典序：前缀相同后较长者大。height(col) 为末项行高，空列返回未定义（空序列）；合并规则与 v1 相同（col1 空时整列拼接）。复制规则：value ≥ r 加 offset；p 保持原样，定义的 v ≥ r 时加 offset，未定义 v 保持 ω。
-
-top_separator(h)（v2 特有）：取末项；若其 v 未定义且 p 有定义，返回 p+1；否则返回 0。height_fill(h, p, vDef, v)：从末项起，只要末项 p 有定义且 p ≤ 当前 p 就弹出；再比较末项的 (vDef, v)，若与新值不同则压入 HEntry(p 有定义, p, vDef, v)。
-
-compute_new_height(h, expr, r)（v2 特有）：new_h 从 h 复制，分三种情况处理末项：
-(1) 末项 v 未定义：先 height_fill(new_h, 末项.p, 定义, r)；若末项 p > 0，再 height_fill(new_h, p−1, 未定义, 0)。（p 也未定义属非法状态。）
-(2) 末项 p 未定义：取第末项.v 列的末项行高替换 new_h；该列为空时清空 new_h。
-(3) p、v 都有定义：取第 v 列 col_rh，找第一个 compare_height(h, 该行高度) ≤ 0 的下标 hj；若整列都大于 h，new_h 取 col_rh 末项行高（空列清空）；否则先 height_fill(new_h, 末项.p, 定义, col_rh[hj].value)，p>0 时再 height_fill(new_h, p−1, 未定义, 0)；若 hj>0 且 col_rh[hj−1] 行高严格大于 new_h，则改用该行高。
-
-展开骨架与其余版本一致：right 为末列下标，末列末项为 (r, h)；求出 new_h 后，末列删去末项并入中项 (r, new_h) 与第 r 列；复制循环 w=1..m，i=r+1..right，偏移量 (right−r)·w；FS 删去末列，FS_alter 保留末列。
-
-记号极限：Limit[n]=(0)(1^(1, ω@n))；实现只给出基本列与展开，其上确界序数以原始 TS 定义为准。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_S_OMEGA_DBMS_V3 = R"DEFTXT(
 SωDBMS v3
-
-SωDBMS v3 是 SDBMS 家族的纯整数 (v, p) 行高版本，TS 源为 src/notations/MN/SDBMS/S_omega_DBMS-v3.ts（TS id s-omega-dbms-v3），C++ 移植见 Header/notation/s_omega_dbms_v3.hpp。与 v2 的区别：p、v 均为定义整数、没有 ω 分量，行高比较为较短者大；与 v1 的区别：行高不是整数序列，而是 (值, 位置) 二元条目序列。
-
-表达式结构：Expr 是若干 Column 的序列；Column 是若干 Entry 的序列；Entry=(value, height)；Height 为 HEntry 序列，HEntry=(v, p)，v 为 0 基列标、p 为位置数；整条显示为 value+1^((v+1@p),…)，p 原样显示不减一。空表达式表示 0；空列显示为 "(0)"；省略上标即空行高，列尾 value=−1 的条目被删去。另外用 ∞ 标志表示记号极限，显示为 "Limit"。
-
-合法性：value 落在 [0, 列数)；行高非空；每个 v 落在 [0, 列数) 内；越界输入返回解析失败提示。
-
-极限与后继：非空且末列非空为极限表达式；末列为空为后继表达式，前驱即删去末列。
-
-∞ 的基本列：Limit[n] 展开为 (0)(1^(1@n))：第一列为空列；第二列为单个条目 value=0，行高单项 (v=0, p=n)。
-
-比较规则 compare_hentry：先比 v 再比 p，数值大者大。行高比较 compare_height：前缀相同后较短者大。height(col) 为末项行高，空列返回未定义；合并 merge_column：col1 非空时追加 col2 中行高严格大于 height(col1) 的条目，col1 为空时整列拼接。复制规则：value ≥ r 加 offset；v ≥ r 加 offset，p 保持不变。
-
-height_fill_dec(h, p, v)（v3 特有）：从末项起，末项 p ≤ 给定 p 就弹出；若弹出后末项 v 与给定 v 相同再弹出；最后压入 (v, p)。
-
-compute_new_height(h, expr, r)（v3 特有）：末项为 (v, p)。
-(1) 若 p > 0：直接返回 height_fill_dec(h, p−1, r)。
-(2) 若行高只有一项：取第 v 列末项行高返回；该列为空则返回未定义（不插入中项）。
-(3) 否则：p_bound 取倒数第二项的 p；取第 v 列 col_rh，找第一个 compare_height(h, col_rh[k].height) ≤ 0 的下标 hj；若整列都大于 h，返回 col_rh 末项行高（空列未定义）；否则 new_h = height_fill_dec(h, p_bound−1, col_rh[hj].value)；若 hj>0 且 col_rh[hj−1] 行高严格大于 new_h，则改用该行高返回。
-
-展开骨架：right 为末列下标，末列末项为 (r, h)；new_h 求出后并入中项 (r, new_h) 与第 r 列；复制循环 w=1..m，i=r+1..right，偏移量 (right−r)·w；FS 删去末列，FS_alter 保留末列。
-
-记号极限：Limit[n]=(0)(1^(1@n))；实现只给出基本列与展开，其上确界序数以原始 TS 定义为准。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_S_OMEGA_P1_DBMS = R"DEFTXT(
 Sω+1DBMS
-
-Sω+1DBMS 是 SDBMS 家族中位置可取 ω 的版本，TS 源为 src/notations/MN/SDBMS/S_omega_p1_DBMS.ts（TS id s-omega+1-dbms），C++ 移植见 Header/notation/s_omega_p1_dbms.hpp。与 v3 的区别：位置 p 除整数外可取 ω；求新高由三个互相递归的函数 descend_height_to_value、find_maximal_entry_below、find_lower_height_pos 驱动。
-
-表达式结构：Expr 是若干 Column 的序列；Column 是若干 Entry 的序列；Entry=(value, height)；Height 为 HEntry 序列，HEntry=(v, p)，v 为 0 基列标，p 为数字位置（0 基）或 ω。整条显示为 value+1^((v+1@p),…)：p 为 ω 时显示 @ω，否则显示 @(p+1)。空表达式表示 0；空列显示为 "(0)"；省略上标即空行高，列尾 value=−1 的条目被删去。另外用 ∞ 标志表示记号极限，显示为 "Limit"。
-
-合法性：value 落在 [0, 列数)；行高非空；每个 v 落在 [0, 列数)；非 ω 的 p 也落在 [0, 列数)；越界输入返回解析失败提示。
-
-极限与后继：非空且末列非空为极限表达式；末列为空为后继表达式，前驱即删去末列。
-
-∞ 的基本列：Limit[n] 展开为 (0)(1^(1@ω))(2^(2@ω))…(n^(n@ω))：第一列为空列；其后第 i 列（i=0..n−1）为单个条目 value=i、行高单项 (v=i, p=ω)。
-
-比较规则：compare_hpos 中 ω 最大，同为数字时数值大者大；compare_hentry 先比 v 再比 p；行高比较为字典序、前缀相同后较短者大。height(col) 为末项行高，空列未定义；合并规则同 v3 家族（col1 空时整列拼接）。复制规则：value ≥ r 加 offset；v ≥ r 加 offset；ω 位置保持不变，数字 p ≥ r 时加 offset。
-
-height_fill_dec(h, p, v)：末项 v ≥ 给定 v 就弹出，然后压入 (v, p)。
-
-compute_new_height(h, expr, r)：末项为 (v, p)。先调 find_lower_height_pos(expr, h, p, r) 求新位置 new_p；若找到，返回 height_fill_dec(h, new_p, r)；否则调 find_maximal_entry_below(expr, v, h, r) 取条目，找不到返回未定义（不插入中项），找到则返回该条目的行高。
-
-三个递归函数（Sω+1 特有机制）：
-(1) descend_height_to_value(expr, h, v)：找第一个 v 大于给定 v 的项位置 j；找不到原样返回 h。j=0 时取首项 v 所指列的末项行高，递归下降到给定 v；否则取倒数第二项位置 p_bound，调 find_lower_height_pos 求新位置后 height_fill_dec 到给定 v。
-(2) find_maximal_entry_below(expr, i, h, r)：若 r ≠ i，先以 r 为索引递归找到条目，再以其行高、其 value 递归到 i；r=i 时在第 i 列找第一个行高严格大于 h 的下标 j；j 越界则返回列末项（空列未定义）；否则用 descend_height_to_value 把 h 下降到 col[j].value，若结果行高比上一项更大（j=0 视为更大）就返回 col[j] 连同下降后的行高，否则返回上一项。
-(3) find_lower_height_pos(expr, h, p, r)：p 为 ω 时直接返回位置 r；数字 p 时调 find_maximal_entry_below 取条目 (r1, h1)；取 h1 末项 (v1, p1)，p1 为 ω 时失败返回未定义；v1=p1.num 时返回位置 v1；否则以位置 v1 递归到 h1 与 r1。
-
-展开骨架：right 为末列下标，末列末项为 (r, h)；new_h 求出后并入中项 (r, new_h) 与第 r 列；复制循环 w=1..m，i=r+1..right，偏移量 (right−r)·w；FS 删去末列，FS_alter 保留末列。
-
-记号极限：Limit[n] 的每列位置均为 ω；实现只给出基本列与展开，其上确界序数以原始 TS 定义为准。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_S_OMEGA_POW_OMEGA_MN = R"DEFTXT(
 Sω^ωMN
-
-Sω^ωMN（TS id "S-omega^omega-MN"，逻辑移植自 notation-explorer 的 src/notations/MN/SMN/S_omega_pow_omega_MN.ts，家族 category-smile-mn，credit.n_mn；C++ 实现见 Header/notation/s_omega_pow_omega_mn.hpp）与 Sω2MN、SAω2MN 同属 SMN 系列，山形骨架同构；本记号的分隔符可以是任意维度的整数向量，显示与解析在二维分号逗号语法之外另支持方括号数组语法，拉伸判定也按维度分层处理。
-
-表达式结构：Expr 是若干列 Column 的序列；每列是若干条目 Entry=(value, sep) 的序列；value 是从 1 起的列标引用，sep 是整数向量（解析时去掉尾部 0 归一）；竖向 Vertical 是 sep 的序列。空表达式表示 0；∞ 标志显示为 "Limit"。显示时 sep 长度不超过 2：先显示 s[1] 个分号再显示 s[0] 个逗号；长度大于 2 时显示为方括号内倒序排列、逗号分隔的整数序列。解析支持同样的两种语法，方括号内给出的序列在内部反转存放；解析接受带括号列与不带括号列，展开前校验每个条目列标须落在 0 到列数范围内，非法输入返回解析失败提示。
-
-比较规则：sep 按反字典序比较——长度不等时短者小，等长时从末元素向前逐位比较；竖向按字典序比较，元素相同则较长者大。竖向由 vertical_increase 逐条目生成；父位置 pi = value−1，pi=−1 时 pj=0，否则在父列竖向表中二分查找第一个严格小于当前竖向的位置。
-
-极限与后继：空表达式表示 0；末列为空的表达式是后继表达式，展开就是删去末列；其余非空表达式为极限表达式。
-
-∞ 的基本列：Limit[n] 展开为空列后接单条目 (value=1, sep)，其中 sep 由 n 个 0 后接 1 构成。n=1 时 sep={0,1} 显示为 ";1"，即 Limit[1] = ()(;1)；n=2 时 sep={0,0,1} 长度为 3，显示为 [1,0,0]，即 Limit[2] = ()([1,0,0]1)，余类推。解析 "Limit"、"limit"、"LIMIT" 均得到 ∞ 标志。
-
-展开（参数 m≥1；FS 较短展开 shorter=true，FS_alter 较长展开 shorter=false）：不做 fill_ghost；连续 m 次应用 extend；较短展开删去末列，较长展开再做一次 subtract_1。extend 总体流程与 Sω2MN 相同：求末列最右上条目的父位置 p=(Ri,Rj)，计算岩浆检查表 MI0 与拉伸数据表 SD0，subtract_1 后重算竖向与检查表，再把坏根列右侧各列按 offset = right−Ri 复制到新位置，拉伸竖向上限取原末列最右上条目的竖向。
-
-magma_indices：坏根列右侧每个条目沿父链上溯，pi < Ri 中断，pi == Ri 记录 min(pj,Rj)，否则转记父条目检查值（父位置等于父列末尾时退到前一项，超出结果表则中断）。
-
-辅助函数 S_default(bound)：令 d = sep_dimension(bound)；若 d == bound 长度−1 且 bound[d] == 1，返回空向量；否则返回 bound 的副本并把第 d 位减 1。S(c, j, bound)：j 越上界递归 S(c, j−1, bound)；j<0 返回 S_default(bound)；若 c[j].sep ≥ bound 也返回 S_default(bound)；否则 previous = S(c, j−1, bound)，返回当前 sep 与 previous 中较小者。sep_dimension(s) 为 s 前导 0 的个数；sep_is_one(s) 当且仅当 s 长度为 1 且首元素为 1；sep_increase(a, d) 把 a 补零到 d+1 位，第 d 位加 1，前 d 位置零。
-
-stretch_data_top：threshold = S(Ri 列, Rj−1, t)，stretch_to = S(末列, top−1, t)，force 初值为假，t 为末列最右上条目的分隔符。(1) 若 sep_is_one(t)，不做任何动作；(2) 若 sep_dimension(t) > 0，令 dim = sep_dimension(t)，当 stretch_to < sep_increase(threshold, dim−1) 时，stretch_to = sep_increase(stretch_to, dim−1) 并置 force=true；(3) 其余首元素非零情形，比较 vertical_increase(v_parent, stretch_to) 与末列倒数第二项竖向 v_bottom，前者更大时置 force=true（v_parent、v_bottom 在对应位置为空时取空竖向）。
-
-stretch_data_list：对 j=0 到 Rj−1，先按末列岩浆检查值推进 ref_j；threshold = S(Ri 列, j−1, m[Ri][j].sep)，stretch_to = S(末列, ref_j−1, m[Ri][j].sep)，force=false；末位数据取 stretch_data_top。
-
-subtract_1：删去末列末项；若 SD_top.force 为真，追加条目 Entry{Ri+1, SD_top.stretch_to}；随后把坏根列从 Rj 起的全部条目拼接到末列末尾。
-
-compute_stretch(sep, data)：若 sep ≤ threshold 保持不变；否则返回 sep_add(stretch_to, sep_sub(sep, threshold))。sep_add(a,b)：b 为空时返回 a；先把 a 补到 b 的长度，末位加上 b 的末位，前 b.size−1 位取 b 的对应位。sep_sub(a,b)：a 更长时返回 a，a 更短时返回空向量；否则找到最后一位不同的位置 d，若 d=0 或 a[d−1] < b[d−1] 返回空向量，否则把结果第 d−1 位减去 b[d−1]。
-
-copy_column：表外条目仅在 value ≥ Ri+1 时列标加 offset；表内条目新列标为 value+offset，mi 切换时按末列同 mi 的记录做行提升并复制对应分隔符；新分隔符在源竖向大于竖向上限时保持原 sep，否则按 SD[current_mi] 调用 compute_stretch。
-
-记号极限：本移植未内建序数阶位结论；记号对应的序数极限以原始 TS 定义为准。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_S_OMEGA_SQUARE_DBMS = R"DEFTXT(
 Sω^2DBMS
-
-Sω^2DBMS 是 SDBMS 家族中位置为二元 (a, b) 段序（b 可取 ω）的版本，TS 源为 src/notations/MN/SDBMS/S_omega^2_DBMS.ts（TS id s-omega^2-dbms），C++ 移植见 Header/notation/s_omega_square_dbms.hpp。与 Sω2DBMS 的区别：位置不是一阶高阶标记，而是 (p1=a, p0=b) 二元段序，b 未定义表示 ω；find_lower_height_pos 按段序的降阶与匹配规则运行。
-
-表达式结构：Expr 是若干 Column 的序列；Column 是若干 Entry 的序列；Entry=(value, height)；Height 为 HEntry 序列，HEntry=(v, p)；HeightPos p=(a, b, bDef)，bDef 为 false 表示 b=ω。整条显示为 value+1^((v+1@p),…)：b 未定义时显示 ω（a≠0 时附 a+1）；b 定义且 a=0 显示 b+1；其余显示 ω（a≠1 时附 a）+（b+1）。空表达式表示 0；空列显示为 "(0)"；省略上标即空行高，列尾 value=−1 的条目被删去。另外用 ∞ 标志表示记号极限，显示为 "Limit"。
-
-合法性：value 落在 [0, 列数)；行高非空；v 落在 [0, 列数)；b 定义时 b 落在 [0, 列数)；越界输入返回解析失败提示。
-
-极限与后继：非空且末列非空为极限表达式；末列为空为后继表达式，前驱即删去末列。
-
-∞ 的基本列：Limit[n] 展开为 (0)(1^(1@ω))(2^(2@ω2))(3^(3@ω3))…(n^(n@ωn))：第一列为空列；其后第 i 列（i=0..n−1）为单个条目 value=i、行高单项 (v=i, p=(a=i, b=未定义))。
-
-位置比较 compare_hpos：先比 a，再比 b，b 未定义（ω）视为最大。compare_hentry 先比 v 再比 p；行高字典序前缀相同后较短者大。height(col) 为末项行高，空列未定义；合并规则同家族。复制规则：value、v ≥ r 时加 offset；a 保持不变，定义的 b ≥ r 时加 offset。
-
-height_fill_dec(h, p, v)：末项 v ≥ 给定 v 弹出后压入 (v, p)。
-
-compute_new_height(h, expr, r)：末项为 (v, p)；先 find_lower_height_pos 求 new_p，找到则 height_fill_dec(h, new_p, r)；否则 find_maximal_entry_below 取条目行高，找不到返回未定义。
-
-递归机制：descend_height_to_value 与 find_maximal_entry_below 与 Sω2DBMS 相同；find_lower_height_pos 的 Sω^2 特有规则：
-(1) b 未定义时返回 (a, r, 定义)。
-(2) b 已定义时：默认值为 a=0 时未定义，否则 (a−1, b 未定义)；调 find_maximal_entry_below(expr, b, h, r) 取条目；取不到返回默认值。
-(3) 取到条目 (r1, h1)，其末项位置 p1 若严格大于给定 p，则返回默认值；若 p1=(a, b) 且 b=v1，返回 p1；否则以 (a, v1, 定义) 递归到 h1 与 r1。
-
-展开骨架：right 为末列下标，末列末项为 (r, h)；new_h 并入中项 (r, new_h) 与第 r 列；复制循环 w=1..m，i=r+1..right，偏移量 (right−r)·w；FS 删去末列，FS_alter 保留末列。
-
-记号极限：Limit[n] 的段序 a 随列递增；实现只给出基本列与展开，其上确界序数以原始 TS 定义为准。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_S_OMEGA2_DBMS = R"DEFTXT(
@@ -1509,268 +1085,58 @@ PPS4 的第三型变体。
 
 constexpr std::string_view kDef_IDR_DEF_TUPMS = R"DEFTXT(
 TUPMS（Transfinite UPMS，超限 UPMS）
-
-与 TBM 相同的树形矩阵记号：元素写成“数值^高度”，高度本身又是可嵌套矩阵；
-输入语法、极限 Limit 的基本列、极限型（末元素高度大于 1）展开规则与 TBM 完全
-一致——空列 ()、ω（可写 w）、逗号分隔列内元素、括号分列。
-
-唯一区别在后继型展开的“提升阈值”判定：TUPMS 不直接扫描，而是把各列按其竖直
-位置放入最小堆，按顺序处理；当某列的父列恰好是根列时暂缓（delay），转而执行
-一次 UPMS“升级测试”——构造阈值列、找出 X 段与 Y 段，分别加上偏移后逐列比较，
-据比较结果决定该列的提升阈值取整体 b 还是当前临界竖直序列。因此在较深的嵌套
-矩阵上，TUPMS 的复制结果可能与 TBM 不同（UPMS 升级）。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_UP1DBMS = R"DEFTXT(
 UP1DBMS
-
-UP1DBMS 是 notation-explorer（hypcos）中 category-upmn-test 家族的 UP 型矩阵记号（TS 源：src/notations/MN/UPMN/UP1DBMS.ts），C++ 实现见 Header/notation/up1dbms.hpp。它在 UP1MN 的列标引用之外为每个条目附加一个整数行高，行高同时作为父列索引参与坏根判定。
-
-表达式结构：一个表达式 Expr 是若干列 Column 的序列；每列是若干条目 Entry=(value, height) 的序列；value 是从 0 起的列标引用，height 是从 0 起的行高，显示为 (value+1)^(height+1)；空列显示为 "(0)"。解析时条目先读列标减 1，可选上标 ^ 数字再减 1 作为行高；无上标时行高置为哨兵 −1，列尾 value=−1 的条目在解析时删去。空表达式表示 0；另外用 ∞ 标志表示极限，显示为 "Limit"。
-
-合法性：展开前校验每个 value 落在 [0, 表达式列数) 内；末列非空时末项行高也须落在 [0, 列数) 内，越界按解析失败处理。
-
-极限与后继：非空且末列非空的表达式是极限表达式；末列为空的表达式是后继表达式，它的展开就是删去末列。
-
-∞ 的基本列：Limit[n]（n 为正整数）展开为第一列空列，随后第 i=0..n−1 列各含单个条目 (value=i, height=i)，显示依次为 (1)^(1)、(2)^(2)、……、(n)^(n)。
-
-展开（参数 m≥1；FS 较短 shorter=true，FS_alter 较长 shorter=false）：空表达式原样返回；末列为空时删去末列。否则取末列末项 (r, h)，新行高 new_h 取第 h 列末项的行高（空列记 −1）。构造新末列：末列删去末项，先并入条目 (r, new_h)，再并入第 r 列；merge_column 规则为保留第一列全部条目，再追加第二列中行高严格大于第一列末项行高的条目（空列行高视为 −1）。新表达式由其余各列与新末列组成。随后由 compute_up(expr, r, h) 算出每列 up 标志，对 w=1..m 逐轮把第 r+1 到末列按 copy_column 复制，列标偏移 (right−r)·w；较短展开删去最后一列，较长展开保留全部复制列。
-
-copy_column(col, r, offset, up)：条目 value 大于 r，或等于 r 且 up 为真时 value 加 offset，否则保持；行高按同一 copy_value 规则同步平移。
-
-compute_up(expr, r, h) 返回每列布尔标志：列标小于 r 为 0，第 r 列为 1。对 i=r+1 到末列逐列判定：h_root 为该列自后向前第一个 value 不小于 r 的条目行高，h_root 小于 h 记 0；h_proj 为第一个 value 不小于 r+1 的条目行高，若 h_proj 不小于 h，取 parent_at(col, h)（第一个行高不小于 h 的条目 value，找不到记 −1），标志继承该引用列，引用不到记 0；若 h_proj 不小于 0，再沿 h_proj 行高上溯到父列等于 r 的列 p_proj，p_proj 引用不到或其标志为 0 则本列记 0。随后进入坏根比较：X_start=i，Y_start=末列，沿 h_proj+1 行高上溯到父列等于 r 的列 Y_start，引用不到记 0；Y_start 不大于 X_start 时相等记 1、否则记 0；否则先比较 X_start 列与 Y_start 列中 value 不大于 r 的条目（discard_after 截断），逐项先比 value 再比 height，前缀相同则长者大，不一致即按方向决定；再对 k=1,2,... 比较相对列，每个条目展开为四元组（value 是否不小于起点、相对 value、height 是否不小于起点、相对 height），先比 value 标记、再比相对 value、再比 height 标记、再比相对 height，前缀相同则长者大，首次不一致决定；全部一致记 1。
-
-记号极限：实现未给出该记号所对应序数上界，具体极限以原始 TS 定义为准。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_UP1MN = R"DEFTXT(
 UP1MN
-
-UP1MN 是 notation-explorer（hypcos）中 category-upmn 家族的 UP 型山记号（credit.up1mn，TS 源：src/notations/MN/UPMN/UP1MN.ts），C++ 移植见 Header/notation/up1mn.hpp。它只有单列标引用、不带分隔符层号，显示与解析骨架复用 n-MN 的 smnshare.hpp。
-
-表达式结构：一个表达式 Expr 是若干列 Column 的序列；每列是若干条目值 v 的序列，v 是从 0 起的列标引用（显示时加 1，经 n-MN 骨架显示为不带逗号的单值）。空表达式表示 0；另外用 ∞ 标志表示记号的极限，显示为 "Limit"。
-
-合法性：解析先经 n-MN 文本骨架读入，凡条目分隔符不为 0 的文本解析失败；展开前校验每个条目值 v 落在 [0, 表达式列数) 内，越界即按解析失败处理。
-
-极限与后继：非空且末列非空的表达式是极限表达式；末列为空的表达式是后继表达式，它的展开（前驱）就是删去末列。
-
-∞ 的基本列：Limit[n]（n 为正整数）展开为 [[], [0, 0, ..., 0]]，即第一列为空列，第二列含 n+1 个均引用第 0 列的条目。解析 "Limit" 直接得到 ∞ 标志，展开时套用上述基本列。
-
-展开（参数 m≥1；FS 采用较短展开 shorter=true，FS_alter 采用较长展开 shorter=false）：空表达式原样返回；末列为空时删去末列。否则取末列末项的值 r，top 为末列项数减 1，先由 compute_up(expr, r, top) 算出每列的 up 标志。随后构造新表达式：保留除末列外的各列，新末列由末列删去末项后，追加第 r 列自第 top 项起的所有条目；再对 w=1..m 逐轮把第 r+1 列到末列的各列按 copy_column 复制到列标偏移 (right−r)·w 的新位置。较短展开在复制完成后删去最后一列，较长展开保留全部复制列。
-
-compute_up(expr, r, b) 返回每列的布尔标志：第 r 列左侧（列标小于 r）一律为 0，第 r 列为 1。对 i=r+1 到末列逐列判定：(1) 第 i 列项数不超过 b 时记 0；(2) 若该列第 b 项的值不等于 r，则该列标志继承它所引用列的标志；(3) 在第 i 列中找到第一个值等于 r 的位置 j，找不到记 0；若 j>0，沿第 j−1 项的值上溯到值等于 r 的列 p，p 的标志为 0 则本列记 0；(4) 进入坏根比较：X_start=i，Y_start=末列，沿第 j 项的值上溯直到值等于 r 的列 Y_start；若 Y_start 不大于 X_start，相等记 1、否则记 0；否则先比较 X_start 列与 Y_start 列自 j 项起的后缀（逐项比列标，前缀相同则长者更大），首次不一致即按方向记 1 或 0；若后缀一致，再对 k=1,2,... 逐对比较 X_start+k 列与 Y_start+k 列的相对列：值不小于本列起点的条目标记为相对项，先比标记（标记为真是更大），再比相对值，前缀相同则长者更大，首次不一致决定本列标志，全部一致则记 1。
-
-copy_column(col, r, offset, up)：条目值大于 r 的加 offset；小于 r 的保持不变；等于 r 时仅当 up 为真才加 offset，否则保持原值。
-
-记号极限：实现未给出该记号所对应序数上界，具体极限以原始 TS 定义为准。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_UP2DBMS_V1 = R"DEFTXT(
 UP2DBMS v1
-
-UP2DBMS v1 是 notation-explorer（hypcos）中 category-upmn 家族的 UP 型 DBMS 山记号（credit.upmn，TS 源：src/notations/MN/UPMN/UP2DBMS-v1.ts），C++ 实现见 Header/notation/up2dbms_v1.hpp，共享核心 Header/notation/mnup2share.hpp。表达式结构与 UP2MN v1B 同属 mnup2 骨架，但展开时行高偏移恒为 top−Rj，且有限情形的 up 判定采用恒真简化规则。
-
-表达式结构：一个表达式 Expr 是若干列 Column 的序列；每列是若干条目 Entry=(value, sep) 的序列；value 是从 0 起的列标引用，sep 是分隔符层号（非负整数），显示时列标加 1 交给 n-MN 骨架。空表达式表示 0；另外用 ∞ 标志表示极限，显示为 "Limit"。竖向表与父位置表 P 的生成规则与 mnup2share 相同：vertical_increase 生成竖向，父位置 pi=value、pj 为父列竖向表中第一个小于本条目竖向的位置。
-
-合法性：展开前校验所有 value 落在 [0, 表达式列数) 内，越界按解析失败处理。
-
-极限与后继：非空且末列非空的表达式是极限表达式；末列为空的表达式是后继表达式，它的展开就是删去末列。
-
-∞ 的基本列：Limit[n]（n 为正整数）展开为第一列空列；第 i=1..n 列先含 i 个引用第 i−1 列、sep=0 的条目，末项为引用第 i−1 列、sep=1 的条目。
-
-展开（参数 m≥1；FS 较短 shorter=true，FS_alter 较长 shorter=false）：空表达式原样返回；末列为空时删去末列。否则取末列列标 right 与末项位置 top，计算竖向表 V 与父位置表 P；rp=P[right][top] 记为 (Ri, Rj)。末项 sep=0 为有限情形 is_finite=true，否则为无限情形。有限情形调用 v1 专用的 compute_up_1mn：列标小于 Ri 记 0，第 Ri 列及其右侧全部记 1；无限情形调用 compute_up_2mn（v1c=false 分支）。构造新表达式：保留除末列外各列，新末列由末列删去末项后，拼回第 Ri 列自第 Rj 项起的所有条目（本记号不在新末列补入 (Ri, 0) 条目）。y_offset 恒为 top−Rj。对 w=1..m 逐轮把第 Ri+1 到 right 列按 copy_column 复制，列标偏移 (right−Ri)·w，高度偏移 y_offset·w；较短展开删去最后一列，较长展开保留全部复制列。
-
-compute_up_2mn（v1 与 v1B+ 相同，v1C 的差异另见其定义）：列标小于 Ri 为 0，第 Ri 列为 1。对 i=Ri+1 到末列：列项数不超过 Rj+1 记 0；项数不少于 Rj+3 时继承 P[i][Rj+1].i 列的标志；末项 sep=0 的有限列同样继承 P[i][Rj+1].i 列的标志；其余取 p=P[i][Rj+1].i，p 不等于 Ri 时继承 p 列标志。p 等于 Ri 时进入坏根比较：X_start=i，Y_start=末列，沿父位置上溯直到找到项数恰为 Rj+2 的列 Y_start；Y_start 不大于 X_start 时相等记 1、否则记 0；否则先比较两列自对应位置起的后缀列，再对 k=1,2,... 比较相对列（value 不小于起点的条目标记为相对项、值改为减起点），先比标记再比 value 与 sep，首次不一致决定；全部一致记 1。
-
-copy_column(col, rp, offset, y_offset, up, v1_flag=true)：value 大于 Ri 加 offset，小于 Ri 保持不变；value 等于 Ri 时，只要 up 为真或位置 j 不超过 Rj 即加 offset，否则保持（j≤Rj 判据是 v1 相对 v1B+ 的特有规则）。若 up 为真且 y_offset 大于 0、Rj 未超出结果列范围，在第 Rj 项位置前补入 y_offset 个填充条目（value 取第 Rj 项平移后的值，sep=0），头部 Rj 项与尾部其余条目依次保留。
-
-记号极限：实现未给出该记号所对应序数上界，具体极限以原始 TS 定义为准。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_UP2DBMS_V1B_PLUS = R"DEFTXT(
 UP2DBMS v1B+
-
-UP2DBMS v1B+ 是 notation-explorer（hypcos）中 category-upmn 家族的 UP 型 DBMS 山记号（credit.upmn，TS 源：src/notations/MN/UPMN/UP2DBMS-v1b-plus.ts），C++ 实现见 Header/notation/up2dbms_v1b_plus.hpp，共享核心 Header/notation/mnup2share.hpp。表达式结构、合法性、极限与后继判定、∞ 基本列、新末列构造与 y_offset 规则均与 UP2DBMS v1 相同，仅在有限情形 up 判定与复制值平移两处不同（以代码为准）。
-
-共同部分：Expr 为列序列，条目 (value 0 起列标, sep 层号)，空表达式表示 0，∞ 标志显示 "Limit"；非空且末列非空为极限表达式，末列为空为后继表达式，后继展开即删去末列；value 须落在 [0, 列数) 内。Limit[n] 为第一列空列，第 i=1..n 列先含 i 个引用第 i−1 列、sep=0 的条目，末项为引用第 i−1 列、sep=1 的条目。展开时末项 sep=0 为有限情形，否则为无限情形；新末列由末列删去末项后拼回第 Ri 列自 Rj 项起的尾部，y_offset 恒为 top−Rj，随后对 w=1..m 复制第 Ri+1 到 right 列，FS 较短删末列、FS_alter 较长保留。
-
-与 v1 的两处差异：
-
-(1) 有限情形 up 判定：v1 把第 Ri 列及其右侧全部记为 up=1；v1B+ 改用真实的 up2mn_compute_up_1mn 算法（与 UP2MN v1B 的有限情形同一套坏根判定：列项数分档、父列继承、j>0 前置列检查、Y_start 上溯到父列等于 Ri 的列、后缀列与相对列比较，未决记 1）。无限情形的 compute_up_2mn 与 v1 完全相同：项数 ≤Rj+1 记 0，≥Rj+3 继承 P[i][Rj+1].i 列，有限末项同样继承父列，p≠Ri 继承 p 列，p=Ri 时上溯到项数恰为 Rj+2 的列再做后缀与相对列比较。
-
-(2) copy_column 的值平移：value 等于 Ri 时，v1B+ 仅当 up 为真才加 offset，不再含 v1 的 j≤Rj 位置判据；value 大于 Ri 加 offset、小于 Ri 保持不变的规则，以及 up 为真时在第 Rj 项前补 y_offset 个填充条目（sep=0）的规则，均与 v1 相同。
-
-记号极限：实现未给出该记号所对应序数上界，具体极限以原始 TS 定义为准。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_UP2DBMS_V1C = R"DEFTXT(
 UP2DBMS v1C
-
-UP2DBMS v1C 是 notation-explorer（hypcos）中 category-upmn 家族的 UP 型 DBMS 山记号（credit.upmn，TS 源：src/notations/MN/UPMN/UP2DBMS-v1c.ts），C++ 实现见 Header/notation/up2dbms_v1c.hpp，共享核心 Header/notation/mnup2share.hpp。表达式结构、合法性、极限与后继判定、∞ 基本列、新末列构造、有限情形 up 判定与复制值平移规则均与 UP2DBMS v1B+ 相同，唯一差异在无限情形 compute_up_2mn 的坏根 Y_start 上溯循环（以代码为准）。
-
-共同部分：Expr 为列序列，条目 (value 0 起列标, sep 层号)，空表达式表示 0，∞ 标志显示 "Limit"；非空且末列非空为极限表达式，末列为空为后继表达式，后继展开即删去末列；value 须落在 [0, 列数) 内。Limit[n] 为第一列空列，第 i=1..n 列先含 i 个引用第 i−1 列、sep=0 的条目，末项为引用第 i−1 列、sep=1 的条目。展开时末项 sep=0 为有限情形，否则为无限情形；新末列由末列删去末项后拼回第 Ri 列自 Rj 项起的尾部，y_offset 恒为 top−Rj，随后对 w=1..m 复制第 Ri+1 到 right 列，FS 较短删末列、FS_alter 较长保留。有限情形使用真实的 up2mn_compute_up_1mn 算法；copy_column 中 value 等于 Ri 时仅当 up 为真才加 offset。
-
-与 v1B+ 的唯一差异：compute_up_2mn 中定位坏根列 Y_start 的上溯循环。v1B+ 沿 P[Y_start][Rj+1].i 上溯，终止条件为列项数恰等于 Rj+2；v1C 沿 P[Y_start][Rj].i 上溯，终止条件为列项数恰等于 Rj+2 且该位置父列恰为 Ri，两个条件同时满足才停止。循环之前的分档判定（项数 ≤Rj+1 记 0、≥Rj+3 继承 P[i][Rj+1].i 列、末项 sep=0 继承父列、p≠Ri 继承 p 列）、循环之后的 Y_start 位置比较（相等记 1、否则记 0）、后缀列与相对列比较规则及未决记 1，均与 v1B+ 相同。
-
-记号极限：实现未给出该记号所对应序数上界，具体极限以原始 TS 定义为准。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_UP2DBMS_V2 = R"DEFTXT(
 UP2DBMS v2
-
-UP2DBMS v2 是 notation-explorer（hypcos）中 category-upmn 家族的 UP 型 DBMS 矩阵记号（credit.up2dbms-v2，TS 源：src/notations/MN/UPMN/UP2DBMS-v2.ts），C++ 实现见 Header/notation/up2dbms_v2.hpp。它与 v1 系列不同：条目行高是一对高度 (h0, h1)，显示为高度对形式；新行高计算与列合并沿用 SDBMS 家族规则，坏根 up 判定与带 BMS 升级分支的复制列均为 v2 专属实现。UI 等价视图（dbms、RMN、Y、层化图等）未移植。
-
-表达式结构：一个表达式 Expr 是若干列 Column 的序列；每列是若干条目 Entry=(value, height) 的序列；value 是从 0 起的列标引用；height=(h0, h1) 为高度对，h0 是父列列标（0 起），h1 是层级号，显示为 (value+1)^(h1, h0+1)；空列显示为 "(0)"。解析时条目先读列标减 1，上标 ^ 后接高度对 (h1, h0+1)（也允许列标后直接跟高度对括号）；无上标时置哨兵高度 (0, −1)，列尾 value=−1 的条目在解析时删去。空表达式表示 0；另外用 ∞ 标志表示极限，显示为 "Limit"。
-
-高度比较：先比 h1，h1 相同再比 h0（反字典序）；条目比较先比 value 再比高度；列比较为条目的字典序，前缀相同则长者更大。
-
-合法性：展开前校验每个 value 与每个 h0 都落在 [0, 表达式列数) 内，越界按解析失败处理。
-
-极限与后继：非空且末列非空的表达式是极限表达式；末列为空的表达式是后继表达式，它的展开就是删去末列。
-
-∞ 的基本列：Limit[n]（n 为正整数）展开为第一列空列，第 i=0..n−1 列各含单个条目 (value=i, height=(h0=i, h1=i+1))，显示依次为 (1)^(1,1)、(2)^(2,2)、……、(n)^(n,n)。
-
-展开（参数 m≥1；FS 较短 shorter=true，FS_alter 较长 shorter=false）：空表达式原样返回；末列为空时删去末列。否则取末列末项 (r, h)，由 compute_new_height(h, expr, r) 算出新行高 new_h。构造新末列：末列删去末项，若 new_h 存在先并入条目 (r, new_h)，再并入第 r 列；merge_column 规则为第一列空时直接取第二列，否则保留第一列全部条目，追加第二列中高度严格大于第一列末项高度的条目。新表达式由其余各列与新末列组成。随后由 compute_up(expr, r, h) 算出每列 up 标志，对 w=1..m 逐轮把第 r+1 到末列按 copy_column 复制，列标偏移 (right−r)·w；较短展开删去最后一列，较长展开保留全部复制列。
-
-compute_new_height(h=(v, h1), expr, r)：在第 v 列中找到第一个高度不小于 h 的位置 hj；若不存在：当该列末项 h1 小于 h.h1 时返回高度 (r, h1−1)，否则返回该列末项高度；若存在：new_h 取为 (第 hj 项 value, h1)，若 hj>0 且前一项高度大于 new_h，则把 new_h 抬升为前一项高度。
-
-compute_up(expr, r, h) 返回每列布尔标志：列标小于 r 为 false，第 r 列为 true；若 h.h1=0，第 r 列右侧全部记 true 并直接返回。对 i=r+1 到末列：h_root 为该列自后向前第一个 value 不小于 r 的条目高度，不存在或其 h1 小于 h.h1 记 false；h_proj 为第一个 value 不小于 r+1 的条目高度，阈值高度 threshold=(r+1, min(h_proj.h1, h.h1−1))（h_proj 不存在时 h1 取 0）；若 h_proj 不小于 threshold，取 parent_at(col, threshold)（第一个高度不小于 threshold 的条目 value，找不到记 −1），标志继承该引用列，引用不到记 false；否则取 p_proj=parent_at(col, h_proj)，引用不到或其标志为 false 记 false。随后进入坏根比较：X_start=i，Y_start=末列，沿 threshold 高度上溯到父列等于 r 的列 Y_start，上溯途中引用不到记 false；Y_start 不大于 X_start 时相等记 true、否则记 false；否则先比较 X_start 列与 Y_start 列中 value 不大于 r 的条目（discard_after 截断）的列字典序，不一致即按方向决定；再对 k=1,2,... 比较相对列：每个条目展开为（value 是否不小于起点、相对 value、h0 是否不小于起点、相对 h0、h1），依次比较标记、相对 value、h0 标记、相对 h0、h1，前缀相同则长者大，首次不一致决定；全部一致记 true。
-
-copy_column(col, r, offset, up)：常规条目经 copy_entry 平移——value 大于 r，或等于 r 且 up 为真时 value 加 offset，否则保持；h0 按同一规则平移，h1 不变。特殊 BMS 升级分支：当条目 value 等于 r 且 up 为假时，若该项 h1=0，或 h1 与前一项 h1 相同，则直接平移为 (r+offset, 平移后高度)；否则先补入条目 (r+offset, (r, 前一项 h1，无前项时 h1=0))，再把原条目按 up 为假规则平移后追加。
-
-记号极限：实现未给出该记号所对应序数上界，具体极限以原始 TS 定义为准。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_UP2MN_V1A = R"DEFTXT(
 UP2MN v1A
-
-UP2MN v1A 是 notation-explorer（hypcos）中 category-upmn-test 家族的早期 UP 型山记号（credit.upmn，TS 源：src/notations/MN/UPMN/UP2MN-v1a.ts），C++ 实现见 Header/notation/up2mn_v1a.hpp。表达式类型、显示解析、竖向表、父位置与标准 n-MN 展开全部复用 smnshare.hpp（n-MN 家族），仅在末列含无限条目时走自定义坏根复制分支。
-
-表达式结构：一个表达式 Mountain 是若干列 Column 的序列；每列是若干条目 Entry=(value, sep) 的序列；value 是从 1 起的列标引用，sep 是分隔符层号（非负整数，显示为 sep+1 个逗号）。空表达式表示 0；另外用 ∞ 标志表示极限，显示为 "Limit"。竖向表由各列条目按顺序经 vertical_increase 生成；父位置为父列 value−1 中竖向小于本条目竖向的第一个位置（二分查找）。
-
-合法性：展开前校验每个 value 落在 [1, 表达式列数] 内，越界即按解析失败处理。
-
-极限与后继：非空且末列非空的表达式是极限表达式；末列为空的表达式是后继表达式，它的展开就是删去末列。
-
-∞ 的特殊判定与基本列：本记号把固定表达式 INFINITY = [[], [[1,1]], [[2,1]]]（第一列为空列，第二列为单条目 (1,1)，第三列为单条目 (2,1)）整体视为 ∞；当前表达式与该固定表达式按列字典序比较相等即识别为 ∞。Limit[n] 的基本列是对 INFINITY 应用标准 n-MN 展开（smnshare::expand，shorter=false）所得的 Mountain。
-
-展开分流（参数 m≥1；FS 较短 shorter=true，FS_alter 较长 shorter=false）：表达式为 ∞ 时直接返回其第 m 个基本列；空表达式原样返回；末列为空时删去末列。若末列不含无限条目（末项 sep=0），直接调用标准 n-MN 展开：fill_ghost 补幽灵行后反复 extend 共 m 次，较短展开删去末列，较长展开再做一次 subtract_1，最后 clear_ghost 清掉幽灵行。若末列含无限条目（末项 sep>0），进入自定义分支 expand_infinite。
-
-expand_infinite 步骤：取末列列标 right 与末项位置 top，计算竖向表 V 与父位置 pr=(Ri, Rj)；offset=right−Ri；y_offset 在 top=Rj 时取 1，否则取 top−Rj。up 标志数组初值全 0，末列标记为 up=1。对 i=Ri+1 到 right−1 逐列判定：该列不含无限条目时，有限高度 finite_height=项数；若 finite_height 不超过 Rj+1 则保持 0，否则取该列第 Rj 项的父位置，up[i] 继承父列标志。该列含无限条目时，finite_height=项数−1；小于 Rj 保持 0；大于 Rj 同样取第 Rj 项的父位置继承标志；恰等于 Rj 时进入阈值坏根比较：构造阈值列，前 Rj+1 个条目为 (列标 i, 0)，末项为 (列标 Ri, 1)；从 i+1 向右找到第一列与阈值列比较结果小于 0 的列标 X_end。若 X_end 已到末列之后，本列记 1；否则自末列起沿第 Rj 项父位置上溯到首个 finite_height 不超过 Rj 的列 Y_start，再对 k=1,2,... 比较 X_start+k 列（值不小于 X_start 的条目整体平移 Y_start−X_start）与 Y_start+k 列，按列字典序首次不一致决定 up_i 为 1 或 0；未决时若 X_end−X_start 不小于 Y_end−Y_start 记 1，否则记 0。随后先对原表达式做 subtract_1（末列末项减一层分隔符，条件成立时补回父列对应条目，再拼回父列尾部）；再对 w=1..m 把第 Ri+1 到 right 列按 copy_column 复制，列标偏移 offset·w，高度填充 y_offset·w；较短展开删去最后一列。
-
-copy_column(col, Ri, Rj, offset, up, y_offset)：若列为空、Rj=0 且 up 为真，先补 y_offset 个 (Ri+1+offset, sep=0) 条目；逐项处理时，若位置 j=Rj 且 up 为真，先在该条目前补 y_offset 个 (e.value+offset, 0) 条目；值平移规则为 e.value 大于 Ri+1，或 e.value 等于 Ri+1 且（up 为真或 j 小于 Rj）时 value 加 offset，否则原样保留。
-
-记号极限：实现未给出该记号所对应序数上界，具体极限以原始 TS 定义为准。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_UP2MN_V1B = R"DEFTXT(
 UP2MN v1B
-
-UP2MN v1B 是 notation-explorer（hypcos）中 category-upmn-test 家族的 UP 型山记号（credit.upmn，TS 源：src/notations/MN/UPMN/UP2MN-v1b.ts），C++ 实现见 Header/notation/up2mn_v1b.hpp，共享核心为 Header/notation/mnup2share.hpp。表达式为 0 起列标、整数分隔符层号的双参数山结构，显示时列标加 1 交给 n-MN 骨架。
-
-表达式结构：一个表达式 Expr 是若干列 Column 的序列；每列是若干条目 Entry=(value, sep) 的序列；value 是从 0 起的列标引用，sep 是分隔符层号（非负整数）。空表达式表示 0；另外用 ∞ 标志表示极限，显示为 "Limit"。竖向表：一列的竖向序列按条目顺序经 vertical_increase 生成——当前竖向长度不超过 sep 时得到 [0]*sep+[1]，否则把第 sep 项加 1、前 sep 项置 0；条目父位置 pi 取自身 value，pj 为父列竖向表中第一个小于本条目竖向的位置（find_index_below_row，二分查找）。
-
-合法性：展开前校验所有 value 落在 [0, 表达式列数) 内，越界按解析失败处理。
-
-极限与后继：非空且末列非空的表达式是极限表达式；末列为空的表达式是后继表达式，它的展开就是删去末列。
-
-∞ 的基本列：Limit[n]（n 为正整数）展开为：第一列为空列；对第 i=1..n 列，列内含 i−1 个引用第 i−1 列、sep=0 的条目，末项为引用第 0 列、sep=1 的条目（plus=false 分支）。解析 "Limit" 直接得到 ∞ 标志。
-
-展开（参数 m≥1；FS 较短 shorter=true，FS_alter 较长 shorter=false）：空表达式原样返回；末列为空时删去末列。否则取末列列标 right 与末项位置 top，计算竖向表 V 与父位置表 P；rp=P[right][top] 记为 (Ri, Rj)。末项 sep=0 记为有限情形 is_finite=true，否则为无限情形；有限情形用 compute_up_1mn 算 up 标志，无限情形用 compute_up_2mn（plus=false）算 up 标志。构造新表达式：保留除末列外各列；新末列由末列删去末项组成，若不是有限情形且 top=Rj，补入条目 (Ri, 0)，再拼回第 Ri 列自第 Rj 项起的所有条目。高度偏移 y_offset 在有限情形为 0；无限情形取 top−Rj 大于 1 时的 top−Rj，否则取 1。对 w=1..m 逐轮把第 Ri+1 到 right 列按 copy_column 复制，列标偏移 (right−Ri)·w，高度偏移 y_offset·w；较短展开删去最后一列。
-
-compute_up_1mn（有限情形，v1B 与 v1B+ 相同）：列标小于 Ri 的标志为 0，第 Ri 列为 1；若 Rj=0，则第 Ri 列及其右侧全部记 1。对 i=Ri+1 到末列：该列项数不超过 Rj 记 0；若 P[i][Rj].i 不等于 Ri，继承 P[i][Rj].i 列的标志；否则在列中找到第一个 value=Ri 的位置 j，找不到记 0；若 j>0，沿第 j−1 项父位置上溯到父列等于 Ri 的列 p，p 标志为 0 则本列记 0。随后进入坏根比较：X_start=i，Y_start=末列，沿第 j 项父位置上溯到父列等于 Ri 的列 Y_start；Y_start 不大于 X_start 时相等记 1、否则记 0；否则先比较两列自 j 项起的后缀列（逐项先比 value 再比 sep，前缀相同则长者大），不一致即按方向决定；再对 k=1,2,... 比较相对列 to_rel_column（value 不小于起点的条目标记为相对项、值改为减起点），相对列先比标记（标记为真是更大），再比 value 与 sep，首次不一致决定；全部一致记 1。
-
-compute_up_2mn（无限情形，v1B 即 plus=false 分支）：列标小于 Ri 为 0，第 Ri 列为 1。对 i=Ri+1 到末列：列项数不超过 Rj 记 0；项数不少于 Rj+2 时继承 P[i][Rj].i 列的标志；末项 sep=0 的有限列记 0；其余取 p=P[i][Rj].i，p 不等于 Ri 时本列记 0（这是 v1B 与 v1B+ 的关键差异，v1B+ 此处继承 p 列标志）。p 等于 Ri 时进入坏根比较：X_start=i，Y_start=末列，沿父位置上溯直到找到项数恰为 Rj+1 的列 Y_start；Y_start 不大于 X_start 时相等记 1、否则记 0；之后的相对列比较与 compute_up_1mn 相同，未决记 1。
-
-copy_column(col, rp, offset, y_offset, up)：value 大于 Ri 加 offset，小于 Ri 保持不变，等于 Ri 时仅当 up 为真才加 offset；若 up 为真且 y_offset 大于 0、Rj 未超出结果列范围，则在第 Rj 项位置前补入 y_offset 个填充条目（value 取第 Rj 项平移后的值，sep=0），原头部 Rj 项与尾部其余条目依次保留。
-
-记号极限：实现未给出该记号所对应序数上界，具体极限以原始 TS 定义为准。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_UP2MN_V1B_PLUS = R"DEFTXT(
 UP2MN v1B+
-
-UP2MN v1B+ 是 notation-explorer（hypcos）中 category-upmn 家族的 UP 型山记号（credit.upmn，TS 源：src/notations/MN/UPMN/UP2MN-v1b-plus.ts），C++ 实现见 Header/notation/up2mn_v1b_plus.hpp，共享核心 Header/notation/mnup2share.hpp。它与 UP2MN v1B 共用同一套表达式结构、竖向表、父位置、极限与后继判定、扩展骨架与复制函数，仅在两处判定上不同（以代码为准）。
-
-表达式结构、合法性、极限与后继判定均与 UP2MN v1B 相同：Expr 为列序列，条目 (value 0 起列标, sep 层号)，空表达式表示 0，∞ 标志显示 "Limit"；非空且末列非空为极限表达式，末列为空为后继表达式，后继展开即删去末列；value 须落在 [0, 列数) 内。
-
-与 v1B 的两处差异：
-
-(1) ∞ 的基本列：Limit[n]（n 为正整数）为第一列空列，第 i=1..n 列只含单个条目 (value=i−1, sep=1)；v1B 的第 i 列则先有 i−1 个 sep=0 条目再加一个 sep=1 末项。
-
-(2) compute_up_2mn（无限情形）中 p≠Ri 分支：当 P[i][Rj].i 不等于 Ri 时，v1B+ 继承该父列 p 的标志 result[p]，而 v1B 直接记 0。其余判定——列项数分档（≤Rj 记 0、≥Rj+2 继承父列、末项 sep=0 记 0）、坏根 Y_start 上溯到项数恰为 Rj+1 的列、后缀列与相对列比较规则、未决记 1——均与 v1B 相同。
-
-展开流程与 v1B 相同：先算 up 标志，构造新末列（非有限且 top=Rj 时补条目 (Ri, 0)，再拼回第 Ri 列自 Rj 项起的尾部），y_offset 无限情形取 top−Rj 与 1 的较大者，随后对 w=1..m 复制第 Ri+1 到 right 列，列标偏移 (right−Ri)·w、高度偏移 y_offset·w；FS 较短展开删去最后一列，FS_alter 较长展开保留全部复制列。copy_column 的值平移与 Rj 位置补条目规则亦与 v1B 相同。
-
-记号极限：实现未给出该记号所对应序数上界，具体极限以原始 TS 定义为准。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_UPMS = R"DEFTXT(
-UPMS（User-defined Primitive Matrix System）
-
-输入格式：省略尾随零的矩阵文本，例如 (0)(1)(2,1)
-或显式补零的 (0,0)(1,0)(2,1)。
+UPMS
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_WEAK_A_OMEGA2_MN_2 = R"DEFTXT(
 wAω2MN2
-
-wAω2MN2 是 Aω2MN2 的弱版本（TS 源：src/notations/MN/Aw2MN2.ts，家族 category-hypcos-w2mn，credit.hypcos_mn），C++ 实现见 Header/notation/waw2mn2.hpp，与普通版 Aω2MN2 共享核心 Header/notation/aw2mn_share.hpp。表达式结构、合法性、极限与后继判定、∞ 的基本列、extend 的总体流程以及 subtract1 版本2 规则均与 Aω2MN2 相同，区别仅在 stretched 拉伸判定中的弱版豁免。
-
-表达式结构（与 Aω2MN2 相同）：Expr = Column[]，Column = Entry[]，Entry=(value, sep, mark)：value 是从 1 起的列标引用，sep 是递归地也是 Expr 的分隔符，mark 是星号标志；竖向 Vertical = Sep[]。空表达式表示 0；∞ 用标志表示，显示为 "Limit"。展开前校验每个条目 1 ≤ value ≤ 列数，括号、逗号、分号不匹配则解析失败。
-
-极限与后继：非空且末列非空为极限表达式；末列为空为后继表达式，删去末列即得前驱；空表达式展开为空。
-
-∞ 的基本列：Limit[n] = [[], [[1, sep_n]]]，其中 sep_n = [[], [[1, [[]]]]] 再接 n 个空列，显示为 ()(; 后接 n 个逗号再接 1；对 ∞ 展开时直接返回 infinity_fs(term)。
-
-展开（参数 m≥1）：FS 为较短展开 shorter=true，FS_alter 为较长展开 shorter=false；两者先对极限表达式反复调用 extend 共 m 次，较短展开随后删去末列，较长展开再调用一次 extend（is_small=true，不新增列）。extend 中依次完成：计算各列竖向 V0；由末列最右上条目经 Parent 求得坏根位置 BRij=(br, bj) 与宽度 width；记录坏根列前 bj 项及末列最右上项的分隔符 top_separators 与竖向 top_verticals；做岩浆检查；调用 subtract1 版本2；用 get_references 匹配末列竖向与 top_verticals；计算各 top 极限分隔符的拉伸阈值与拉伸量；按 stretched 规则处理条目分隔符；最后按岩浆检查结果把坏根列右侧 width 列复制到列标加 width 的新位置（is_small 时只处理 dx=0）。
-
-与 Aω2MN2 的唯一差异在 stretched 判定：弱版（weak=true）在施加拉伸之前先检查该条目在原表达式中的竖向 V0[x][y] 是否不低于对应的 top 竖向 top_verticals[br]；若是，条目保持原分隔符，不追加任何空列；普通版没有这一豁免。其余保持原分隔符的条件与普通版相同：拉伸量为 0，条目分隔符 ≥ 对应的 top 分隔符，或条目分隔符 < 拉伸阈值；不满足这些条件时，在条目分隔符后追加 stretch_value 个空列。
-
-subtract1 仍为版本2：先删去末列最右上条目，取 alpha 为坏根列 bj−1 项的竖向（无则空竖向），working_vertical 为末列最右上条目前一项的竖向（无则空竖向）；copy_entries_loop 在 alpha > working_vertical 时把坏根列中定位位置之后、bj 之前的条目复制到末列。被删分隔符为极限表达式时，构造 J（BR_separator ≥ 被删分隔符则 J 为单空列，否则 BR_separator 后接一空列），在 vertical_increase(alpha, J) > working_vertical 时先按需执行复制循环，再追加带 mark 的条目 (value, J, mark=true)；被删分隔符非极限且非 one（one 为单空列表达式 [[]]）时，先复制循环，alpha == working_vertical 时追加不带 mark 的截断条目 (value, truncated, mark=false)；分隔符为 one 时不追加条目。
-
-记号极限：与 Aω2MN2 共用 infinity_fs，基本列相同；"w"（弱）体现在拉伸时保留高位条目的原分隔符。本记号达到的极限序数以原始 TS 定义为准。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_WEAK_A_OMEGA2_MN_3 = R"DEFTXT(
 wAω2MN3
-
-wAω2MN3 是 Aω2MN3 的弱版本（TS 源：src/notations/MN/Aw2MN3.ts，家族 category-hypcos-w2mn，credit.hypcos_mn），C++ 实现见 Header/notation/waw2mn3.hpp，与其余三个记号共享核心 Header/notation/aw2mn_share.hpp。表达式结构、合法性、极限与后继判定、∞ 基本列、extend 总体流程与 Aω2MN3 相同；本记号同时携带版本3 的 subtract1 规则与弱版拉伸豁免。
-
-表达式结构（与其余三个记号相同）：Expr = Column[]，Column = Entry[]，Entry=(value, sep, mark)：value 是从 1 起的列标引用，sep 是递归地也是 Expr 的分隔符，mark 是星号标志；竖向 Vertical = Sep[]。空表达式表示 0；∞ 用标志表示，显示为 "Limit"。展开前校验每个条目 1 ≤ value ≤ 列数，括号、逗号、分号不匹配则解析失败。
-
-极限与后继：非空且末列非空为极限表达式；末列为空为后继表达式，删去末列即得前驱；空表达式展开为空。
-
-∞ 的基本列：Limit[n] = [[], [[1, sep_n]]]，其中 sep_n = [[], [[1, [[]]]]] 再接 n 个空列，显示为 ()(; 后接 n 个逗号再接 1；对 ∞ 展开时直接返回 infinity_fs(term)。
-
-展开（参数 m≥1，FS 较短展开 shorter=true，FS_alter 较长展开 shorter=false）：先对极限表达式反复调用 extend 共 m 次，较短展开随后删去末列，较长展开再调用一次 extend（is_small=true，不新增列）。extend 中依次完成：计算各列竖向 V0；由末列最右上条目经 Parent 求得坏根位置 BRij=(br, bj) 与宽度 width；记录坏根列前 bj 项及末列最右上项的分隔符 top_separators 与竖向 top_verticals；做岩浆检查；调用 subtract1 版本3；用 get_references 匹配末列竖向与 top_verticals；计算拉伸阈值与拉伸量；按 stretched 弱版规则处理条目分隔符；最后按岩浆检查结果把坏根列右侧 width 列复制到列标加 width 的新位置（is_small 时只处理 dx=0）。
-
-弱版拉伸豁免（与 wAω2MN2 相同，区别于普通版）：stretched 判定中，若 weak=true 且该条目在原表达式中的竖向 V0[x][y] 不低于对应的 top 竖向 top_verticals[br]，条目保持原分隔符，不追加空列；其余保持原分隔符的条件为拉伸量为 0、条目分隔符 ≥ 对应的 top 分隔符、条目分隔符 < 拉伸阈值；不满足这些条件时在条目分隔符后追加 stretch_value 个空列。普通版没有高位豁免。
-
-subtract1 版本3（与 Aω2MN3 相同，区别于版本2）：先删去末列最右上条目；alpha = 坏根列第 bj−1 项的竖向（bj=0 时为空竖向）；working_vertical = 末列最右上条目前一项的竖向（无前一项时为空竖向）。若被删条目分隔符是 one（单空列表达式 [[]]），直接返回删去末项后的表达式，不执行复制循环，也不追加条目。否则先执行一次 copy_entries_loop：若 alpha > working_vertical，在坏根列竖向表中定位 working_vertical 下方位置，把该位置之后、bj 之前的条目依次复制到末列，value 取被删条目的 value，working_vertical 随复制逐条 vertical_increase。随后按分隔符类型分支：
-(1) 极限分支：BR_separator = S(A, br, bj−1)；J = 若 BR_separator ≥ 被删分隔符则为单空列，否则 BR_separator 后接一个空列；while 循环把空列追加到 J，直到 vertical_increase(alpha, J) 与 vertical_increase(working_vertical, J) 相等；最后向末列追加带 mark 的条目 (value, J, mark=true)。
-(2) 非极限分支：truncated = 被删分隔符删去末列；若 vertical_increase(alpha, truncated) > working_vertical，向末列追加不带 mark 的条目 (value, truncated, mark=false)。
-
-版本3 相对版本2 的差异在此记号中同样成立：one 提前返回；复制循环前置；非极限分支以 vertical_increase(alpha, truncated) > working_vertical 为追加判据（版本2 为 alpha == working_vertical）；极限分支循环加长 J 至两侧竖向相等后总是追加（版本2 不循环加长，仅在 vertical_increase(alpha, J) > working_vertical 时追加）。
-
-记号极限：与普通版共用 infinity_fs，基本列相同；"w"（弱）体现在拉伸时保留高位条目的原分隔符。本记号达到的极限序数以原始 TS 定义为准。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_WMM = R"DEFTXT(
-wMM（Weak Mutant Matrix，弱突变矩阵系统）
-
-输入格式：与 BMS 相同的矩阵文本，列为 (v0,v1,...)，省略尾随零，例如 (0,0)(1,1)(2,2)(3,2)。
-记号极限输入 Limit，其第 n 个基本列为 (0)(1,1,...,1)。
-最后一列全为零时为后继型，删去最后一列。
-
-展开规则：每个单元格除数值外还对应一个“vertical 序列”（先比序列长度，
-再从高位到低位逐项比较）；父项由数值恰好小 1 且 vertical 不更大的祖先
-确定。展开时沿父链收集根的位置，把末列数值减 1 并覆写成根列后缀，再按
-根宽与根高逐段复制坏部，通过 reference 行号映射为每列重建数值。
-
-提供两个展开：
-- FS（shorter）：在核心结果上再删去最后一列。
-- FS_alter：保留核心结果的全部列。
+wMM
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_WPPS4 = R"DEFTXT(

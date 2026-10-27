@@ -400,3 +400,5 @@ FodyWeavers.xsd
 *.txt
 *.cpp
 /tools/bml_golden
+
+!/defs/law.txt

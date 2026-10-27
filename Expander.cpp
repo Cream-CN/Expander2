@@ -96,6 +96,7 @@
 #include <cstdint>
 #include "Resource.h"
 #include "Definitions.h"   // 记号定义文本由标头编译进程序，绕过 rc.exe
+#include "HandA.h"         // 帮助(&H)/关于(&A)：RichEdit 展示 Expander.cpp 源码
 
 using namespace omegay;
 using namespace omegay::common;
@@ -108,6 +109,7 @@ namespace {
     constexpr int IDM_EXIT = 1002;*/
     constexpr int IDM_HELP = 1003;
     constexpr int IDM_LEGAL = 1004;
+    constexpr int IDM_THIRDPARTY_LICENSE = 1005; // 帮助菜单：第三方开源软件许可证
     constexpr int IDM_FS = 101;
     constexpr int IDM_FSALTER = 102;
     constexpr int IDM_ENTRY_DEMO = 103;
@@ -119,6 +121,9 @@ namespace {
     constexpr wchar_t kLegalWindowClass[] = L"OmegaYLegal";
     constexpr int IDC_LEGAL_EDIT = 6001;
     HWND g_hLegalWindow = nullptr;
+    constexpr wchar_t kLicenseWindowClass[] = L"OmegaYLicense";
+    constexpr int IDC_LICENSE_EDIT = 6002;
+    HWND g_hLicenseWindow = nullptr;
 
     // ---- 记号选择窗体 ----
     constexpr wchar_t kPickerWindowClass[] = L"OmegaYPicker";
@@ -1401,6 +1406,8 @@ namespace {
         ::AppendMenuW(hHelp, MF_STRING, IDM_HELP, L"帮助(&H)...");
         ::AppendMenuW(hHelp, MF_STRING, IDM_ABOUT, L"关于(&A)...");
         ::AppendMenuW(hHelp, MF_STRING, IDM_LEGAL, L"法律声明(&L)...");
+        ::AppendMenuW(hHelp, MF_STRING, IDM_THIRDPARTY_LICENSE,
+            L"第三方开源软件许可证(&T)...");
         ::AppendMenuW(hMenu, MF_POPUP,
             reinterpret_cast<UINT_PTR>(hHelp), L"帮助(&H)");
 
@@ -1438,20 +1445,6 @@ namespace {
         return true;
     }
 
-    void applyRichEdit10pt(HWND hRich, const wchar_t* face = L"Microsoft YaHei UI") {
-        const LONG sizeTwips = 10 * 20;
-
-        CHARFORMAT2W cf{};
-        cf.cbSize = sizeof(cf);
-        cf.dwMask = CFM_SIZE | CFM_FACE;
-        cf.yHeight = sizeTwips;
-        if (face != nullptr && face[0] != L'\0') {
-            wcscpy_s(cf.szFaceName, face);
-        }
-
-        ::SendMessageW(hRich, EM_SETCHARFORMAT, SCF_ALL, reinterpret_cast<LPARAM>(&cf));
-    }
-
     void fillPopupDefinition(HWND hRich, const NotationEntry& entry, HINSTANCE hInst) {
         std::wstring text;
         text += L"【";
@@ -1459,9 +1452,9 @@ namespace {
         text += L"】\r\n\r\n";
         text += loadDefinitionText(hInst, entry.definition_resource_id);
 
-        applyRichEdit10pt(hRich);
+        expander_help_about::applyRichEdit10pt(hRich);
         ::SetWindowTextW(hRich, text.c_str());
-        applyRichEdit10pt(hRich);
+        expander_help_about::applyRichEdit10pt(hRich);
 
         ::SendMessageW(hRich, EM_SETSEL, 0, 0);
         ::SendMessageW(hRich, EM_SCROLLCARET, 0, 0);
@@ -1616,7 +1609,7 @@ namespace {
 
             if (hRich && text) {
                 ::SetWindowTextW(hRich, text->c_str());
-                applyRichEdit10pt(hRich, L"Microsoft YaHei");
+                expander_help_about::applyRichEdit10pt(hRich, L"Microsoft YaHei");
                 ::SendMessageW(hRich, EM_SETMARGINS,
                     EC_LEFTMARGIN | EC_RIGHTMARGIN,
                     MAKELPARAM(0, 0));
@@ -1685,6 +1678,156 @@ namespace {
             return;
         }
         g_hLegalWindow = hwnd;
+        ::ShowWindow(hwnd, SW_SHOW);
+        ::UpdateWindow(hwnd);
+    }
+
+    // ---- 第三方开源软件许可证：内容读取自 defs/law.txt ----
+    [[nodiscard]] std::wstring loadThirdPartyLicenseText() {
+        // 候选路径：exe 所在目录的 defs/law.txt，其次当前工作目录的 defs/law.txt
+        wchar_t exePath[MAX_PATH]{};
+        ::GetModuleFileNameW(nullptr, exePath, MAX_PATH);
+        std::wstring exeDir;
+        if (exePath[0] != L'\0') {
+            exeDir = exePath;
+            const size_t slash = exeDir.find_last_of(L"\\/");
+            if (slash != std::wstring::npos) exeDir.resize(slash + 1);
+        }
+        const std::wstring paths[] = {
+            exeDir + L"defs\\law.txt",
+            L"defs\\law.txt",
+        };
+
+        for (const std::wstring& path : paths) {
+            HANDLE hFile = ::CreateFileW(
+                path.c_str(), GENERIC_READ, FILE_SHARE_READ, nullptr,
+                OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+            if (hFile == INVALID_HANDLE_VALUE) continue;
+
+            DWORD size = ::GetFileSize(hFile, nullptr);
+            std::string utf8;
+            if (size > 0) {
+                utf8.resize(size);
+                DWORD read = 0;
+                if (!::ReadFile(hFile, utf8.data(), size, &read, nullptr))
+                    utf8.clear();
+                else
+                    utf8.resize(read);
+            }
+            ::CloseHandle(hFile);
+
+            std::string_view view(utf8);
+            if (view.size() >= 3 &&
+                static_cast<unsigned char>(view[0]) == 0xEF &&
+                static_cast<unsigned char>(view[1]) == 0xBB &&
+                static_cast<unsigned char>(view[2]) == 0xBF) {
+                view.remove_prefix(3); // 跳过 UTF-8 BOM
+            }
+
+            std::wstring w = utf8_to_wstring(view);
+            std::wstring out;
+            out.reserve(w.size() + 64);
+            for (size_t i = 0; i < w.size(); ++i) {
+                if (w[i] == L'\r') {
+                    if (i + 1 < w.size() && w[i + 1] == L'\n') ++i;
+                    out += L"\r\n";
+                }
+                else if (w[i] == L'\n') out += L"\r\n";
+                else out += w[i];
+            }
+            return out;
+        }
+        return L"未找到 defs/law.txt 文件。";
+    }
+
+    LRESULT CALLBACK LicenseWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+        switch (msg) {
+        case WM_CREATE: {
+            auto* cs = reinterpret_cast<CREATESTRUCTW*>(lParam);
+            auto* text = reinterpret_cast<std::wstring*>(cs->lpCreateParams);
+
+            HWND hRich = ::CreateWindowExW(
+                0, MSFTEDIT_CLASS, L"",
+                WS_CHILD | WS_VISIBLE | WS_BORDER | WS_VSCROLL | WS_HSCROLL |
+                ES_MULTILINE | ES_READONLY | ES_AUTOVSCROLL | ES_AUTOHSCROLL,
+                2, 2, 10, 10,
+                hwnd,
+                reinterpret_cast<HMENU>(static_cast<UINT_PTR>(IDC_LICENSE_EDIT)),
+                cs->hInstance, nullptr);
+
+            if (hRich && text) {
+                ::SetWindowTextW(hRich, text->c_str());
+                expander_help_about::applyRichEdit10pt(hRich, L"Microsoft YaHei");
+                ::SendMessageW(hRich, EM_SETMARGINS,
+                    EC_LEFTMARGIN | EC_RIGHTMARGIN,
+                    MAKELPARAM(0, 0));
+                ::SendMessageW(hRich, EM_SETTARGETDEVICE, 0, 0);
+                ::SendMessageW(hRich, EM_SETSEL, 0, 0);
+            }
+            ::SetWindowLongPtrW(hwnd, GWLP_USERDATA,
+                reinterpret_cast<LONG_PTR>(hRich));
+            delete text;
+            break;
+        }
+        case WM_SIZE: {
+            HWND hRich = reinterpret_cast<HWND>(
+                ::GetWindowLongPtrW(hwnd, GWLP_USERDATA));
+            if (hRich) {
+                ::MoveWindow(hRich, 2, 2,
+                    LOWORD(lParam) - 4, HIWORD(lParam) - 4, TRUE);
+            }
+            break;
+        }
+        case WM_CLOSE:
+            ::DestroyWindow(hwnd);
+            break;
+        case WM_DESTROY:
+            ::SetWindowLongPtrW(hwnd, GWLP_USERDATA, 0);
+            g_hLicenseWindow = nullptr;
+            break;
+        default:
+            return ::DefWindowProcW(hwnd, msg, wParam, lParam);
+        }
+        return 0;
+    }
+
+    void registerLicenseClass(HINSTANCE hInst) {
+        static bool registered = false;
+        if (registered) return;
+
+        WNDCLASSW wc{};
+        wc.lpfnWndProc = LicenseWndProc;
+        wc.hInstance = hInst;
+        wc.lpszClassName = kLicenseWindowClass;
+        wc.hbrBackground = ::GetSysColorBrush(COLOR_WINDOW);
+        wc.hCursor = ::LoadCursorW(nullptr, IDC_ARROW);
+        ::RegisterClassW(&wc);
+        registered = true;
+    }
+
+    void showLicenseWindow(HINSTANCE hInst, HWND hParent) {
+        if (::IsWindow(g_hLicenseWindow)) {
+            ::ShowWindow(g_hLicenseWindow, SW_RESTORE);
+            ::SetForegroundWindow(g_hLicenseWindow);
+            return;
+        }
+
+        registerLicenseClass(hInst);
+        auto* text = new std::wstring(loadThirdPartyLicenseText());
+        if (text->empty())
+            *text = L"（defs/law.txt 当前为空，第三方开源软件许可证文本尚未填写。）";
+
+        HWND hwnd = ::CreateWindowExW(
+            0, kLicenseWindowClass, L"第三方开源软件许可证",
+            WS_OVERLAPPEDWINDOW,
+            CW_USEDEFAULT, CW_USEDEFAULT, 760, 640,
+            hParent, nullptr, hInst, text);
+
+        if (!hwnd) {
+            delete text;
+            return;
+        }
+        g_hLicenseWindow = hwnd;
         ::ShowWindow(hwnd, SW_SHOW);
         ::UpdateWindow(hwnd);
     }
@@ -1879,33 +2022,24 @@ namespace {
 
             switch (id) {
             case IDM_HELP:
-                ::MessageBoxW(hwnd,
-                    L"代码署名\n"
-                    L"部分记号的代码修改自hypcos的notation-explorer\n"
-                    L"部分记号的代码修改自笑姐姐(SmileLee-lyx)的NER\n"
-                    L"曹知秋 记号提供给AI的定义使用《大数理论》的原文\n"
-                    L"MrSS的定义来自 AAA滚木批发 (QQ3682911373)\n"
-                    L"ε-Y,X-Y的代码修改自Go men的代码gomen520/gomen520.github.io"
-                    L"Den的代码修改自SmileLee/ne-rewritten"
-                    L"UPMS由test_alpha0定义\n"
-                    L"\n"
-                    L"BMS的代码修改自bmsmat，源仓库由Fish,kotetian,kyodaisuu提交\n"
-                    L"请注意 代码系利用人工智能技术生成",
-                    L"帮助", MB_OK | MB_ICONINFORMATION);
+            case IDM_ABOUT: {
+                HINSTANCE hInst = reinterpret_cast<HINSTANCE>(
+                    ::GetWindowLongPtrW(hwnd, GWLP_HINSTANCE));
+                expander_help_about::showSourceWindow(hInst, hwnd);
                 break;
-
-            case IDM_ABOUT:
-                ::MessageBoxW(hwnd,
-                    L"展开器\n\n"
-                    L"本软件是可自由分发的自由软件，使用 GNU 通用公共许可证 第三版本 授权"
-                    L"By Cream-CN\n",
-                    L"关于", MB_OK | MB_ICONINFORMATION);
-                break;
+            }
 
             case IDM_LEGAL: {
                 HINSTANCE hInst = reinterpret_cast<HINSTANCE>(
                     ::GetWindowLongPtrW(hwnd, GWLP_HINSTANCE));
                 showLegalWindow(hInst, hwnd);
+                break;
+            }
+
+            case IDM_THIRDPARTY_LICENSE: {
+                HINSTANCE hInst = reinterpret_cast<HINSTANCE>(
+                    ::GetWindowLongPtrW(hwnd, GWLP_HINSTANCE));
+                showLicenseWindow(hInst, hwnd);
                 break;
             }
 
