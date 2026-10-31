@@ -10,6 +10,7 @@ namespace expander_help_about {
     inline constexpr wchar_t kSourceWindowClass[] = L"OmegaYSource";
     inline constexpr int    IDC_SOURCE_EDIT     = 6002;
     inline HWND             g_hSourceWindow     = nullptr;
+    inline HFONT            g_hSourceFont       = nullptr; // “关于”窗体文本框字体
     inline constexpr wchar_t kSourceText[] =
         L"Expander\r\n"
         L"\r\n"
@@ -47,34 +48,41 @@ namespace expander_help_about {
             auto* cs = reinterpret_cast<CREATESTRUCTW*>(lParam);
             auto* text = reinterpret_cast<std::wstring*>(cs->lpCreateParams);
 
-            HWND hRich = ::CreateWindowExW(
-                0, MSFTEDIT_CLASS, L"",
-                WS_CHILD | WS_VISIBLE | WS_BORDER | WS_VSCROLL | WS_HSCROLL |
-                ES_MULTILINE | ES_READONLY | ES_AUTOVSCROLL | ES_AUTOHSCROLL,
+            // “关于”窗体：普通多行编辑框（尺寸与旧 RichEdit 相同），向下滚动展示文字
+            HWND hEdit = ::CreateWindowExW(
+                0, L"EDIT", L"",
+                WS_CHILD | WS_VISIBLE | WS_BORDER | WS_VSCROLL |
+                ES_MULTILINE | ES_READONLY | ES_AUTOVSCROLL,
                 2, 2, 10, 10,
                 hwnd,
                 reinterpret_cast<HMENU>(static_cast<UINT_PTR>(IDC_SOURCE_EDIT)),
                 cs->hInstance, nullptr);
 
-            if (hRich && text) {
-                ::SetWindowTextW(hRich, text->c_str());
-                applyRichEdit10pt(hRich);
-                ::SendMessageW(hRich, EM_SETMARGINS,
-                    EC_LEFTMARGIN | EC_RIGHTMARGIN,
-                    MAKELPARAM(0, 0));
-                ::SendMessageW(hRich, EM_SETTARGETDEVICE, 0, 0);
-                ::SendMessageW(hRich, EM_SETSEL, 0, 0);
+            if (hEdit) {
+                if (!g_hSourceFont) {
+                    g_hSourceFont = ::CreateFontW(-13, 0, 0, 0, FW_NORMAL,
+                        FALSE, FALSE, FALSE, DEFAULT_CHARSET,
+                        OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
+                        CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE,
+                        L"Microsoft YaHei UI");
+                }
+                ::SendMessageW(hEdit, WM_SETFONT,
+                    reinterpret_cast<WPARAM>(g_hSourceFont), TRUE);
+                if (text) {
+                    ::SetWindowTextW(hEdit, text->c_str());
+                    ::SendMessageW(hEdit, EM_SETSEL, 0, 0);
+                }
             }
             ::SetWindowLongPtrW(hwnd, GWLP_USERDATA,
-                reinterpret_cast<LONG_PTR>(hRich));
+                reinterpret_cast<LONG_PTR>(hEdit));
             delete text;
             break;
         }
         case WM_SIZE: {
-            HWND hRich = reinterpret_cast<HWND>(
+            HWND hEdit = reinterpret_cast<HWND>(
                 ::GetWindowLongPtrW(hwnd, GWLP_USERDATA));
-            if (hRich) {
-                ::MoveWindow(hRich, 2, 2,
+            if (hEdit) {
+                ::MoveWindow(hEdit, 2, 2,
                     LOWORD(lParam) - 4, HIWORD(lParam) - 4, TRUE);
             }
             break;
@@ -83,6 +91,10 @@ namespace expander_help_about {
             ::DestroyWindow(hwnd);
             break;
         case WM_DESTROY:
+            if (g_hSourceFont) {
+                ::DeleteObject(g_hSourceFont);
+                g_hSourceFont = nullptr;
+            }
             ::SetWindowLongPtrW(hwnd, GWLP_USERDATA, 0);
             g_hSourceWindow = nullptr;
             break;

@@ -96,7 +96,7 @@
 #include <cstdint>
 #include "Resource.h"
 #include "Definitions.h"   // 记号定义文本由标头编译进程序，绕过 rc.exe
-#include "HandA.h"         // 帮助(&H)/关于(&A)：RichEdit 展示 Expander.cpp 源码
+#include "HandA.h"         // 关于(&A)：展示软件信息（向下滚动的只读文本框）
 
 using namespace omegay;
 using namespace omegay::common;
@@ -107,7 +107,6 @@ namespace {
 
     /*constexpr int IDM_ABOUT = 1001;
     constexpr int IDM_EXIT = 1002;*/
-    constexpr int IDM_HELP = 1003;
     constexpr int IDM_LEGAL = 1004;
     constexpr int IDM_THIRDPARTY_LICENSE = 1005; // 帮助菜单：第三方开源软件许可证
     constexpr int IDM_FS = 101;
@@ -1407,7 +1406,6 @@ namespace {
         ::AppendMenuW(hMenu, MF_STRING, IDM_DEFINITION_PICK, L"定义(&D)...");
 
         HMENU hHelp = ::CreatePopupMenu();
-        ::AppendMenuW(hHelp, MF_STRING, IDM_HELP, L"帮助(&H)...");
         ::AppendMenuW(hHelp, MF_STRING, IDM_ABOUT, L"关于(&A)...");
         ::AppendMenuW(hHelp, MF_STRING, IDM_LEGAL, L"法律声明(&L)...");
         ::AppendMenuW(hHelp, MF_STRING, IDM_THIRDPARTY_LICENSE,
@@ -2129,7 +2127,6 @@ namespace {
             }
 
             switch (id) {
-            case IDM_HELP:
             case IDM_ABOUT: {
                 HINSTANCE hInst = reinterpret_cast<HINSTANCE>(
                     ::GetWindowLongPtrW(hwnd, GWLP_HINSTANCE));
