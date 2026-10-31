@@ -82,9 +82,6 @@ namespace omegay::notation {
             }
             return 0;
         }
-        [[nodiscard]] inline bool is_nat(int x) noexcept {
-            return x >= 0;  // 输入整数
-        }
         [[nodiscard]] inline bool legal(const FMat& in) {
             if (in.empty()) return true;
             const int rows = max_rows(in);

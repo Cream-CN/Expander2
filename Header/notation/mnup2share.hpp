@@ -107,20 +107,6 @@ inline int find_index_below_row(const std::vector<Vertical>& V, const Vertical& 
     return l;
 }
 
-inline int find_index_below_equal_row(const std::vector<Vertical>& V, const Vertical& v) {
-    const int n = static_cast<int>(V.size());
-    if (n == 0) return 0;
-    if (vertical_compare(v, V[static_cast<std::size_t>(n - 1)]) >= 0) return n;
-    int l = 0, r = n;
-    while (l < r) {
-        const int mid = (l + r + 1) >> 1;
-        const Vertical& w = mid == 0 ? Vertical{} : V[static_cast<std::size_t>(mid - 1)];
-        if (vertical_compare(v, w) >= 0) l = mid;
-        else r = mid - 1;
-    }
-    return l;
-}
-
 struct Position {
     int i;
     int j;

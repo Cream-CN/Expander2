@@ -67,13 +67,6 @@ inline bool br_is_limit(const NodePtr& e)
     if (e->cols.empty()) return false;
     return !is_zero_column(e->cols.back());
 }
-inline NodePtr br_zero_column(int n)
-{
-    auto e = std::make_shared<Node>();
-    Column c; c.arr.assign(n, 0); c.step = make_node();
-    e->cols.push_back(std::move(c));
-    return e;
-}
 inline NodePtr br_infinity_fs(int index, int n)
 {
     NodePtr chain = make_node();

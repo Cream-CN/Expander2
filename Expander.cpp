@@ -124,6 +124,10 @@ namespace {
     constexpr wchar_t kLicenseWindowClass[] = L"OmegaYLicense";
     constexpr int IDC_LICENSE_EDIT = 6002;
     HWND g_hLicenseWindow = nullptr;
+    // ---- 展开结果展示窗体：只读 RichEdit 5.0（Msftedit.dll / MSFTEDIT_CLASS） ----
+    constexpr wchar_t kResultWindowClass[] = L"OmegaYResult";
+    constexpr int IDC_RESULT_EDIT = 6003;
+    HWND g_hResultWindow = nullptr;
 
     // ---- 记号选择窗体 ----
     constexpr wchar_t kPickerWindowClass[] = L"OmegaYPicker";
@@ -1832,6 +1836,110 @@ namespace {
         ::UpdateWindow(hwnd);
     }
 
+    // ---- 展开结果展示窗体：只读 RichEdit 5.0（Msftedit.dll / MSFTEDIT_CLASS） ----
+    // 取代原 MessageBox 弹窗：结果可能极长，RichEdit 支持选择/复制与双向滚动。
+    void setResultText(HWND hRich, const std::wstring& text) {
+        expander_help_about::applyRichEdit10pt(hRich);
+        ::SetWindowTextW(hRich, text.c_str());
+        expander_help_about::applyRichEdit10pt(hRich);
+        ::SendMessageW(hRich, EM_SETMARGINS,
+            EC_LEFTMARGIN | EC_RIGHTMARGIN, MAKELPARAM(0, 0));
+        ::SendMessageW(hRich, EM_SETTARGETDEVICE, 0, 0);
+        ::SendMessageW(hRich, EM_SETSEL, 0, 0);
+        ::SendMessageW(hRich, EM_SCROLLCARET, 0, 0);
+    }
+
+    LRESULT CALLBACK ResultWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+        switch (msg) {
+        case WM_CREATE: {
+            auto* cs = reinterpret_cast<CREATESTRUCTW*>(lParam);
+            auto* text = reinterpret_cast<std::wstring*>(cs->lpCreateParams);
+
+            HWND hRich = ::CreateWindowExW(
+                0, MSFTEDIT_CLASS, L"",
+                WS_CHILD | WS_VISIBLE | WS_BORDER | WS_VSCROLL | WS_HSCROLL |
+                ES_MULTILINE | ES_READONLY | ES_AUTOVSCROLL | ES_AUTOHSCROLL,
+                2, 2, 10, 10,
+                hwnd,
+                reinterpret_cast<HMENU>(static_cast<UINT_PTR>(IDC_RESULT_EDIT)),
+                cs->hInstance, nullptr);
+
+            if (hRich && text) setResultText(hRich, *text);
+            ::SetWindowLongPtrW(hwnd, GWLP_USERDATA,
+                reinterpret_cast<LONG_PTR>(hRich));
+            delete text;
+            break;
+        }
+        case WM_SIZE: {
+            HWND hRich = reinterpret_cast<HWND>(
+                ::GetWindowLongPtrW(hwnd, GWLP_USERDATA));
+            if (hRich) {
+                ::MoveWindow(hRich, 2, 2,
+                    LOWORD(lParam) - 4, HIWORD(lParam) - 4, TRUE);
+            }
+            break;
+        }
+        case WM_CLOSE:
+            ::DestroyWindow(hwnd);
+            break;
+        case WM_DESTROY:
+            ::SetWindowLongPtrW(hwnd, GWLP_USERDATA, 0);
+            g_hResultWindow = nullptr;
+            break;
+        default:
+            return ::DefWindowProcW(hwnd, msg, wParam, lParam);
+        }
+        return 0;
+    }
+
+    void registerResultClass(HINSTANCE hInst) {
+        static bool registered = false;
+        if (registered) return;
+
+        WNDCLASSW wc{};
+        wc.lpfnWndProc = ResultWndProc;
+        wc.hInstance = hInst;
+        wc.lpszClassName = kResultWindowClass;
+        wc.hbrBackground = ::GetSysColorBrush(COLOR_WINDOW);
+        wc.hCursor = ::LoadCursorW(nullptr, IDC_ARROW);
+        ::RegisterClassW(&wc);
+        registered = true;
+    }
+
+    void showResultWindow(HINSTANCE hInst, HWND hParent,
+        std::wstring text, std::wstring title)
+    {
+        if (::IsWindow(g_hResultWindow)) {
+            HWND hRich = reinterpret_cast<HWND>(
+                ::GetWindowLongPtrW(g_hResultWindow, GWLP_USERDATA));
+            if (hRich) setResultText(hRich, text);
+            if (!title.empty())
+                ::SetWindowTextW(g_hResultWindow, title.c_str());
+            ::ShowWindow(g_hResultWindow, SW_RESTORE);
+            ::SetForegroundWindow(g_hResultWindow);
+            return;
+        }
+
+        registerResultClass(hInst);
+        auto* pText = new std::wstring(std::move(text));
+        if (title.empty()) title = L"展开结果";
+
+        HWND hwnd = ::CreateWindowExW(
+            0, kResultWindowClass, title.c_str(),
+            WS_OVERLAPPEDWINDOW,
+            150, 150, 500, 500,   // 固定位置 (150,150)、固定尺寸 500×500
+            hParent, nullptr, hInst, pText);
+
+        if (!hwnd) {
+            delete pText;
+            return;
+        }
+        g_hResultWindow = hwnd;
+
+        ::ShowWindow(hwnd, SW_SHOW);
+        ::UpdateWindow(hwnd);
+    }
+
     /*void showEntryDemo(HWND hwnd, UiState* ui) {
         std::vector<int> seq;
         int term = 0;
@@ -2189,8 +2297,12 @@ namespace {
 
                 text += entry.suffix();
                 std::wstring wtext = utf8_to_wstring(text);
-                ::MessageBoxW(hwnd, wtext.c_str(), L"展开结果",
-                    MB_OK | MB_ICONINFORMATION);
+                HINSTANCE hInst = reinterpret_cast<HINSTANCE>(
+                    ::GetWindowLongPtrW(hwnd, GWLP_HINSTANCE));
+                std::wstring resultTitle = L"展开结果 - ";
+                resultTitle += entry.display_name;
+                showResultWindow(hInst, hwnd, std::move(wtext),
+                    std::move(resultTitle));
                 break;
             }
 

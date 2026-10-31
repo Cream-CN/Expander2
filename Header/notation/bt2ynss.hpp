@@ -471,12 +471,6 @@ inline ANodePtr bt2_a_slice(const ANodePtr& A, int from)
     for (size_t i = from; i < A->cols.size(); ++i) out->cols.push_back(A->cols[i]);
     return out;
 }
-inline ANodePtr bt2_a_pop_last(const ANodePtr& A)
-{
-    auto out = std::make_shared<ANodeC>();
-    for (size_t i = 0; i + 1 < A->cols.size(); ++i) out->cols.push_back(A->cols[i]);
-    return out;
-}
 NodePtr bt2_ascend_replace(const NodePtr& e, const NodePtr& tail,
                            std::optional<int> tl, const ANodePtr& A,
                            const std::vector<int>& V, int w)
