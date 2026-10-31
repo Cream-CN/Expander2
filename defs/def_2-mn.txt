@@ -1,13 +1,2 @@
 2MN
 
-2MN 是 n-MN 家族（TS 类别 category-n-mn，credit.n_mn）中模板参数 N=2 的实例，逻辑移植自 notation-explorer（hypcos）的 src/notations/MN/SMN/n_MN.ts（TS id "2-MN"）；C++ 实现为模板 NMnNotation<N>，见 Header/notation/n_mn.hpp，共享核心见 Header/notation/smnshare.hpp。表达式结构、竖向机制、极限与后继判定、fill_ghost/extend/subtract_1/copy_column 展开流程均与 1MN 完全相同（同一模板、同一份 smnshare 核心），本文件只列出口径与 N=2 的差异。
-
-表达式结构：Expr 是若干列 Column 的序列；每列是若干条目 Entry=(value, sep) 的序列；value 是从 1 起的列标引用（0 仅为幽灵条目哨兵），sep 是非负整数分隔符，显示为 sep+1 个逗号；空表达式表示 0；∞ 标志显示为 "Limit"。竖向由 vertical_increase 逐条目生成；父位置 pi = value−1，pi=−1 时 pj=0，否则在父列竖向表中二分查找第一个严格小于当前竖向的位置。
-
-极限与后继：末列为空的表达式是后继表达式，展开就是删去末列；其余非空表达式为极限表达式。
-
-∞ 的基本列：Limit[n] 展开为第一列空列、第二列含 n 个条目 (value=1, sep=N−1) 的表达式。本记号 N=2，分隔符为 1，每个条目显示为两个逗号加列标，即 Limit[1] = ()(,,1)，Limit[2] = ()(,,1,,1)，余类推。解析 "Limit" 得到 ∞ 标志。
-
-展开（参数 m≥1；FS 较短展开、FS_alter 较长展开）：先 fill_ghost 补幽灵行，连续 m 次 extend；较短展开删去末列，较长展开再做一次 subtract_1；最后 clear_ghost 删去 value=0 的幽灵条目。extend 中先求末列最右上条目的父位置 (Ri,Rj) 与岩浆检查表，subtract_1 删去末项后按竖向比较决定是否追加 (Ri+1, new_sep) 条目，再把坏根列从 Rj 起的条目拼接到末列，随后把坏根列右侧各列按 offset = right−Ri 复制到新位置；copy_column 中按岩浆检查表做行提升复制分隔符，表外条目仅在 value ≥ Ri+1 时列标加 offset。
-
-记号极限：模板参数 N 在本移植中仅作用于 ∞ 基本列分隔符 N−1；记号对应的序数阶位以原始 TS 定义为准。

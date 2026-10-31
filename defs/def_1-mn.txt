@@ -1,25 +1,2 @@
 1MN
 
-1MN 是 n-MN 家族（TS 类别 category-n-mn，credit.n_mn）中模板参数 N=1 的实例，逻辑移植自 notation-explorer（hypcos）的 src/notations/MN/SMN/n_MN.ts（TS id "1-MN"）；C++ 实现为模板 NMnNotation<N>，见 Header/notation/n_mn.hpp，展开核心与共享机制见 Header/notation/smnshare.hpp。2MN、3MN 是同一模板 N=2、N=3 的实例，表达式结构、竖向机制与展开流程完全相同，唯一差异在 ∞ 基本列的分隔符参数（见各自定义文件）。
-
-表达式结构：一个表达式 Expr 是若干列 Column 的序列（Mountain）；每列是若干条目 Entry=(value, sep) 的序列；value 是从 1 起的列标引用（决定父位置；0 仅作为展开过程中补出的幽灵条目哨兵），sep 是非负整数分隔符，显示为 sep+1 个逗号。空表达式表示 0；另外用 ∞ 标志表示记号的极限，显示为 "Limit"。解析时逗号个数减 1 得到 sep（零个逗号对应 sep=0），列可带括号也可不带括号，单独的 "0" 表示空列；每个列在显示时都包裹在一对括号中。
-
-竖向机制：一列中每个条目对应一个竖向（Vertical，分隔符序列）：按条目顺序做 vertical_increase 得到，vertical_increase(v, s) 从 v 末尾向前删除所有小于 s 的分隔符再追加 s。条目 (i,j) 的父位置为 (pi, pj)：pi = value−1；当 pi=−1 时 pj=0，否则 pj = find_index_below(V[pi], V[i][j])，即在父列（列标 value）的竖向表中二分查找第一个严格小于该条目竖向的位置。
-
-极限与后继：空表达式表示 0；末列为空的表达式是后继表达式，它的展开（前驱）就是删去末列；其余非空表达式为极限表达式。
-
-∞ 的基本列：Limit[n]（n 为正整数）展开为第一列空列、第二列含 n 个条目 (value=1, sep=N−1) 的表达式。本记号 N=1，分隔符为 0，每个条目显示为一个逗号加列标，即 Limit[1] = ()(,1)，Limit[2] = ()(,1,1)，余类推。解析 "Limit" 得到 ∞ 标志。
-
-展开（参数 m≥1；FS 采用较短展开 shorter=true，FS_alter 采用较长展开 shorter=false）：对极限表达式依次执行 fill_ghost 补幽灵行，随后连续 m 次应用 extend；较短展开在最后删去末列，较长展开再做一次 subtract_1；最后 clear_ghost 删去所有 value=0 的幽灵条目。
-
-fill_ghost（补幽灵行）：先计算各列竖向表；对每个条目求父位置，若父位置恰为父列末尾，比较 vertical_increase(v_parent, sep) 与当前条目竖向：若前者更小，则在父列末尾追加一个幽灵条目 Entry{0, undef_sep}（undef_sep 是大于任意值的哨兵，仅在取不到父列前一项竖向时产生），其竖向为当前竖向删去末元素。
-
-extend（一次反射式扩展）：设 right 为末列列标、top 为末列最右上条目下标；求该条目父位置 p=(Ri, Rj)；用 magma_indices 计算岩浆检查表 MI0；先调用 subtract_1 得到中间山形 m，重算末列竖向，取 MI0 的前 right 列部分继续计算 magma_indices 得到 MI；offset = right − Ri；随后对列 Ri+1 到 right 依次调用 copy_column，把源列复制到列标加 offset 的新位置。
-
-magma_indices（岩浆检查表）：对坏根列 Ri 右侧每一列的每个条目沿父链上溯：若父列标 pi < Ri 则中断；若 pi == Ri，记录 min(pj, Rj)；否则转记父条目对应的检查值（父位置等于父列末尾时退到前一项，若超出结果表则中断）。
-
-subtract_1（取前驱并拼接坏根列）：删去末列末项；若末项分隔符 top_right_sep > 0，令 new_sep = top_right_sep−1，比较 vertical_increase(v_parent, new_sep) 与末列倒数第二项竖向 v_bottom：若前者更大，则在末列追加条目 Entry{Ri+1, new_sep}；随后把坏根列从 Rj 起的全部条目拼接到末列末尾。
-
-copy_column（复制单列）：遍历源列每个条目；若该条目的岩浆检查值在表内，新列标为 value+offset，mi 切换时按末列 mr 中同 mi 的记录做行提升：当 current_mi == Rj，或 mr 中下一项的 mi 也等于 current_mi 时，复制 mr[ref_j] 的分隔符到新条目；检查表之外的条目保持原分隔符，仅当 value ≥ Ri+1 时列标加 offset。
-
-记号极限：在本 C++ 移植中，模板参数 N 仅出现在 ∞ 基本列的分隔符 N−1 上，展开算法本身与 N 无关；记号对应的序数阶位以原始 TS 定义为准。
