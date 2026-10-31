@@ -1,4 +1,7 @@
 # EXPANDER
+
+## 请注意：项目已经进入非活跃维护期
+
 ![GitHub Stars](https://img.shields.io/github/stars/cream-cn/expander2?style=for-the-badge&logo=github&label=Stars&color=24292e&branch=dev)
 
 ![C](https://img.shields.io/badge/C-00599C?style=for-the-badge&logo=c&logoColor=white)
