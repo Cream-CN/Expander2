@@ -1,14 +1,4 @@
-// Header/notation/den1.hpp
-// DEN1 记号（display 名为 "DEN1"）。
-//
-// 逻辑移植自 notation-explorer（hypcos）的 src/notations/DEN/DEN.ts。
-// DEN1 的表达式是“扁平行”序列：
-//   - rows[0] 是父标号列表（display 中位于 ';' 之后）；
-//   - 其余每行 row[0] 是 step，row[1..] 是条目值（无标记）。
-// 记号极限以 expr.infinity 表示，display 为 "Limit"。
-//
-// 对外提供文本接口（expand_text / expand_text_alter，分别对应 FS / FS_alter），
-// 与 UI 的 NotationEntry::expand_text 槽位对接；纯函数、不抛异常。
+
 #pragma once
 
 #include "denshare.hpp"

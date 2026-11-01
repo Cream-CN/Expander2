@@ -1,13 +1,4 @@
 // Header/notation/iblp.hpp
-// iblp 记号（display 名为 "iblp"）。
-//
-// 逻辑移植自 notation-explorer（hypcos）的 src/notations/DEN/DEN3.ts。
-// 表达式是“带标记的扁平行”序列：每行是扁平数组，行内位置 0 是 step，
-// 位置 1.. 是条目（entry，带标记，display 中以 '*' 表示）。
-// 记号极限以 expr.infinity 表示，display 为 "Limit"。
-//
-// 对外提供文本接口（expand_text / expand_text_alter，分别对应 FS / FS_alter），
-// 纯函数、不抛异常。
 #pragma once
 
 #include "denshare.hpp"

@@ -1,8 +1,6 @@
 #pragma once
 // ============================================================
 // 记号: "空记号" (Passthrough / Empty Notation)
-// 行为: 原样输出输入序列，并追加"尚在重构中"的提示。
-// 这是当前唯一可用的记号，其它记号将在后续版本中重新加入。
 // ============================================================
 #include <string>
 #include <vector>
@@ -11,7 +9,7 @@ namespace omegay::notation {
 
 struct EmptyNotation {
     static constexpr const char* kName        = "空记号 (Passthrough)";
-    static constexpr const char* kDescription = "原样输出，尚在重构中";
+    static constexpr const char* kDescription = "";
     [[nodiscard]] static std::vector<int> expand(
         const std::vector<int>& seq, int /*FSterm*/) {
         return seq;

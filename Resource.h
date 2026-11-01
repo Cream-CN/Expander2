@@ -12,6 +12,7 @@
 #define IDI_EXPANDER			107
 #define IDI_SMALL				108
 #define IDC_EXPANDER			109
+#define IDI_MFC					110
 #define IDR_LICENSE_TEXT		131
 #define IDC_MYICON				2
 #ifndef IDC_STATIC
@@ -26,7 +27,7 @@
 #define _APS_NEXT_RESOURCE_VALUE	129
 #define _APS_NEXT_COMMAND_VALUE		32771
 #define _APS_NEXT_CONTROL_VALUE		1000
-#define _APS_NEXT_SYMED_VALUE		110
+#define _APS_NEXT_SYMED_VALUE		111
 #endif
 #endif
 

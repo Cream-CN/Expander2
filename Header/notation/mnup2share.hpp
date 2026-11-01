@@ -1,10 +1,4 @@
-// Header/notation/mnup2share.hpp
-// UP2 家族（UP2MN-v1b / v1b-plus / UP2DBMS-v1 / v1b-plus / v1c）共享核心。
-// 逻辑移植自 notation-explorer（hypcos）的 src/notations/MN/UPMN/ 下各 TS 文件。
-// 表达式结构（TS）：Entry=[value(0-based), sep(int)]；Column=Entry[]；
-// Expr=Column[]；Vertical=number[]（sep 为层号）。
-// 显示/解析复用 smnshare（n-MN）：value+1 转换后交给 mountain_display /
-// from_display。∞ 用 bool 标志表示（display 为 "Limit"）。
+
 #pragma once
 
 #include <cstdint>

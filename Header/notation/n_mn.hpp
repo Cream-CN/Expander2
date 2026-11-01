@@ -1,11 +1,4 @@
-// Header/notation/n_mn.hpp
-// nMN 家族记号（display 名 "<n>MN"，如 1MN / 2MN / 3MN …）。
-// 逻辑移植自 notation-explorer（hypcos）的 src/notations/MN/SMN/n_MN.ts
-// （TS 生成器 category_n_mn：start=1、initial=3；TS id "<n>-MN"，
-// 家族/类别：category-n-mn，credit.n_mn）。
-// 表达式结构（TS）：Sep=int；Vertical=Sep[]；Entry=[int,Sep]；
-// Column=Entry[]；Mountain=Column[]；∞ 表示为顶层 "Limit"。
-// 共享核心见 smnshare.hpp（同一家族其他记号与 UPMN 家族复用）。
+
 #pragma once
 
 #include <optional>

@@ -1,13 +1,4 @@
-// Header/notation/e0mn.hpp
-// e0MN 记号（display 名 "e0MN"，TS id "e0mn"）。
-// 逻辑移植自 notation-explorer（hypcos）的 src/notations/MN/e0MN.ts
-// （家族/类别：category-ta0-mn，credit.e0mn；原作者 test_alpha0）。
-// 表达式结构（TS）：Term={exp:Ord, coeff:int}；Ord=Term[]（[]=0）；
-// Entry={a:int, x:Ord}；Column=Entry[]；Expr=Column[]；∞ 用标志表示
-// （display 为 "Limit"）。
-// 共享核心见 mnordshare.hpp（strong e0MN 同族复用）。
-// 对外文本接口：expand_text = FS（较短）、expand_text_alter = FS_alter（较长），
-// 与 UI 的 NotationEntry::expand_text / expand_text_alter 槽位对接。
+
 #pragma once
 
 #include <optional>

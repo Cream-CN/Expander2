@@ -14,18 +14,21 @@ namespace expander_help_about {
     inline constexpr wchar_t kSourceText[] =
         L"Expander\r\n"
         L"\r\n"
-        L"本软件是可自由分发的自由软件，使用 GNU 通用公共许可证 第三版本 授权\r\n"
+        L"本软件是可自由分发的自由软件，使用 GNU 通用公共许可证 3 授权\r\n"
         L"By Cream-CN\r\n"
         L"\r\n"
         L"\r\n"
+        L"鸣谢"
         L"部分记号的代码修改自 hypcos/notation-explorer\r\n"
         L"部分记号的代码修改自 smilelee-lyx/ne-weritten（DEN，TON，MN）\r\n"
-        L"记号的定义和部分记号的 AI 提示词选自曹知秋《大数理论》（zhiqiucao/googology）\r\n"
+        L"记号的定义和部分记号的 AI 提示词定义选自曹知秋《大数理论》（zhiqiucao/googology）\r\n"
         L"BMS系列的定义来自kyodaisuu/basmat"
         L"MrSS 的定义来自 AAA滚木批发 (QQ3682911373)\r\n"
         L"ε-Y,X-Y 的代码修改自 Go men 的代码 gomen520/gomen520.github.io\r\n"
         L"\r\n"
-        L"请注意：代码系利用人工智能技术生成";
+        L"请注意：代码系利用人工智能技术生成\r\n\r\n"
+        L"Zen Of C++20:\r\n"
+        L"Clear is better than clever.\r\n清晰胜于取巧。\r\n\r\nExplicit is better than implicit.\r\n显式胜于隐式。\r\n\r\nValue is better than pointer.\r\n值语义胜于裸指针。\r\n\r\nSafe is better than fast, unless proven slow.\r\n安全优先于速度，除非实测瓶颈。\r\n\r\nFlat is better than tangled.\r\n扁平胜于纠缠。\r\n\r\nComposable is better than monolithic.\r\n可组合胜于大一统。\r\n\r\nReadability counts.\r\n可读性至关重要。\r\n\r\nTypes aren’t rigid enough to block reason.\r\n类型约束不必僵化到抛弃常理。\r\n\r\nAlthough correctness beats brevity.\r\n但正确性优先于简洁。\r\n\r\nUndefined behavior must not be ignored.\r\n未定义行为绝不能视而不见。\r\n\r\nUnless you know exactly what you trade.\r\n除非你清楚自己取舍的代价。\r\n\r\nIn the face of ambiguity, prefer compile-time checks.\r\n遇到歧义，优先交给编译期校验。\r\n\r\nThere should be a straightforward way to express intent.\r\n应当有一种直抒意图的写法。\r\n\r\nThough it may demand learning new idioms.\r\n只是它往往需要你习得新范式。\r\n\r\nNow is better than later.\r\n尽早落地胜于无限拖延。\r\n\r\nBut half-baked abstractions are worse than none.\r\n不成熟的抽象，不如不要抽象。\r\n\r\nIf the template is hard to constrain, it’s a bad design.\r\n模板约束难以说清，便是糟糕设计。\r\n\r\nIf the concept reads like plain prose, it may be a good design.\r\n概念约束清晰易懂，多半是好设计。\r\n\r\nModules are one honking great idea — let’s use more of those!\r\n模块是超棒的特性——多多善用！\r\n";
 
     // 将 RichEdit 字号设为 10pt（供本窗体与定义弹窗共用）。
     inline void applyRichEdit10pt(HWND hRich, const wchar_t* face = L"Microsoft YaHei UI") {
