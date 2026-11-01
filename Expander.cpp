@@ -13,6 +13,7 @@
 #include "Header/core/arena.hpp"
 #include "Header/core/entry.hpp"
 #include "Header/notation/empty.hpp"
+#include "Header/notation/prss.hpp"
 #include "Header/notation/PPS-family.hpp"
 #include "Header/notation/Omega-YMagma.hpp"
 #include "Header/notation/mrss121.hpp"
@@ -319,6 +320,12 @@ namespace {
               .suffix = &notation::EmptyNotation::suffix,
               .definition_resource_id = IDR_DEF_EMPTY,
               .tags = { L"测试", L"基础" } },
+
+            { .display_name = L"PrSS", .id = "prss",
+              .expand = &notation::PrSSNotation::expand,
+              .suffix = &notation::PrSSNotation::suffix,
+              .definition_resource_id = IDR_DEF_PRSS,
+              .tags = { L"PrSS", L"原始数列", L"数列", L"入门", L"基础" } },
 
             { .display_name = L"PPS", .id = "pps",
               .expand = &notation::PPSNotation::expand,

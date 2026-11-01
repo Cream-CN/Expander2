@@ -164,4 +164,6 @@
 
 #define IDR_DEF_BTLYNSS             20111
 
+#define IDR_DEF_PRSS                20112
+
 

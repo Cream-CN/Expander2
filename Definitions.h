@@ -782,6 +782,17 @@ Parented Predecessor Sequence 4
 PPS4治好了无穷降链的问题，但是其地府段的特色减弱，并且极限只有ζ0
 )DEFTXT";
 
+constexpr std::string_view kDef_IDR_DEF_PRSS = R"DEFTXT(
+PrSS（Primitive Sequence System，原始数列系统）
+
+设序列 (a_0, a_1, ..., a_{m-1}, a_m) 定义如下：
+(1) () = 0。
+(2) (#, 0) = (#) + 1，式中 # 为任意合法序列。
+(3) (#_1, a_i, #_2, a_k) = (#_1, a_i, #_2, a_i, #_2, ...)，式中 #_1,#_2 为任意两段合法序列，a_k>0，a_i = a_k - 1 为 a_k 前首个小于 a_k 的数，省略号代表任意有限次循环的极限。
+
+输入示例：0,1,2  (以英文逗号分隔的非负整数序列，与 PPS 同格式)
+)DEFTXT";
+
 constexpr std::string_view kDef_IDR_DEF_REL_BM1YNSS = R"DEFTXT(
 RelB(n+1)SS
 )DEFTXT";
@@ -1212,6 +1223,7 @@ constexpr Entry kTable[] = {
     { IDR_DEF_PCF_OMEGA_MN, kDef_IDR_DEF_PCF_OMEGA_MN },
     { IDR_DEF_PPS, kDef_IDR_DEF_PPS },
     { IDR_DEF_PPS4, kDef_IDR_DEF_PPS4 },
+    { IDR_DEF_PRSS, kDef_IDR_DEF_PRSS },
     { IDR_DEF_REL_BM1YNSS, kDef_IDR_DEF_REL_BM1YNSS },
     { IDR_DEF_S_OMEGA_DBMS, kDef_IDR_DEF_S_OMEGA_DBMS },
     { IDR_DEF_S_OMEGA_DBMS_V2, kDef_IDR_DEF_S_OMEGA_DBMS_V2 },
