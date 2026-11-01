@@ -241,6 +241,7 @@
   <ItemGroup>
     <Image Include="Expander.ico" />
     <Image Include="small.ico" />
+    <Image Include="MFC.ico" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
