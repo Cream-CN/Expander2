@@ -95,9 +95,11 @@
 #include <algorithm>
 #include <cwctype>
 #include <cstdint>
+#include <shellapi.h>   // ShellExecuteW：打开友情链接
 #include "Resource.h"
 #include "Definitions.h"   // 记号定义文本由标头编译进程序，绕过 rc.exe
 #include "HandA.h"         // 关于(&A)：展示软件信息（向下滚动的只读文本框）
+#include "linksFreind.h"   // 友情链接(&F)：showsOfFriLnks 结构体数组
 
 using namespace omegay;
 using namespace omegay::common;
@@ -110,6 +112,7 @@ namespace {
     constexpr int IDM_EXIT = 1002;*/
     constexpr int IDM_LEGAL = 1004;
     constexpr int IDM_THIRDPARTY_LICENSE = 1005; // 帮助菜单：第三方开源软件许可证
+    constexpr int IDM_FRIENDLINK = 1006;         // 帮助菜单：友情链接
     constexpr int IDM_FS = 101;
     constexpr int IDM_FSALTER = 102;
     constexpr int IDM_ENTRY_DEMO = 103;
@@ -1375,6 +1378,8 @@ namespace {
         return result;
     }
 
+    struct IconStrip; // 顶部图标条（Expander.ico + MFC.ico），定义见互译器页面前的辅助代码
+
     struct UiState {
         HWND hEditSeq{};
         HWND hEditTerm{};
@@ -1385,6 +1390,7 @@ namespace {
         HWND hStaticParam{};    // 参数化记号的参数标签
         HWND hEditParam{};      // 参数化记号的参数输入框
         int notation_index = 0; // 当前选中的记号表索引
+        IconStrip* icons{};     // 顶部图标条（Expander.ico + MFC.ico）
         BrushPtr background;
     };
 
@@ -1447,6 +1453,7 @@ namespace {
 
         HMENU hHelp = ::CreatePopupMenu();
         ::AppendMenuW(hHelp, MF_STRING, IDM_ABOUT, L"关于(&A)...");
+        ::AppendMenuW(hHelp, MF_STRING, IDM_FRIENDLINK, L"友情链接(&F)...");
         ::AppendMenuW(hHelp, MF_STRING, IDM_LEGAL, L"法律声明(&L)...");
         ::AppendMenuW(hHelp, MF_STRING, IDM_THIRDPARTY_LICENSE,
             L"第三方开源软件许可证(&T)...");
@@ -1978,6 +1985,57 @@ namespace {
         ::UpdateWindow(hwnd);
     }
 
+    // ================= 顶栏图标条（Expander.ico + MFC.ico） =================
+    // “关于 / 互译器 / 主界面”共用：顶部并排显示软件图标 Expander.ico 与 MFC.ico，
+    // 统一按 48×48 显示。图标句柄归本结构所有，父窗口销毁时须调用 destroyIconStrip 释放。
+    constexpr int IDC_ICON_EXPANDER = 7301;
+    constexpr int IDC_ICON_MFC      = 7302;
+
+    struct IconStrip {
+        HWND  hIcon1{};    // Expander.ico
+        HWND  hIcon2{};    // MFC.ico
+        HICON hIcoExpander{};
+        HICON hIcoMfc{};
+    };
+
+    [[nodiscard]] IconStrip* createIconStrip(HWND hParent, HINSTANCE hInst,
+                                             int x, int y, int size = 48) {
+        auto* s = new IconStrip{};
+        s->hIcoExpander = static_cast<HICON>(::LoadImageW(
+            hInst, MAKEINTRESOURCEW(IDI_EXPANDER),
+            IMAGE_ICON, size, size, LR_DEFAULTCOLOR));
+        s->hIcoMfc = static_cast<HICON>(::LoadImageW(
+            hInst, MAKEINTRESOURCEW(IDI_MFC),
+            IMAGE_ICON, size, size, LR_DEFAULTCOLOR));
+
+        s->hIcon1 = ::CreateWindowExW(0, L"STATIC", L"",
+            WS_CHILD | WS_VISIBLE | SS_ICON,
+            x, y, size, size, hParent,
+            reinterpret_cast<HMENU>(static_cast<UINT_PTR>(IDC_ICON_EXPANDER)),
+            hInst, nullptr);
+        if (s->hIcon1 && s->hIcoExpander) {
+            ::SendMessageW(s->hIcon1, STM_SETICON,
+                reinterpret_cast<WPARAM>(s->hIcoExpander), 0);
+        }
+
+        s->hIcon2 = ::CreateWindowExW(0, L"STATIC", L"",
+            WS_CHILD | WS_VISIBLE | SS_ICON,
+            x + size + 12, y, size, size, hParent,
+            reinterpret_cast<HMENU>(static_cast<UINT_PTR>(IDC_ICON_MFC)),
+            hInst, nullptr);
+        if (s->hIcon2 && s->hIcoMfc) {
+            ::SendMessageW(s->hIcon2, STM_SETICON,
+                reinterpret_cast<WPARAM>(s->hIcoMfc), 0);
+        }
+        return s;
+    }
+
+    void destroyIconStrip(IconStrip* s) {
+        if (!s) return;
+        if (s->hIcoExpander) ::DestroyIcon(s->hIcoExpander);
+        if (s->hIcoMfc)     ::DestroyIcon(s->hIcoMfc);
+    }
+
     // ================= 互译器页面 =================
 
     struct TranslatorState {
@@ -1988,6 +2046,7 @@ namespace {
         HWND hStatus{};   // 状态栏
         HWND hDesc{};     // 互译器说明
         HWND hDir{};      // 方向（源 → 目标）
+        IconStrip* icons{}; // 顶部图标条（Expander.ico + MFC.ico）
         BrushPtr background;
         int index = 0;    // 当前选中的互译器表索引
     };
@@ -2047,53 +2106,56 @@ namespace {
 
             HINSTANCE hInst = cs->hInstance;
 
+            // 顶部图标条：Expander.ico + MFC.ico（48×48）；下方内容整体下移 60 像素让位
+            st->icons = createIconStrip(hwnd, hInst, 12, 12, 48);
+
             ::CreateWindowExW(0, L"STATIC", L"互译器:",
                 WS_CHILD | WS_VISIBLE | SS_LEFT,
-                12, 14, 56, 18, hwnd, nullptr, hInst, nullptr);
+                12, 74, 56, 18, hwnd, nullptr, hInst, nullptr);
 
             st->hCombo = ::CreateWindowExW(0, WC_COMBOBOXW, L"",
                 WS_CHILD | WS_VISIBLE | WS_TABSTOP | CBS_DROPDOWNLIST | WS_VSCROLL,
-                68, 10, 250, 220, hwnd,
+                68, 70, 250, 220, hwnd,
                 reinterpret_cast<HMENU>(static_cast<UINT_PTR>(IDC_TRANSLATOR_COMBO)),
                 hInst, nullptr);
 
             st->hDir = ::CreateWindowExW(0, L"STATIC", L"",
                 WS_CHILD | WS_VISIBLE | SS_LEFT,
-                328, 14, 240, 18, hwnd, nullptr, hInst, nullptr);
+                328, 74, 240, 18, hwnd, nullptr, hInst, nullptr);
 
             st->hDesc = ::CreateWindowExW(0, L"STATIC", L"",
                 WS_CHILD | WS_VISIBLE | SS_LEFT,
-                12, 38, 536, 40, hwnd, nullptr, hInst, nullptr);
+                12, 98, 536, 40, hwnd, nullptr, hInst, nullptr);
 
             ::CreateWindowExW(0, L"STATIC", L"输入 (源记号表达式):",
                 WS_CHILD | WS_VISIBLE | SS_LEFT,
-                12, 84, 300, 18, hwnd, nullptr, hInst, nullptr);
+                12, 144, 300, 18, hwnd, nullptr, hInst, nullptr);
 
             st->hInput = ::CreateWindowExW(0, L"EDIT", L"",
                 WS_CHILD | WS_VISIBLE | WS_BORDER | WS_TABSTOP |
                 ES_LEFT | ES_AUTOHSCROLL,
-                12, 104, 536, 24, hwnd,
+                12, 164, 536, 24, hwnd,
                 reinterpret_cast<HMENU>(static_cast<UINT_PTR>(IDC_TRANSLATOR_INPUT)),
                 hInst, nullptr);
 
             st->hBtn = ::CreateWindowExW(0, L"BUTTON", L"互译",
                 WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_DEFPUSHBUTTON,
-                12, 138, 90, 28, hwnd,
+                12, 198, 90, 28, hwnd,
                 reinterpret_cast<HMENU>(static_cast<UINT_PTR>(IDC_TRANSLATOR_BTN)),
                 hInst, nullptr);
 
             st->hStatus = ::CreateWindowExW(0, L"STATIC", L"",
                 WS_CHILD | WS_VISIBLE | SS_LEFT,
-                112, 144, 436, 22, hwnd, nullptr, hInst, nullptr);
+                112, 204, 436, 22, hwnd, nullptr, hInst, nullptr);
 
             ::CreateWindowExW(0, L"STATIC", L"输出 (目标记号表达式):",
                 WS_CHILD | WS_VISIBLE | SS_LEFT,
-                12, 180, 300, 18, hwnd, nullptr, hInst, nullptr);
+                12, 240, 300, 18, hwnd, nullptr, hInst, nullptr);
 
             st->hOutput = ::CreateWindowExW(0, MSFTEDIT_CLASS, L"",
                 WS_CHILD | WS_VISIBLE | WS_BORDER | WS_VSCROLL | WS_HSCROLL |
                 ES_MULTILINE | ES_READONLY | ES_AUTOVSCROLL | ES_AUTOHSCROLL,
-                12, 200, 536, 248, hwnd,
+                12, 260, 536, 248, hwnd,
                 reinterpret_cast<HMENU>(static_cast<UINT_PTR>(IDC_TRANSLATOR_OUTPUT)),
                 hInst, nullptr);
 
@@ -2144,6 +2206,10 @@ namespace {
             ::DestroyWindow(hwnd);
             break;
         case WM_DESTROY:
+            {
+                TranslatorState* st = getTranslator(hwnd);
+                if (st) destroyIconStrip(st->icons);
+            }
             delete getTranslator(hwnd);
             ::SetWindowLongPtrW(hwnd, GWLP_USERDATA, 0);
             g_hTranslatorWindow = nullptr;
@@ -2181,11 +2247,146 @@ namespace {
         HWND hwnd = ::CreateWindowExW(
             0, kTranslatorWindowClass, L"互译器",
             WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU,
-            CW_USEDEFAULT, CW_USEDEFAULT, 580, 510,
+            CW_USEDEFAULT, CW_USEDEFAULT, 580, 580,
             hParent, nullptr, hInst, nullptr);
         if (!hwnd) return;
 
         g_hTranslatorWindow = hwnd;
+        ::ShowWindow(hwnd, SW_SHOW);
+        ::UpdateWindow(hwnd);
+    }
+
+    // ================= 友情链接页面 =================
+    constexpr wchar_t kLinksWindowClass[] = L"OmegaYLinks";
+    constexpr int IDC_LINKS_LIST = 7401;
+    HWND g_hLinksWindow = nullptr;
+
+    struct LinksState {
+        HWND hList{};
+    };
+
+    [[nodiscard]] LinksState* getLinks(HWND h) {
+        return reinterpret_cast<LinksState*>(::GetWindowLongPtrW(h, GWLP_USERDATA));
+    }
+
+    // 用系统默认浏览器打开第 index 条友情链接的 URL。
+    void openFriendLink(int index) {
+        if (index < 0 || index >= expander_links::kFriendLinkCount) return;
+        const std::wstring url = utf8_to_wstring(expander_links::kFriendLinks[index].Link);
+        ::ShellExecuteW(nullptr, L"open", url.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
+    }
+
+    LRESULT CALLBACK LinksProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+        switch (msg) {
+        case WM_CREATE: {
+            auto* cs = reinterpret_cast<CREATESTRUCTW*>(lParam);
+            auto* st = new LinksState{};
+            ::SetWindowLongPtrW(hwnd, GWLP_USERDATA,
+                reinterpret_cast<LONG_PTR>(st));
+
+            HINSTANCE hInst = cs->hInstance;
+
+            // 列表：两列（名称 / URL），点击第一列（名称）跳转
+            st->hList = ::CreateWindowExW(
+                WS_EX_CLIENTEDGE, WC_LISTVIEWW, L"",
+                WS_CHILD | WS_VISIBLE | WS_TABSTOP | WS_VSCROLL |
+                LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_NOSORTHEADER,
+                12, 12, 476, 360, hwnd,
+                reinterpret_cast<HMENU>(static_cast<UINT_PTR>(IDC_LINKS_LIST)),
+                hInst, nullptr);
+            ::SendMessageW(st->hList, LVM_SETEXTENDEDLISTVIEWSTYLE, 0,
+                LVS_EX_FULLROWSELECT | LVS_EX_GRIDLINES | LVS_EX_DOUBLEBUFFER);
+
+            LVCOLUMNW col{};
+            col.mask = LVCF_TEXT | LVCF_WIDTH | LVCF_SUBITEM;
+            col.pszText = const_cast<wchar_t*>(L"名称");
+            col.cx = 200;
+            ::SendMessageW(st->hList, LVM_INSERTCOLUMNW, 0,
+                reinterpret_cast<LPARAM>(&col));
+            col.pszText = const_cast<wchar_t*>(L"URL");
+            col.cx = 276;
+            ::SendMessageW(st->hList, LVM_INSERTCOLUMNW, 1,
+                reinterpret_cast<LPARAM>(&col));
+
+            for (int i = 0; i < expander_links::kFriendLinkCount; ++i) {
+                const std::wstring name = utf8_to_wstring(expander_links::kFriendLinks[i].showName);
+                const std::wstring link = utf8_to_wstring(expander_links::kFriendLinks[i].Link);
+                LVITEMW it{};
+                it.mask = LVIF_TEXT | LVIF_PARAM;
+                it.iItem = i;
+                it.pszText = const_cast<wchar_t*>(name.c_str());
+                it.lParam = i;
+                const int row = static_cast<int>(
+                    ::SendMessageW(st->hList, LVM_INSERTITEMW, 0,
+                        reinterpret_cast<LPARAM>(&it)));
+                LVITEMW si{};
+                si.mask = LVIF_TEXT;
+                si.iItem = row;
+                si.iSubItem = 1;
+                si.pszText = const_cast<wchar_t*>(link.c_str());
+                ::SendMessageW(st->hList, LVM_SETITEMW, 0,
+                    reinterpret_cast<LPARAM>(&si));
+            }
+            break;
+        }
+        case WM_NOTIFY: {
+            auto* nmh = reinterpret_cast<NMHDR*>(lParam);
+            if (nmh->idFrom == IDC_LINKS_LIST && nmh->code == NM_CLICK) {
+                // 单击第一列（名称）跳转到对应 URL
+                auto* na = reinterpret_cast<NMITEMACTIVATE*>(lParam);
+                if (na->iItem >= 0 && na->iSubItem == 0) {
+                    openFriendLink(na->iItem);
+                }
+                return 0;
+            }
+            break;
+        }
+        case WM_CLOSE:
+            ::DestroyWindow(hwnd);
+            break;
+        case WM_DESTROY:
+            delete getLinks(hwnd);
+            ::SetWindowLongPtrW(hwnd, GWLP_USERDATA, 0);
+            g_hLinksWindow = nullptr;
+            break;
+        default:
+            return ::DefWindowProcW(hwnd, msg, wParam, lParam);
+        }
+        return 0;
+    }
+
+    void registerLinksClass(HINSTANCE hInst) {
+        static bool registered = false;
+        if (registered) return;
+
+        WNDCLASSW wc{};
+        wc.lpfnWndProc = LinksProc;
+        wc.hInstance = hInst;
+        wc.lpszClassName = kLinksWindowClass;
+        wc.hbrBackground = ::GetSysColorBrush(COLOR_WINDOW);
+        wc.hCursor = ::LoadCursorW(nullptr, IDC_ARROW);
+        ::RegisterClassW(&wc);
+        registered = true;
+    }
+
+    // 打开“友情链接”页面（单例：已打开则带回前台）。
+    void showLinksWindow(HINSTANCE hInst, HWND hParent) {
+        if (::IsWindow(g_hLinksWindow)) {
+            ::ShowWindow(g_hLinksWindow, SW_RESTORE);
+            ::SetForegroundWindow(g_hLinksWindow);
+            return;
+        }
+
+        registerLinksClass(hInst);
+
+        HWND hwnd = ::CreateWindowExW(
+            0, kLinksWindowClass, L"友情链接",
+            WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU,
+            CW_USEDEFAULT, CW_USEDEFAULT, 520, 440,
+            hParent, nullptr, hInst, nullptr);
+        if (!hwnd) return;
+
+        g_hLinksWindow = hwnd;
         ::ShowWindow(hwnd, SW_SHOW);
         ::UpdateWindow(hwnd);
     }
@@ -2263,7 +2464,10 @@ namespace {
 
             HINSTANCE hInst = reinterpret_cast<HINSTANCE>(
                 ::GetWindowLongPtrW(hwnd, GWLP_HINSTANCE));
-            constexpr int mh = 25;
+            // 顶部图标条：Expander.ico + MFC.ico（48×48）。mh 由 25 改为 60，
+            // 使下方控件整体下移 35 像素，为图标条让位。
+            ui->icons = createIconStrip(hwnd, hInst, 10, 10, 48);
+            constexpr int mh = 60;
 
             ::CreateWindowExW(0, L"STATIC", L"序列 (用逗号分隔):",
                 WS_CHILD | WS_VISIBLE | SS_LEFT,
@@ -2390,6 +2594,13 @@ namespace {
                 HINSTANCE hInst = reinterpret_cast<HINSTANCE>(
                     ::GetWindowLongPtrW(hwnd, GWLP_HINSTANCE));
                 showTranslatorWindow(hInst, hwnd);
+                break;
+            }
+
+            case IDM_FRIENDLINK: {
+                HINSTANCE hInst = reinterpret_cast<HINSTANCE>(
+                    ::GetWindowLongPtrW(hwnd, GWLP_HINSTANCE));
+                showLinksWindow(hInst, hwnd);
                 break;
             }
 
@@ -2568,6 +2779,8 @@ namespace {
             break;
         }
         case WM_DESTROY: {
+            UiState* ui = getUi(hwnd);
+            if (ui) destroyIconStrip(ui->icons);
             delete getUi(hwnd);
             ::SetWindowLongPtrW(hwnd, GWLP_USERDATA, 0);
             ::PostQuitMessage(0);
@@ -2600,7 +2813,7 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance,
     HWND hwnd = ::CreateWindowExW(
         0, L"OmegaY", L"Expander",
         WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX,
-        CW_USEDEFAULT, CW_USEDEFAULT, 470, 250,
+        CW_USEDEFAULT, CW_USEDEFAULT, 470, 280,
         nullptr, nullptr, hInstance, nullptr);
     if (!hwnd) return 0;
 
