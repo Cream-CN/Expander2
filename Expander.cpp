@@ -13,6 +13,7 @@
 #include "Header/core/arena.hpp"
 #include "Header/core/entry.hpp"
 #include "Header/notation/empty.hpp"
+#include "Header/notation/prss.hpp"
 #include "Header/notation/PPS-family.hpp"
 #include "Header/notation/Omega-YMagma.hpp"
 #include "Header/notation/mrss121.hpp"
@@ -40,6 +41,7 @@
 #include "Header/notation/bt2ynss.hpp"
 #include "Header/notation/bt3ynss.hpp"
 #include "Header/notation/btlynss.hpp"
+#include "Header/notation/translator.hpp"
 #include "Header/notation/gy.hpp"
 #include "Header/notation/xy-v1.hpp"
 #include "Header/notation/xy-v2.hpp"
@@ -94,8 +96,11 @@
 #include <algorithm>
 #include <cwctype>
 #include <cstdint>
+#include <shellapi.h>   // ShellExecuteW：打开友情链接
 #include "Resource.h"
 #include "Definitions.h"   // 记号定义文本由标头编译进程序，绕过 rc.exe
+#include "HandA.h"         // 关于(&A)：展示软件信息（向下滚动的只读文本框）
+#include "linksFreind.h"   // 友情链接(&F)：showsOfFriLnks 结构体数组
 
 using namespace omegay;
 using namespace omegay::common;
@@ -106,8 +111,9 @@ namespace {
 
     /*constexpr int IDM_ABOUT = 1001;
     constexpr int IDM_EXIT = 1002;*/
-    constexpr int IDM_HELP = 1003;
     constexpr int IDM_LEGAL = 1004;
+    constexpr int IDM_THIRDPARTY_LICENSE = 1005; // 帮助菜单：第三方开源软件许可证
+    constexpr int IDM_FRIENDLINK = 1006;         // 帮助菜单：友情链接
     constexpr int IDM_FS = 101;
     constexpr int IDM_FSALTER = 102;
     constexpr int IDM_ENTRY_DEMO = 103;
@@ -119,12 +125,31 @@ namespace {
     constexpr wchar_t kLegalWindowClass[] = L"OmegaYLegal";
     constexpr int IDC_LEGAL_EDIT = 6001;
     HWND g_hLegalWindow = nullptr;
+    constexpr wchar_t kLicenseWindowClass[] = L"OmegaYLicense";
+    constexpr int IDC_LICENSE_EDIT = 6002;
+    HWND g_hLicenseWindow = nullptr;
+    // ---- 展开结果展示窗体：只读 RichEdit 5.0（Msftedit.dll / MSFTEDIT_CLASS） ----
+    constexpr wchar_t kResultWindowClass[] = L"OmegaYResult";
+    constexpr int IDC_RESULT_EDIT = 6003;
+    HWND g_hResultWindow = nullptr;
 
     // ---- 记号选择窗体 ----
     constexpr wchar_t kPickerWindowClass[] = L"OmegaYPicker";
     constexpr int IDC_PICKER_SEARCH = 7101;
     constexpr int IDC_PICKER_LIST = 7102;
     constexpr int IDC_PICKER_STATUS = 7103;
+
+    // ---- 互译器页面 ----
+    constexpr wchar_t kTranslatorWindowClass[] = L"OmegaYTranslator";
+    constexpr int IDC_TRANSLATOR_COMBO = 7201;   // 互译器下拉选择
+    constexpr int IDC_TRANSLATOR_INPUT = 7202;   // 输入（源记号表达式）
+    constexpr int IDC_TRANSLATOR_OUTPUT = 7203;  // 输出（目标记号表达式，只读）
+    constexpr int IDC_TRANSLATOR_BTN = 7204;     // “互译”按钮
+    constexpr int IDC_TRANSLATOR_STATUS = 7205;  // 状态栏
+    constexpr int IDC_TRANSLATOR_DESC = 7206;    // 互译器说明
+    constexpr int IDC_TRANSLATOR_DIR = 7207;     // 方向（源 → 目标）
+    constexpr int IDM_TRANSLATOR = 110;          // 工具菜单：“互译器”
+    HWND g_hTranslatorWindow = nullptr;
 
     struct NotationEntry {
         const wchar_t* display_name;
@@ -295,6 +320,12 @@ namespace {
               .suffix = &notation::EmptyNotation::suffix,
               .definition_resource_id = IDR_DEF_EMPTY,
               .tags = { L"测试", L"基础" } },
+
+            { .display_name = L"PrSS", .id = "prss",
+              .expand = &notation::PrSSNotation::expand,
+              .suffix = &notation::PrSSNotation::suffix,
+              .definition_resource_id = IDR_DEF_PRSS,
+              .tags = { L"PrSS", L"原始数列", L"数列", L"入门", L"基础" } },
 
             { .display_name = L"PPS", .id = "pps",
               .expand = &notation::PPSNotation::expand,
@@ -1010,6 +1041,27 @@ namespace {
         return notation_table;
     }
 
+    // ---- 互译器表 ----
+    // 登记在“互译器页面”中的所有互译器。契约见 Header/notation/translator.hpp，
+    // 规范见 Docs/互译器规范.md。表很小，直接用普通静态数组承载。
+    static const omegay::translator::Translator kTranslatorTable[] = {
+            { .display_name = L"恒等互译器",
+              .id = "identity",
+              .source = L"任意",
+              .target = L"相同（不改变）",
+              .description = L"占位互译器：把输入原样返回，作为互译器框架的基线与调试工具。"
+                             L"选中它输入任意文本，点击“互译”后输出应与输入逐字节一致。",
+              .translate = &omegay::translator::identityTranslate },
+        };
+
+    static const std::vector<omegay::translator::Translator> translator_table(
+        kTranslatorTable,
+        kTranslatorTable + sizeof(kTranslatorTable) / sizeof(kTranslatorTable[0]));
+
+    [[nodiscard]] const std::vector<omegay::translator::Translator>& translatorTable() {
+        return translator_table;
+    }
+
     struct MenuDeleter { void operator()(HMENU m)  const noexcept { if (m) ::DestroyMenu(m); } };
     struct BrushDeleter { void operator()(HBRUSH b) const noexcept { if (b) ::DeleteObject(b); } };
     using MenuPtr = std::unique_ptr<std::remove_pointer_t<HMENU>, MenuDeleter>;
@@ -1333,6 +1385,8 @@ namespace {
         return result;
     }
 
+    struct IconStrip; // 顶部图标条（Expander.ico + MFC.ico），定义见互译器页面前的辅助代码
+
     struct UiState {
         HWND hEditSeq{};
         HWND hEditTerm{};
@@ -1343,6 +1397,7 @@ namespace {
         HWND hStaticParam{};    // 参数化记号的参数标签
         HWND hEditParam{};      // 参数化记号的参数输入框
         int notation_index = 0; // 当前选中的记号表索引
+        IconStrip* icons{};     // 顶部图标条（Expander.ico + MFC.ico）
         BrushPtr background;
     };
 
@@ -1397,10 +1452,18 @@ namespace {
         // 定义改为直接命令项：点击后打开记号选择窗体，选定后弹出对应定义
         ::AppendMenuW(hMenu, MF_STRING, IDM_DEFINITION_PICK, L"定义(&D)...");
 
+        // 工具：互译器等独立功能页面
+        HMENU hTools = ::CreatePopupMenu();
+        ::AppendMenuW(hTools, MF_STRING, IDM_TRANSLATOR, L"互译器(&T)...");
+        ::AppendMenuW(hMenu, MF_POPUP,
+            reinterpret_cast<UINT_PTR>(hTools), L"工具(&T)");
+
         HMENU hHelp = ::CreatePopupMenu();
-        ::AppendMenuW(hHelp, MF_STRING, IDM_HELP, L"帮助(&H)...");
         ::AppendMenuW(hHelp, MF_STRING, IDM_ABOUT, L"关于(&A)...");
+        ::AppendMenuW(hHelp, MF_STRING, IDM_FRIENDLINK, L"友情链接(&F)...");
         ::AppendMenuW(hHelp, MF_STRING, IDM_LEGAL, L"法律声明(&L)...");
+        ::AppendMenuW(hHelp, MF_STRING, IDM_THIRDPARTY_LICENSE,
+            L"第三方开源软件许可证(&T)...");
         ::AppendMenuW(hMenu, MF_POPUP,
             reinterpret_cast<UINT_PTR>(hHelp), L"帮助(&H)");
 
@@ -1438,20 +1501,6 @@ namespace {
         return true;
     }
 
-    void applyRichEdit10pt(HWND hRich, const wchar_t* face = L"Microsoft YaHei UI") {
-        const LONG sizeTwips = 10 * 20;
-
-        CHARFORMAT2W cf{};
-        cf.cbSize = sizeof(cf);
-        cf.dwMask = CFM_SIZE | CFM_FACE;
-        cf.yHeight = sizeTwips;
-        if (face != nullptr && face[0] != L'\0') {
-            wcscpy_s(cf.szFaceName, face);
-        }
-
-        ::SendMessageW(hRich, EM_SETCHARFORMAT, SCF_ALL, reinterpret_cast<LPARAM>(&cf));
-    }
-
     void fillPopupDefinition(HWND hRich, const NotationEntry& entry, HINSTANCE hInst) {
         std::wstring text;
         text += L"【";
@@ -1459,9 +1508,9 @@ namespace {
         text += L"】\r\n\r\n";
         text += loadDefinitionText(hInst, entry.definition_resource_id);
 
-        applyRichEdit10pt(hRich);
+        expander_help_about::applyRichEdit10pt(hRich);
         ::SetWindowTextW(hRich, text.c_str());
-        applyRichEdit10pt(hRich);
+        expander_help_about::applyRichEdit10pt(hRich);
 
         ::SendMessageW(hRich, EM_SETSEL, 0, 0);
         ::SendMessageW(hRich, EM_SCROLLCARET, 0, 0);
@@ -1616,7 +1665,7 @@ namespace {
 
             if (hRich && text) {
                 ::SetWindowTextW(hRich, text->c_str());
-                applyRichEdit10pt(hRich, L"Microsoft YaHei");
+                expander_help_about::applyRichEdit10pt(hRich, L"Microsoft YaHei");
                 ::SendMessageW(hRich, EM_SETMARGINS,
                     EC_LEFTMARGIN | EC_RIGHTMARGIN,
                     MAKELPARAM(0, 0));
@@ -1685,6 +1734,666 @@ namespace {
             return;
         }
         g_hLegalWindow = hwnd;
+        ::ShowWindow(hwnd, SW_SHOW);
+        ::UpdateWindow(hwnd);
+    }
+
+    // ---- 第三方开源软件许可证：内容读取自 defs/law.txt ----
+    [[nodiscard]] std::wstring loadThirdPartyLicenseText() {
+        // 候选路径：exe 所在目录的 defs/law.txt，其次当前工作目录的 defs/law.txt
+        wchar_t exePath[MAX_PATH]{};
+        ::GetModuleFileNameW(nullptr, exePath, MAX_PATH);
+        std::wstring exeDir;
+        if (exePath[0] != L'\0') {
+            exeDir = exePath;
+            const size_t slash = exeDir.find_last_of(L"\\/");
+            if (slash != std::wstring::npos) exeDir.resize(slash + 1);
+        }
+        const std::wstring paths[] = {
+            exeDir + L"defs\\law.txt",
+            L"defs\\law.txt",
+        };
+
+        for (const std::wstring& path : paths) {
+            HANDLE hFile = ::CreateFileW(
+                path.c_str(), GENERIC_READ, FILE_SHARE_READ, nullptr,
+                OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+            if (hFile == INVALID_HANDLE_VALUE) continue;
+
+            DWORD size = ::GetFileSize(hFile, nullptr);
+            std::string utf8;
+            if (size > 0) {
+                utf8.resize(size);
+                DWORD read = 0;
+                if (!::ReadFile(hFile, utf8.data(), size, &read, nullptr))
+                    utf8.clear();
+                else
+                    utf8.resize(read);
+            }
+            ::CloseHandle(hFile);
+
+            std::string_view view(utf8);
+            if (view.size() >= 3 &&
+                static_cast<unsigned char>(view[0]) == 0xEF &&
+                static_cast<unsigned char>(view[1]) == 0xBB &&
+                static_cast<unsigned char>(view[2]) == 0xBF) {
+                view.remove_prefix(3); // 跳过 UTF-8 BOM
+            }
+
+            std::wstring w = utf8_to_wstring(view);
+            std::wstring out;
+            out.reserve(w.size() + 64);
+            for (size_t i = 0; i < w.size(); ++i) {
+                if (w[i] == L'\r') {
+                    if (i + 1 < w.size() && w[i + 1] == L'\n') ++i;
+                    out += L"\r\n";
+                }
+                else if (w[i] == L'\n') out += L"\r\n";
+                else out += w[i];
+            }
+            return out;
+        }
+        return L"未找到 defs/law.txt 文件。";
+    }
+
+    LRESULT CALLBACK LicenseWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+        switch (msg) {
+        case WM_CREATE: {
+            auto* cs = reinterpret_cast<CREATESTRUCTW*>(lParam);
+            auto* text = reinterpret_cast<std::wstring*>(cs->lpCreateParams);
+
+            HWND hRich = ::CreateWindowExW(
+                0, MSFTEDIT_CLASS, L"",
+                WS_CHILD | WS_VISIBLE | WS_BORDER | WS_VSCROLL | WS_HSCROLL |
+                ES_MULTILINE | ES_READONLY | ES_AUTOVSCROLL | ES_AUTOHSCROLL,
+                2, 2, 10, 10,
+                hwnd,
+                reinterpret_cast<HMENU>(static_cast<UINT_PTR>(IDC_LICENSE_EDIT)),
+                cs->hInstance, nullptr);
+
+            if (hRich && text) {
+                ::SetWindowTextW(hRich, text->c_str());
+                expander_help_about::applyRichEdit10pt(hRich, L"Microsoft YaHei");
+                ::SendMessageW(hRich, EM_SETMARGINS,
+                    EC_LEFTMARGIN | EC_RIGHTMARGIN,
+                    MAKELPARAM(0, 0));
+                ::SendMessageW(hRich, EM_SETTARGETDEVICE, 0, 0);
+                ::SendMessageW(hRich, EM_SETSEL, 0, 0);
+            }
+            ::SetWindowLongPtrW(hwnd, GWLP_USERDATA,
+                reinterpret_cast<LONG_PTR>(hRich));
+            delete text;
+            break;
+        }
+        case WM_SIZE: {
+            HWND hRich = reinterpret_cast<HWND>(
+                ::GetWindowLongPtrW(hwnd, GWLP_USERDATA));
+            if (hRich) {
+                ::MoveWindow(hRich, 2, 2,
+                    LOWORD(lParam) - 4, HIWORD(lParam) - 4, TRUE);
+            }
+            break;
+        }
+        case WM_CLOSE:
+            ::DestroyWindow(hwnd);
+            break;
+        case WM_DESTROY:
+            ::SetWindowLongPtrW(hwnd, GWLP_USERDATA, 0);
+            g_hLicenseWindow = nullptr;
+            break;
+        default:
+            return ::DefWindowProcW(hwnd, msg, wParam, lParam);
+        }
+        return 0;
+    }
+
+    void registerLicenseClass(HINSTANCE hInst) {
+        static bool registered = false;
+        if (registered) return;
+
+        WNDCLASSW wc{};
+        wc.lpfnWndProc = LicenseWndProc;
+        wc.hInstance = hInst;
+        wc.lpszClassName = kLicenseWindowClass;
+        wc.hbrBackground = ::GetSysColorBrush(COLOR_WINDOW);
+        wc.hCursor = ::LoadCursorW(nullptr, IDC_ARROW);
+        ::RegisterClassW(&wc);
+        registered = true;
+    }
+
+    void showLicenseWindow(HINSTANCE hInst, HWND hParent) {
+        if (::IsWindow(g_hLicenseWindow)) {
+            ::ShowWindow(g_hLicenseWindow, SW_RESTORE);
+            ::SetForegroundWindow(g_hLicenseWindow);
+            return;
+        }
+
+        registerLicenseClass(hInst);
+        auto* text = new std::wstring(loadThirdPartyLicenseText());
+        if (text->empty())
+            *text = L"（defs/law.txt 当前为空，第三方开源软件许可证文本尚未填写。）";
+
+        HWND hwnd = ::CreateWindowExW(
+            0, kLicenseWindowClass, L"第三方开源软件许可证",
+            WS_OVERLAPPEDWINDOW,
+            CW_USEDEFAULT, CW_USEDEFAULT, 760, 640,
+            hParent, nullptr, hInst, text);
+
+        if (!hwnd) {
+            delete text;
+            return;
+        }
+        g_hLicenseWindow = hwnd;
+        ::ShowWindow(hwnd, SW_SHOW);
+        ::UpdateWindow(hwnd);
+    }
+
+    // ---- 展开结果展示窗体：只读 RichEdit 5.0（Msftedit.dll / MSFTEDIT_CLASS） ----
+    // 取代原 MessageBox 弹窗：结果可能极长，RichEdit 支持选择/复制与双向滚动。
+    void setResultText(HWND hRich, const std::wstring& text) {
+        expander_help_about::applyRichEdit10pt(hRich);
+        ::SetWindowTextW(hRich, text.c_str());
+        expander_help_about::applyRichEdit10pt(hRich);
+        ::SendMessageW(hRich, EM_SETMARGINS,
+            EC_LEFTMARGIN | EC_RIGHTMARGIN, MAKELPARAM(0, 0));
+        ::SendMessageW(hRich, EM_SETTARGETDEVICE, 0, 0);
+        ::SendMessageW(hRich, EM_SETSEL, 0, 0);
+        ::SendMessageW(hRich, EM_SCROLLCARET, 0, 0);
+    }
+
+    LRESULT CALLBACK ResultWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+        switch (msg) {
+        case WM_CREATE: {
+            auto* cs = reinterpret_cast<CREATESTRUCTW*>(lParam);
+            auto* text = reinterpret_cast<std::wstring*>(cs->lpCreateParams);
+
+            HWND hRich = ::CreateWindowExW(
+                0, MSFTEDIT_CLASS, L"",
+                WS_CHILD | WS_VISIBLE | WS_BORDER | WS_VSCROLL | WS_HSCROLL |
+                ES_MULTILINE | ES_READONLY | ES_AUTOVSCROLL | ES_AUTOHSCROLL,
+                2, 2, 10, 10,
+                hwnd,
+                reinterpret_cast<HMENU>(static_cast<UINT_PTR>(IDC_RESULT_EDIT)),
+                cs->hInstance, nullptr);
+
+            if (hRich && text) setResultText(hRich, *text);
+            ::SetWindowLongPtrW(hwnd, GWLP_USERDATA,
+                reinterpret_cast<LONG_PTR>(hRich));
+            delete text;
+            break;
+        }
+        case WM_SIZE: {
+            HWND hRich = reinterpret_cast<HWND>(
+                ::GetWindowLongPtrW(hwnd, GWLP_USERDATA));
+            if (hRich) {
+                ::MoveWindow(hRich, 2, 2,
+                    LOWORD(lParam) - 4, HIWORD(lParam) - 4, TRUE);
+            }
+            break;
+        }
+        case WM_CLOSE:
+            ::DestroyWindow(hwnd);
+            break;
+        case WM_DESTROY:
+            ::SetWindowLongPtrW(hwnd, GWLP_USERDATA, 0);
+            g_hResultWindow = nullptr;
+            break;
+        default:
+            return ::DefWindowProcW(hwnd, msg, wParam, lParam);
+        }
+        return 0;
+    }
+
+    void registerResultClass(HINSTANCE hInst) {
+        static bool registered = false;
+        if (registered) return;
+
+        WNDCLASSW wc{};
+        wc.lpfnWndProc = ResultWndProc;
+        wc.hInstance = hInst;
+        wc.lpszClassName = kResultWindowClass;
+        wc.hbrBackground = ::GetSysColorBrush(COLOR_WINDOW);
+        wc.hCursor = ::LoadCursorW(nullptr, IDC_ARROW);
+        ::RegisterClassW(&wc);
+        registered = true;
+    }
+
+    void showResultWindow(HINSTANCE hInst, HWND hParent,
+        std::wstring text, std::wstring title)
+    {
+        if (::IsWindow(g_hResultWindow)) {
+            HWND hRich = reinterpret_cast<HWND>(
+                ::GetWindowLongPtrW(g_hResultWindow, GWLP_USERDATA));
+            if (hRich) setResultText(hRich, text);
+            if (!title.empty())
+                ::SetWindowTextW(g_hResultWindow, title.c_str());
+            ::ShowWindow(g_hResultWindow, SW_RESTORE);
+            ::SetForegroundWindow(g_hResultWindow);
+            return;
+        }
+
+        registerResultClass(hInst);
+        auto* pText = new std::wstring(std::move(text));
+        if (title.empty()) title = L"展开结果";
+
+        HWND hwnd = ::CreateWindowExW(
+            0, kResultWindowClass, title.c_str(),
+            WS_OVERLAPPEDWINDOW,
+            150, 150, 500, 500,   // 固定位置 (150,150)、固定尺寸 500×500
+            hParent, nullptr, hInst, pText);
+
+        if (!hwnd) {
+            delete pText;
+            return;
+        }
+        g_hResultWindow = hwnd;
+
+        ::ShowWindow(hwnd, SW_SHOW);
+        ::UpdateWindow(hwnd);
+    }
+
+    // ================= 顶栏图标条（Expander.ico + MFC.ico） =================
+    // “关于 / 互译器 / 主界面”共用：顶部并排显示软件图标 Expander.ico 与 MFC.ico，
+    // 统一按 48×48 显示。图标句柄归本结构所有，父窗口销毁时须调用 destroyIconStrip 释放。
+    constexpr int IDC_ICON_EXPANDER = 7301;
+    constexpr int IDC_ICON_MFC      = 7302;
+
+    struct IconStrip {
+        HWND  hIcon1{};    // Expander.ico
+        HWND  hIcon2{};    // MFC.ico
+        HICON hIcoExpander{};
+        HICON hIcoMfc{};
+    };
+
+    [[nodiscard]] IconStrip* createIconStrip(HWND hParent, HINSTANCE hInst,
+                                             int x, int y, int size = 48) {
+        auto* s = new IconStrip{};
+        s->hIcoExpander = static_cast<HICON>(::LoadImageW(
+            hInst, MAKEINTRESOURCEW(IDI_EXPANDER),
+            IMAGE_ICON, size, size, LR_DEFAULTCOLOR));
+        s->hIcoMfc = static_cast<HICON>(::LoadImageW(
+            hInst, MAKEINTRESOURCEW(IDI_MFC),
+            IMAGE_ICON, size, size, LR_DEFAULTCOLOR));
+
+        s->hIcon1 = ::CreateWindowExW(0, L"STATIC", L"",
+            WS_CHILD | WS_VISIBLE | SS_ICON,
+            x, y, size, size, hParent,
+            reinterpret_cast<HMENU>(static_cast<UINT_PTR>(IDC_ICON_EXPANDER)),
+            hInst, nullptr);
+        if (s->hIcon1 && s->hIcoExpander) {
+            ::SendMessageW(s->hIcon1, STM_SETICON,
+                reinterpret_cast<WPARAM>(s->hIcoExpander), 0);
+        }
+
+        s->hIcon2 = ::CreateWindowExW(0, L"STATIC", L"",
+            WS_CHILD | WS_VISIBLE | SS_ICON,
+            x + size + 12, y, size, size, hParent,
+            reinterpret_cast<HMENU>(static_cast<UINT_PTR>(IDC_ICON_MFC)),
+            hInst, nullptr);
+        if (s->hIcon2 && s->hIcoMfc) {
+            ::SendMessageW(s->hIcon2, STM_SETICON,
+                reinterpret_cast<WPARAM>(s->hIcoMfc), 0);
+        }
+        return s;
+    }
+
+    void destroyIconStrip(IconStrip* s) {
+        if (!s) return;
+        if (s->hIcoExpander) ::DestroyIcon(s->hIcoExpander);
+        if (s->hIcoMfc)     ::DestroyIcon(s->hIcoMfc);
+    }
+
+    // ================= 互译器页面 =================
+
+    struct TranslatorState {
+        HWND hCombo{};    // 互译器下拉选择
+        HWND hInput{};    // 输入（源记号表达式）
+        HWND hOutput{};   // 输出（目标记号表达式，只读 RichEdit）
+        HWND hBtn{};      // “互译”按钮
+        HWND hStatus{};   // 状态栏
+        HWND hDesc{};     // 互译器说明
+        HWND hDir{};      // 方向（源 → 目标）
+        IconStrip* icons{}; // 顶部图标条（Expander.ico + MFC.ico）
+        BrushPtr background;
+        int index = 0;    // 当前选中的互译器表索引
+    };
+
+    [[nodiscard]] TranslatorState* getTranslator(HWND h) {
+        return reinterpret_cast<TranslatorState*>(::GetWindowLongPtrW(h, GWLP_USERDATA));
+    }
+
+    [[nodiscard]] const omegay::translator::Translator& currentTranslator(
+        const TranslatorState* st) {
+        const auto& table = translatorTable();
+        int idx = st ? st->index : 0;
+        if (idx < 0 || idx >= static_cast<int>(table.size())) idx = 0;
+        return table[idx];
+    }
+
+    void updateTranslatorUI(HWND hwnd, TranslatorState* st) {
+        const auto& e = currentTranslator(st);
+        std::wstring dir = e.source;
+        dir += L"  →  ";
+        dir += e.target;
+        ::SetWindowTextW(st->hDir, dir.c_str());
+        ::SetWindowTextW(st->hDesc, e.description);
+    }
+
+    void runTranslator(HWND hwnd, TranslatorState* st) {
+        const auto& e = currentTranslator(st);
+        wchar_t buf[1024]{};
+        ::GetWindowTextW(st->hInput, buf, 1024);
+        std::string utf8in = wstring_to_utf8(buf);
+        if (utf8in.empty()) {
+            ::SetWindowTextW(st->hStatus, L"请输入要互译的表达式");
+            return;
+        }
+        std::string result;
+        try {
+            result = e.translate(utf8in);
+        }
+        catch (...) {
+            // 契约要求互译函数不得抛异常；此处兜底，避免互译器缺陷崩溃程序。
+            result = omegay::translator::kParseError;
+        }
+        setResultText(st->hOutput, utf8_to_wstring(result));
+        std::wstring status = L"互译完成：";
+        status += e.display_name;
+        ::SetWindowTextW(st->hStatus, status.c_str());
+    }
+
+    LRESULT CALLBACK TranslatorProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+        switch (msg) {
+        case WM_CREATE: {
+            auto* cs = reinterpret_cast<CREATESTRUCTW*>(lParam);
+            auto* st = new TranslatorState{};
+            st->background.reset(::CreateSolidBrush(::GetSysColor(COLOR_WINDOW)));
+            ::SetWindowLongPtrW(hwnd, GWLP_USERDATA,
+                reinterpret_cast<LONG_PTR>(st));
+
+            HINSTANCE hInst = cs->hInstance;
+
+            // 顶部图标条：Expander.ico + MFC.ico（48×48）；下方内容整体下移 60 像素让位
+            st->icons = createIconStrip(hwnd, hInst, 12, 12, 48);
+
+            ::CreateWindowExW(0, L"STATIC", L"互译器:",
+                WS_CHILD | WS_VISIBLE | SS_LEFT,
+                12, 74, 56, 18, hwnd, nullptr, hInst, nullptr);
+
+            st->hCombo = ::CreateWindowExW(0, WC_COMBOBOXW, L"",
+                WS_CHILD | WS_VISIBLE | WS_TABSTOP | CBS_DROPDOWNLIST | WS_VSCROLL,
+                68, 70, 250, 220, hwnd,
+                reinterpret_cast<HMENU>(static_cast<UINT_PTR>(IDC_TRANSLATOR_COMBO)),
+                hInst, nullptr);
+
+            st->hDir = ::CreateWindowExW(0, L"STATIC", L"",
+                WS_CHILD | WS_VISIBLE | SS_LEFT,
+                328, 74, 240, 18, hwnd, nullptr, hInst, nullptr);
+
+            st->hDesc = ::CreateWindowExW(0, L"STATIC", L"",
+                WS_CHILD | WS_VISIBLE | SS_LEFT,
+                12, 98, 536, 40, hwnd, nullptr, hInst, nullptr);
+
+            ::CreateWindowExW(0, L"STATIC", L"输入 (源记号表达式):",
+                WS_CHILD | WS_VISIBLE | SS_LEFT,
+                12, 144, 300, 18, hwnd, nullptr, hInst, nullptr);
+
+            st->hInput = ::CreateWindowExW(0, L"EDIT", L"",
+                WS_CHILD | WS_VISIBLE | WS_BORDER | WS_TABSTOP |
+                ES_LEFT | ES_AUTOHSCROLL,
+                12, 164, 536, 24, hwnd,
+                reinterpret_cast<HMENU>(static_cast<UINT_PTR>(IDC_TRANSLATOR_INPUT)),
+                hInst, nullptr);
+
+            st->hBtn = ::CreateWindowExW(0, L"BUTTON", L"互译",
+                WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_DEFPUSHBUTTON,
+                12, 198, 90, 28, hwnd,
+                reinterpret_cast<HMENU>(static_cast<UINT_PTR>(IDC_TRANSLATOR_BTN)),
+                hInst, nullptr);
+
+            st->hStatus = ::CreateWindowExW(0, L"STATIC", L"",
+                WS_CHILD | WS_VISIBLE | SS_LEFT,
+                112, 204, 436, 22, hwnd, nullptr, hInst, nullptr);
+
+            ::CreateWindowExW(0, L"STATIC", L"输出 (目标记号表达式):",
+                WS_CHILD | WS_VISIBLE | SS_LEFT,
+                12, 240, 300, 18, hwnd, nullptr, hInst, nullptr);
+
+            st->hOutput = ::CreateWindowExW(0, MSFTEDIT_CLASS, L"",
+                WS_CHILD | WS_VISIBLE | WS_BORDER | WS_VSCROLL | WS_HSCROLL |
+                ES_MULTILINE | ES_READONLY | ES_AUTOVSCROLL | ES_AUTOHSCROLL,
+                12, 260, 536, 248, hwnd,
+                reinterpret_cast<HMENU>(static_cast<UINT_PTR>(IDC_TRANSLATOR_OUTPUT)),
+                hInst, nullptr);
+
+            // 填充互译器下拉框并默认选中第一个
+            const auto& table = translatorTable();
+            for (const auto& t : table)
+                ::SendMessageW(st->hCombo, CB_ADDSTRING, 0,
+                    reinterpret_cast<LPARAM>(t.display_name));
+            ::SendMessageW(st->hCombo, CB_SETCURSEL, 0, 0);
+            updateTranslatorUI(hwnd, st);
+
+            std::wstring ready = L"就绪：共 ";
+            ready += std::to_wstring(table.size());
+            ready += L" 个互译器";
+            ::SetWindowTextW(st->hStatus, ready.c_str());
+            break;
+        }
+        case WM_COMMAND: {
+            auto* st = getTranslator(hwnd);
+            if (!st) break;
+            const int id = LOWORD(wParam);
+            if (id == IDC_TRANSLATOR_COMBO && HIWORD(wParam) == CBN_SELCHANGE) {
+                const int sel = static_cast<int>(
+                    ::SendMessageW(st->hCombo, CB_GETCURSEL, 0, 0));
+                if (sel >= 0) {
+                    st->index = sel;
+                    updateTranslatorUI(hwnd, st);
+                }
+                return 0;
+            }
+            if (id == IDC_TRANSLATOR_BTN) {
+                runTranslator(hwnd, st);
+                return 0;
+            }
+            break;
+        }
+        case WM_CTLCOLORSTATIC:
+        case WM_CTLCOLOREDIT:
+        case WM_CTLCOLORBTN: {
+            auto* st = getTranslator(hwnd);
+            if (!st) return ::DefWindowProcW(hwnd, msg, wParam, lParam);
+            HDC hdc = reinterpret_cast<HDC>(wParam);
+            ::SetBkMode(hdc, TRANSPARENT);
+            ::SetTextColor(hdc, ::GetSysColor(COLOR_WINDOWTEXT));
+            return reinterpret_cast<LRESULT>(st->background.get());
+        }
+        case WM_CLOSE:
+            ::DestroyWindow(hwnd);
+            break;
+        case WM_DESTROY:
+            {
+                TranslatorState* st = getTranslator(hwnd);
+                if (st) destroyIconStrip(st->icons);
+            }
+            delete getTranslator(hwnd);
+            ::SetWindowLongPtrW(hwnd, GWLP_USERDATA, 0);
+            g_hTranslatorWindow = nullptr;
+            break;
+        default:
+            return ::DefWindowProcW(hwnd, msg, wParam, lParam);
+        }
+        return 0;
+    }
+
+    void registerTranslatorClass(HINSTANCE hInst) {
+        static bool registered = false;
+        if (registered) return;
+
+        WNDCLASSW wc{};
+        wc.lpfnWndProc = TranslatorProc;
+        wc.hInstance = hInst;
+        wc.lpszClassName = kTranslatorWindowClass;
+        wc.hbrBackground = ::GetSysColorBrush(COLOR_WINDOW);
+        wc.hCursor = ::LoadCursorW(nullptr, IDC_ARROW);
+        ::RegisterClassW(&wc);
+        registered = true;
+    }
+
+    // 打开“互译器”页面（单例：已打开则带回前台）。
+    void showTranslatorWindow(HINSTANCE hInst, HWND hParent) {
+        if (::IsWindow(g_hTranslatorWindow)) {
+            ::ShowWindow(g_hTranslatorWindow, SW_RESTORE);
+            ::SetForegroundWindow(g_hTranslatorWindow);
+            return;
+        }
+
+        registerTranslatorClass(hInst);
+
+        HWND hwnd = ::CreateWindowExW(
+            0, kTranslatorWindowClass, L"互译器",
+            WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU,
+            CW_USEDEFAULT, CW_USEDEFAULT, 580, 580,
+            hParent, nullptr, hInst, nullptr);
+        if (!hwnd) return;
+
+        g_hTranslatorWindow = hwnd;
+        ::ShowWindow(hwnd, SW_SHOW);
+        ::UpdateWindow(hwnd);
+    }
+
+    // ================= 友情链接页面 =================
+    constexpr wchar_t kLinksWindowClass[] = L"OmegaYLinks";
+    constexpr int IDC_LINKS_LIST = 7401;
+    HWND g_hLinksWindow = nullptr;
+
+    struct LinksState {
+        HWND hList{};
+    };
+
+    [[nodiscard]] LinksState* getLinks(HWND h) {
+        return reinterpret_cast<LinksState*>(::GetWindowLongPtrW(h, GWLP_USERDATA));
+    }
+
+    // 用系统默认浏览器打开第 index 条友情链接的 URL。
+    void openFriendLink(int index) {
+        if (index < 0 || index >= expander_links::kFriendLinkCount) return;
+        const std::wstring url = utf8_to_wstring(expander_links::kFriendLinks[index].Link);
+        ::ShellExecuteW(nullptr, L"open", url.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
+    }
+
+    LRESULT CALLBACK LinksProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+        switch (msg) {
+        case WM_CREATE: {
+            auto* cs = reinterpret_cast<CREATESTRUCTW*>(lParam);
+            auto* st = new LinksState{};
+            ::SetWindowLongPtrW(hwnd, GWLP_USERDATA,
+                reinterpret_cast<LONG_PTR>(st));
+
+            HINSTANCE hInst = cs->hInstance;
+
+            // 列表：两列（名称 / URL），点击第一列（名称）跳转
+            st->hList = ::CreateWindowExW(
+                WS_EX_CLIENTEDGE, WC_LISTVIEWW, L"",
+                WS_CHILD | WS_VISIBLE | WS_TABSTOP | WS_VSCROLL |
+                LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_NOSORTHEADER,
+                12, 12, 476, 360, hwnd,
+                reinterpret_cast<HMENU>(static_cast<UINT_PTR>(IDC_LINKS_LIST)),
+                hInst, nullptr);
+            ::SendMessageW(st->hList, LVM_SETEXTENDEDLISTVIEWSTYLE, 0,
+                LVS_EX_FULLROWSELECT | LVS_EX_GRIDLINES | LVS_EX_DOUBLEBUFFER);
+
+            LVCOLUMNW col{};
+            col.mask = LVCF_TEXT | LVCF_WIDTH | LVCF_SUBITEM;
+            col.pszText = const_cast<wchar_t*>(L"名称");
+            col.cx = 200;
+            ::SendMessageW(st->hList, LVM_INSERTCOLUMNW, 0,
+                reinterpret_cast<LPARAM>(&col));
+            col.pszText = const_cast<wchar_t*>(L"URL");
+            col.cx = 276;
+            ::SendMessageW(st->hList, LVM_INSERTCOLUMNW, 1,
+                reinterpret_cast<LPARAM>(&col));
+
+            for (int i = 0; i < expander_links::kFriendLinkCount; ++i) {
+                const std::wstring name = utf8_to_wstring(expander_links::kFriendLinks[i].showName);
+                const std::wstring link = utf8_to_wstring(expander_links::kFriendLinks[i].Link);
+                LVITEMW it{};
+                it.mask = LVIF_TEXT | LVIF_PARAM;
+                it.iItem = i;
+                it.pszText = const_cast<wchar_t*>(name.c_str());
+                it.lParam = i;
+                const int row = static_cast<int>(
+                    ::SendMessageW(st->hList, LVM_INSERTITEMW, 0,
+                        reinterpret_cast<LPARAM>(&it)));
+                LVITEMW si{};
+                si.mask = LVIF_TEXT;
+                si.iItem = row;
+                si.iSubItem = 1;
+                si.pszText = const_cast<wchar_t*>(link.c_str());
+                ::SendMessageW(st->hList, LVM_SETITEMW, 0,
+                    reinterpret_cast<LPARAM>(&si));
+            }
+            break;
+        }
+        case WM_NOTIFY: {
+            auto* nmh = reinterpret_cast<NMHDR*>(lParam);
+            if (nmh->idFrom == IDC_LINKS_LIST && nmh->code == NM_CLICK) {
+                // 单击第一列（名称）跳转到对应 URL
+                auto* na = reinterpret_cast<NMITEMACTIVATE*>(lParam);
+                if (na->iItem >= 0 && na->iSubItem == 0) {
+                    openFriendLink(na->iItem);
+                }
+                return 0;
+            }
+            break;
+        }
+        case WM_CLOSE:
+            ::DestroyWindow(hwnd);
+            break;
+        case WM_DESTROY:
+            delete getLinks(hwnd);
+            ::SetWindowLongPtrW(hwnd, GWLP_USERDATA, 0);
+            g_hLinksWindow = nullptr;
+            break;
+        default:
+            return ::DefWindowProcW(hwnd, msg, wParam, lParam);
+        }
+        return 0;
+    }
+
+    void registerLinksClass(HINSTANCE hInst) {
+        static bool registered = false;
+        if (registered) return;
+
+        WNDCLASSW wc{};
+        wc.lpfnWndProc = LinksProc;
+        wc.hInstance = hInst;
+        wc.lpszClassName = kLinksWindowClass;
+        wc.hbrBackground = ::GetSysColorBrush(COLOR_WINDOW);
+        wc.hCursor = ::LoadCursorW(nullptr, IDC_ARROW);
+        ::RegisterClassW(&wc);
+        registered = true;
+    }
+
+    // 打开“友情链接”页面（单例：已打开则带回前台）。
+    void showLinksWindow(HINSTANCE hInst, HWND hParent) {
+        if (::IsWindow(g_hLinksWindow)) {
+            ::ShowWindow(g_hLinksWindow, SW_RESTORE);
+            ::SetForegroundWindow(g_hLinksWindow);
+            return;
+        }
+
+        registerLinksClass(hInst);
+
+        HWND hwnd = ::CreateWindowExW(
+            0, kLinksWindowClass, L"友情链接",
+            WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU,
+            CW_USEDEFAULT, CW_USEDEFAULT, 520, 440,
+            hParent, nullptr, hInst, nullptr);
+        if (!hwnd) return;
+
+        g_hLinksWindow = hwnd;
         ::ShowWindow(hwnd, SW_SHOW);
         ::UpdateWindow(hwnd);
     }
@@ -1762,7 +2471,10 @@ namespace {
 
             HINSTANCE hInst = reinterpret_cast<HINSTANCE>(
                 ::GetWindowLongPtrW(hwnd, GWLP_HINSTANCE));
-            constexpr int mh = 25;
+            // 顶部图标条：Expander.ico + MFC.ico（48×48）。mh 由 25 改为 60，
+            // 使下方控件整体下移 35 像素，为图标条让位。
+            ui->icons = createIconStrip(hwnd, hInst, 10, 10, 48);
+            constexpr int mh = 60;
 
             ::CreateWindowExW(0, L"STATIC", L"序列 (用逗号分隔):",
                 WS_CHILD | WS_VISIBLE | SS_LEFT,
@@ -1878,34 +2590,38 @@ namespace {
             }
 
             switch (id) {
-            case IDM_HELP:
-                ::MessageBoxW(hwnd,
-                    L"代码署名\n"
-                    L"部分记号的代码修改自hypcos的notation-explorer\n"
-                    L"部分记号的代码修改自笑姐姐(SmileLee-lyx)的NER\n"
-                    L"曹知秋 记号提供给AI的定义使用《大数理论》的原文\n"
-                    L"MrSS的定义来自 AAA滚木批发 (QQ3682911373)\n"
-                    L"ε-Y,X-Y的代码修改自Go men的代码gomen520/gomen520.github.io"
-                    L"Den的代码修改自SmileLee/ne-rewritten"
-                    L"UPMS由test_alpha0定义\n"
-                    L"\n"
-                    L"BMS的代码修改自bmsmat，源仓库由Fish,kotetian,kyodaisuu提交\n"
-                    L"请注意 代码系利用人工智能技术生成",
-                    L"帮助", MB_OK | MB_ICONINFORMATION);
+            case IDM_ABOUT: {
+                HINSTANCE hInst = reinterpret_cast<HINSTANCE>(
+                    ::GetWindowLongPtrW(hwnd, GWLP_HINSTANCE));
+                expander_help_about::showSourceWindow(hInst, hwnd);
                 break;
+            }
 
-            case IDM_ABOUT:
-                ::MessageBoxW(hwnd,
-                    L"展开器\n\n"
-                    L"本软件是可自由分发的自由软件，使用 GNU 通用公共许可证 第三版本 授权"
-                    L"By Cream-CN\n",
-                    L"关于", MB_OK | MB_ICONINFORMATION);
+            case IDM_TRANSLATOR: {
+                HINSTANCE hInst = reinterpret_cast<HINSTANCE>(
+                    ::GetWindowLongPtrW(hwnd, GWLP_HINSTANCE));
+                showTranslatorWindow(hInst, hwnd);
                 break;
+            }
+
+            case IDM_FRIENDLINK: {
+                HINSTANCE hInst = reinterpret_cast<HINSTANCE>(
+                    ::GetWindowLongPtrW(hwnd, GWLP_HINSTANCE));
+                showLinksWindow(hInst, hwnd);
+                break;
+            }
 
             case IDM_LEGAL: {
                 HINSTANCE hInst = reinterpret_cast<HINSTANCE>(
                     ::GetWindowLongPtrW(hwnd, GWLP_HINSTANCE));
                 showLegalWindow(hInst, hwnd);
+                break;
+            }
+
+            case IDM_THIRDPARTY_LICENSE: {
+                HINSTANCE hInst = reinterpret_cast<HINSTANCE>(
+                    ::GetWindowLongPtrW(hwnd, GWLP_HINSTANCE));
+                showLicenseWindow(hInst, hwnd);
                 break;
             }
 
@@ -2055,8 +2771,12 @@ namespace {
 
                 text += entry.suffix();
                 std::wstring wtext = utf8_to_wstring(text);
-                ::MessageBoxW(hwnd, wtext.c_str(), L"展开结果",
-                    MB_OK | MB_ICONINFORMATION);
+                HINSTANCE hInst = reinterpret_cast<HINSTANCE>(
+                    ::GetWindowLongPtrW(hwnd, GWLP_HINSTANCE));
+                std::wstring resultTitle = L"展开结果 - ";
+                resultTitle += entry.display_name;
+                showResultWindow(hInst, hwnd, std::move(wtext),
+                    std::move(resultTitle));
                 break;
             }
 
@@ -2066,6 +2786,8 @@ namespace {
             break;
         }
         case WM_DESTROY: {
+            UiState* ui = getUi(hwnd);
+            if (ui) destroyIconStrip(ui->icons);
             delete getUi(hwnd);
             ::SetWindowLongPtrW(hwnd, GWLP_USERDATA, 0);
             ::PostQuitMessage(0);
@@ -2098,7 +2820,7 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance,
     HWND hwnd = ::CreateWindowExW(
         0, L"OmegaY", L"Expander",
         WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX,
-        CW_USEDEFAULT, CW_USEDEFAULT, 470, 250,
+        CW_USEDEFAULT, CW_USEDEFAULT, 470, 280,
         nullptr, nullptr, hInstance, nullptr);
     if (!hwnd) return 0;
 

@@ -129,6 +129,7 @@ function Invoke-GenDefinitions {
     # 定义文本文件名(去 .txt 扩展名) -> 资源 ID 宏名(与 Resource.h 保持一致)
     $fileToId = @{
         "def_empty"            = "IDR_DEF_EMPTY"
+        "def_prss"             = "IDR_DEF_PRSS"
         "def_pps"              = "IDR_DEF_PPS"
         "def_pps4"             = "IDR_DEF_PPS4"
         "def_wpps4"            = "IDR_DEF_WPPS4"

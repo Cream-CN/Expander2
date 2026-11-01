@@ -163,21 +163,6 @@ private:
     return i < row.entries.size() ? row.entries[i].value : 0;
 }
 
-// DEN3：按扁平位置取条目值；位置 0（step）或越界均返回 0。
-[[nodiscard]] inline int den3_entry_at(const Den3Row& row, std::size_t pos) noexcept {
-    return (pos != 0 && pos < row.size()) ? row[pos].value : 0;
-}
-
-// 取 DEN3 扁平行的全部条目值（位置 1..）。
-[[nodiscard]] inline std::vector<int> den3_row_values(const Den3Row& row) noexcept {
-    std::vector<int> out;
-    if (row.size() > 1) {
-        out.reserve(row.size() - 1);
-        for (std::size_t i = 1; i < row.size(); ++i) out.push_back(row[i].value);
-    }
-    return out;
-}
-
 // =====================================================================
 // pleasant_until 与 ap 映射（三种记号共用的判据与公式）
 // =====================================================================

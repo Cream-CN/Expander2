@@ -33,6 +33,7 @@ LANGUAGE LANG_CHINESE, SUBLANG_CHINESE_SIMPLIFIED
 
 IDI_EXPANDER            ICON                    "Expander.ico"
 IDI_SMALL               ICON                    "small.ico"
+IDI_MFC                 ICON                    "MFC.ico"
 
 /////////////////////////////////////////////////////////////////////////////
 //

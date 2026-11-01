@@ -1,13 +1,4 @@
-// Header/notation/omega_mn.hpp
-// ωMN 记号（display 名 "ωMN"，TS id "omega-mn"）。
-// 逻辑移植自 notation-explorer（hypcos）的 src/notations/MN/Omega_MN.ts
-// （家族/类别：category-mn，credit.hypcos_mn）。
-// 表达式结构（TS）：Sep=int；Vertical=Sep[]；Entry=[int,Sep]；
-// Column=Entry[]；Expr=Column[]。竖向机制（vertical_* / parent /
-// column_verticals / find_index_below）复用 smnshare.hpp。
-// 与 n-MN 的关键区别在 expand：ωMN 用 get_references + magma_checks_list
-// 的"坏根复制"算法（而非 fill_ghost/extend），且 ∞ 的基本列为 [[],[[1,n]]]。
-// 层显示等价（convert_to_layer 等）为 UI 特性，C++ 侧不移植。
+
 #pragma once
 
 #include <cstddef>

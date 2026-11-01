@@ -22,9 +22,6 @@ struct UP2MNV1ANotation {
         return expand_text_impl(text, term, /*longer=*/true);
     }
     [[nodiscard]] static std::string suffix() { return {}; }
-
-    // parse：∞ 用空 Mountain + infinity 标志；此处以 optional 表示解析结果，
-    // "Limit" 特殊处理放在 expand_text_impl。
     [[nodiscard]] static std::optional<Up2MnV1aExpr> parse(std::string_view text) {
         if (text == "Limit" || text == "limit" || text == "LIMIT") {
             return smnshare::Mountain{};

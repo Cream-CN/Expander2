@@ -1,10 +1,4 @@
-// Header/notation/mnup2share.hpp
-// UP2 家族（UP2MN-v1b / v1b-plus / UP2DBMS-v1 / v1b-plus / v1c）共享核心。
-// 逻辑移植自 notation-explorer（hypcos）的 src/notations/MN/UPMN/ 下各 TS 文件。
-// 表达式结构（TS）：Entry=[value(0-based), sep(int)]；Column=Entry[]；
-// Expr=Column[]；Vertical=number[]（sep 为层号）。
-// 显示/解析复用 smnshare（n-MN）：value+1 转换后交给 mountain_display /
-// from_display。∞ 用 bool 标志表示（display 为 "Limit"）。
+
 #pragma once
 
 #include <cstdint>
@@ -102,20 +96,6 @@ inline int find_index_below_row(const std::vector<Vertical>& V, const Vertical& 
         const int mid = (l + r + 1) >> 1;
         const Vertical& w = mid == 0 ? Vertical{} : V[static_cast<std::size_t>(mid - 1)];
         if (vertical_compare(v, w) > 0) l = mid;
-        else r = mid - 1;
-    }
-    return l;
-}
-
-inline int find_index_below_equal_row(const std::vector<Vertical>& V, const Vertical& v) {
-    const int n = static_cast<int>(V.size());
-    if (n == 0) return 0;
-    if (vertical_compare(v, V[static_cast<std::size_t>(n - 1)]) >= 0) return n;
-    int l = 0, r = n;
-    while (l < r) {
-        const int mid = (l + r + 1) >> 1;
-        const Vertical& w = mid == 0 ? Vertical{} : V[static_cast<std::size_t>(mid - 1)];
-        if (vertical_compare(v, w) >= 0) l = mid;
         else r = mid - 1;
     }
     return l;

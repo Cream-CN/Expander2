@@ -1,5 +1,5 @@
 // Header/notation/epsilon-y.hpp
-// ε-Y 记号（即 1-Y，维度序列 {1}）的 C++20 头文件实现。
+// ε-Y 记号的 C++20 头文件实现。
 // 规范：omegay::notation::EpsilonYNotation
 // 依赖：仅标准库。纯函数，不抛异常。
 #pragma once

@@ -1,12 +1,4 @@
-// Header/notation/mn_smn_share.hpp
-// SMN 家族（Smile's MN 系列：SAω2MN / Sω2MN / Sω^ωMN）共享核心。
-// 逻辑移植自 notation-explorer（hypcos）的 src/notations/MN/SMN/ 下三个 TS 文件
-// （S_omega2_MN.ts / SA_omega2_MN.ts / S_omega_pow_omega_MN.ts）。
-// 结构：Sep=number[]（'[',';' 语法，二维 [逗号,分号] 或任意维）；Vertical=Sep[]；
-// Entry=[value(1-based), Sep, mark?]；Column/Expr。值的语义 1-based，value 0 表示底部哨兵
-// （parent pi=value-1，pi==-1 → pj=0）。
-// 各记号仅在 S / stretch_data_top / stretch_data_list / subtract_1 / parse / display /
-// infinity_FS 上不同；本文件提供其余全部共享机制，派生类经 CRTP 提供差异函数。
+
 #pragma once
 
 #include <cstddef>
