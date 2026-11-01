@@ -1,0 +1,301 @@
+# 关于贡献的详细说明
+
+## 前排提示
+
+1. 代码的来源能且只能是与 Unlicense 相兼容的，且必须署名，无论要求与否。
+2. 对于没有许可证的仓库，原则上必须与仓库控制者联系。
+3. 如果你能够自己写代码，可以给写入权限。
+4. 不得引入非宽松许可证的库，不得引入链接时依赖，所有的库原则上要放到 `./Header` 下，并且无论如何必须署名。
+
+## 工具链和依赖
+
+- 使用 Microsoft Visual Studio 2026，MSVC145 C++20，C 默认。
+- 没有额外的依赖。
+- 构建的时候使用 `build.ps1` 即可。
+
+## 接口
+
+### ω-Y 展开器接口规范
+
+本文档定义项目内部的公共接口契约，供贡献者在添加新记号、修改序列处理逻辑时遵循。
+
+#### 命名空间分层
+
+```
+omegay
+├── common    // 通用工具：UTF-8 转换、序列解析与格式化
+└── notation  // 数学记号：每种记号一个独立编译单元
+```
+
+**规则：**
+
+- `common` 下只放与具体记号无关的纯工具函数，不得引入 `notation` 的依赖。
+- `notation` 可以依赖 `common`，但不得反向依赖。
+- 记号与记号之间不得互相 `#include`，避免耦合。
+
+#### omegay::common 接口
+
+##### 2.1 UTF-8 与宽字符转换 — `Header/common/utf8.hpp`
+
+```cpp
+namespace omegay::common {
+
+[[nodiscard]] std::string wstring_to_utf8(std::wstring_view w);
+[[nodiscard]] std::wstring utf8_to_wstring(std::string_view s);
+
+}
+```
+
+**契约：**
+
+| 项目 | 约定 |
+| --- | --- |
+| 输入为空 | 返回空字符串（非 nullptr 语义） |
+| 编码 | 固定 `CP_UTF8`，不接受其他代码页 |
+| 非法输入 | 遇非法字节序列时，`WideCharToMultiByte` / `MultiByteToWideChar` 的行为由 Win32 决定；不抛出异常 |
+| 返回值 | `[[nodiscard]]`，调用方必须使用返回值 |
+| 线程安全 | 是（仅使用局部变量与 Win32 纯函数） |
+
+贡献者注意：若将来需要 `CP_ACP` 支持，请新增独立函数，不要修改现有签名，以免破坏调用点。
+
+##### 2.2 序列解析与格式化 — `Header/common/sequence.hpp`
+
+```cpp
+namespace omegay::common {
+
+[[nodiscard]] std::vector<int> parse_sequence(std::string_view str);
+[[nodiscard]] std::string seq_to_string(const std::vector<int>& seq);
+
+}
+```
+
+**`parse_sequence` 契约：**
+
+| 输入 | 行为 |
+| --- | --- |
+| `""` | 返回空 vector |
+| `"1,2,3"` | 返回 `{1, 2, 3}` |
+| `"1, ,3"` | 跳过空 token，返回 `{1, 3}` |
+| `" 1 , 2 "` | 忽略所有空白字符，返回 `{1, 2}` |
+| `"abc"` | `std::stoi` 失败被捕获，静默跳过该 token |
+| `"1,999999999999"` | 溢出被捕获，静默跳过 |
+
+**关键约定：**
+
+- 永不抛出异常。所有解析失败均以"跳过该项"处理。
+- 允许前导/尾随逗号，行为等同于空 token。
+- 返回值为 `[[nodiscard]]`。
+- 待改进项（欢迎 PR）：当前实现静默丢弃非法输入，UI 层无法向用户报告"第 N 项解析失败"。如需改进，建议新增 `parse_sequence_ex` 返回 `(vector, error_list)`，保留现有函数作为薄封装。
+
+**`seq_to_string` 契约：**
+
+| 输入 | 输出 |
+| --- | --- |
+| `{}` | `"[]"` |
+| `{1}` | `"1"` |
+| `{1,2,3}` | `"1,2,3"` |
+
+- 分隔符固定为半角逗号 `,`，无空格。
+- 空序列固定输出 `"[]"`，而非空字符串，便于 UI 区分"未解析"与"结果为空"。
+
+#### omegay::notation 接口
+
+##### 3.1 记号模块的标准形态
+
+每个记号（当前仅 EmptyNotation）应位于独立头文件 `Header/notation/<name>.hpp`，并在命名空间 `omegay::notation` 中提供以下静态成员约定：
+
+```cpp
+namespace omegay::notation {
+
+struct XxxNotation {
+    static constexpr const char* kName; // 显示名（UTF-8）
+
+    static std::vector<int> expand(
+        const std::vector<int>& seq,
+        int term); // 核心展开
+
+    static std::string suffix(); // 结果后缀（UTF-8）
+};
+
+}
+```
+
+**当前 EmptyNotation 的实际契约：**
+
+| 成员 | 类型 | 含义 |
+| --- | --- | --- |
+| `kName` | `const char*` | 记号显示名，UTF-8 编码，供 UI 用 `utf8_to_wstring` 转换后显示 |
+| `expand(seq, term)` | `vector<int>(const vector<int>&, int)` | 对序列 `seq` 执行 `term` 项展开，返回结果序列 |
+| `suffix()` | `std::string()` | 追加在结果文本末尾的标记，UTF-8 |
+
+**`expand` 通用约定（所有记号必须遵守）：**
+
+- **纯函数**：不得修改入参 `seq`，不得读写全局状态。
+- **`seq` 为空**：返回值由具体记号定义；调用方（UI 层）有责任先行校验空序列。
+- **`term < 1`**：调用方（UI 层）有责任先行校验；`expand` 本身不保证对非法 `term` 的行为。
+- **异常**：`expand` 不应抛出异常。若记号内部逻辑可能失败，应返回空 vector 或保持输入不变。
+- **性能**：对微型项目不设硬性要求，但应避免 `O(n²)` 以上的无谓拷贝。
+
+##### 3.2 FS / FSalter 语义
+
+UI 层的"移除末项 / 保留末项"按钮，对向量记号属于调用方对展开结果的后处理：
+
+```cpp
+// Expander.cpp 中：
+std::vector<int> result = notation::EmptyNotation::expand(seq, term);
+if (LOWORD(wParam) == IDM_FS && result.size() > 1)
+    result.pop_back();
+```
+
+**约定：**
+
+- 当 `result.size() <= 1` 时，FS 操作不执行移除（避免产生空序列歧义）。
+- 此策略在 UI 层实现，记号模块不应感知 FS/FSalter 概念。
+
+##### 3.3 文本接口记号（expand_text / expand_text_alter）
+
+部分记号的表达式不是整数序列（例如 DEN1 / blp / iblp 的文本表达式），无法使用 `NotationEntry::expand` 的向量签名。这类记号改走 `NotationEntry` 的两个可选文本槽：
+
+```cpp
+std::string(*expand_text)(std::string_view, int);        // FS（较短）展开
+std::string(*expand_text_alter)(std::string_view, int);  // FS_alter（较长）展开
+```
+
+**约定：**
+
+- `expand_text` 与 `expand_text_alter` 均为纯函数、不抛异常。
+- `expand_text_alter` 为空（nullptr）时，记号退化为 3.2 的通用策略：`expand_text` 提供"较长"结果，`IDM_FS` 由 UI 按记号类型对结果做截断（BMS 删列 / UPMS 删列 / MrSS pop_back）。
+- `expand_text_alter` 非空时，FS 与 FS_alter 均由记号自身实现，UI 直接使用 `expand_text` / `expand_text_alter` 的结果，不做通用截断（DEN1 / blp / iblp）。
+- 解析失败时文本接口返回错误提示字符串（不以异常报告），例如 `"解析失败，请确认你没有使用全角括号，逗号"`。
+
+##### 3.4 参数化文本记号（expand_text_n / param_*）
+
+Minus1_Y_nSS 系列是"参数为 n 的工厂"记号（n = 父标号分量个数），不走编译期枚举，而是在运行时由 UI 输入 n。此类记号在 `NotationEntry` 上走扩展槽：
+
+```cpp
+std::string(*expand_text_n)(std::string_view, int term, int n);
+int param_min, param_max, param_default;
+const wchar_t* param_label;
+```
+
+**约定：**
+
+- `param_min=0` 的族（基础族、T 族、Abs/Rel）`n` 从 0 起（1SS 起）；
+- `param_min=1` 的族（BT v1/v2/v3、BTL）`n` 从 1 起（2SS 起）；
+- 上限统一 25；`param_default` 为输入框默认值。
+- 选中此类记号时，UI 显示参数输入框；`IDM_FS` / `IDM_FSALTER` 分支读取并校验 `n ∈ [param_min, param_max]` 后调用 `expand_text_n`。
+- `expand_text_n` 与 `expand_text` 同为纯函数、不抛异常；解析失败或内部异常统一返回 `bmlike::kParseError`（提示字符串），不以异常报告。
+- 有 FS_short 的族（BT v3）额外提供 `expand_text_n_alter`，经 `NotationEntry::expand_text_n_alter` 槽接入 FS_alter 按钮，由记号自身实现两种展开，UI 不做通用截断。
+- `"Limit"` 表示极限；展开结果按各族显示规则渲染。
+
+### UI 层与记号层的边界
+
+```text
+┌─────────────────────────────────────────┐
+│ Expander.cpp (Win32 UI)                 │
+│ - 读取控件文本                           │
+│ - 校验 term >= 1、seq 非空               │
+│ - 调用 utf8/wstring 转换                 │
+│ - 调用 notation::Xxx::expand             │
+│ - 后处理 FS/FSalter                      │
+│ - 显示 MessageBox                       │
+└──────────────┬──────────────────────────┘
+               │ 只通过下列接口通信
+               ▼
+┌─────────────────────────────────────────┐
+│ common: parse_sequence / seq_to_string  │
+│         utf8_to_wstring / wstring_to_utf8│
+│ notation: Xxx::kName / expand / suffix  │
+└─────────────────────────────────────────┘
+```
+
+**硬性规则：**
+
+- UI 层不得直接操作 `std::vector<int>` 的数学含义（例如自行实现"移除末项"以外的记号逻辑）。
+- 记号层不得包含 `<windows.h>` 或任何 UI 相关头文件。
+- 新增记号时，只需在 `Expander.cpp` 的 `WM_COMMAND` 分支中增加调用，不应改动 `common`。
+
+### 版本与兼容性
+
+| 变更类型 | 要求 |
+| --- | --- |
+| 新增记号 | 只增文件、只增调用分支，不动现有接口 |
+| 修改 common 函数签名 | 破坏性变更，需同步更新所有调用点与本文档 |
+| 修改 expand 语义 | 需在 CONTRIBUTING.md 或 CHANGELOG 中注明 |
+| 删除任何 `[[nodiscard]]` | 不允许，除非你发现它的返回值被丢弃了 |
+| 新增/修改定义文本 | 只编辑 `defs/*.txt`，并重新运行 `.\build.ps1 -Mode gen` |
+
+## 记号定义文本（Definition Text）
+
+`"定义(&D)"` 菜单展示的记号原文不再作为 RCDATA 资源由 rc.exe 编译。原因是 rc.exe 会把 UTF-8 无 BOM 的源文件按本地代码页（ANSI/GBK）误读，导致中文在首尾乱码；且资源脚本里的 `"\n"` 只是字面字符、不会变成真正的换行。现在定义文本改为由 C++ 标头编译进程序，完全绕过 rc.exe。
+
+### 目录与文件
+
+- `defs/<name>.txt` —— 定义文本的唯一权威源（UTF-8，每个记号一个文件）
+- `Definitions.h` —— 由 `build.ps1` 内置流程从 `defs/` 生成的标头（请勿手工编辑）
+- `build.ps1` —— `Definitions.h` 生成流程（`Invoke-GenDefinitions`）与一键构建入口
+
+**命名约定：** `defs/` 下的文件名与 `Resource.h` 中的 `IDR_DEF_*` 宏一一对应，映射关系维护在 `build.ps1` 的 `$fileToId` 表里。例如 `def_pps.txt` → `IDR_DEF_PPS`。
+
+### 新增或修改一条定义
+
+1. 编辑或新建 `defs/<name>.txt`，直接用真实换行书写，不要写 `"\n"`。
+2. 运行 `.\build.ps1 -Mode gen` 重新生成 `Definitions.h`。
+3. 若这是此前不存在的记号，还需要：
+   - 在 `Resource.h` 追加对应的 `IDR_DEF_*` 宏；
+   - 在 `defs/` 放入定义文件，并在 `build.ps1` 的 `$fileToId` 中登记；
+   - 在 `Expander.cpp` 的 `notationTable()` 中追加条目。
+4. 重新构建项目。
+
+### 关键约定
+
+- `Definitions.h` 输出为 UTF-8 with BOM，确保未开 `/utf-8` 的配置（如 Debug|Win32）也能被 MSVC 按 UTF-8 识别，中文定义不乱码。
+- 定义文本在标头中以原始字符串字面量 `R"DEFTXT(...)DEFTXT"` 保存，字节原样保留，换行即真换行（不再有 `\n` 不转义的问题）。
+- 加载路径：`Expander.cpp` 的 `loadDefinitionText()` → `expander_defs::lookup(resId)` → `omegay::common::utf8_to_wstring()`。`Resource.h` 中的 `IDR_DEF_*` 现在只作为查表键使用，对应的 RCDATA 资源已从 `Expander.rc` 移除。
+- 未收录原文的记号（例如暂无原文的 G-Y、X-Y V1/V2/V3）在"定义"菜单中显示`"暂缺，有提供的联系作者邮箱"`，属预期行为。
+
+## 贡献者检查清单
+
+提交涉及接口的 PR 前，请确认：
+
+- [ ] 新函数/成员是否加了 `[[nodiscard]]`（若返回值有意义）？
+- [ ] `common` 是否仍不依赖 `notation`？
+- [ ] `expand` 是否仍为纯函数、不抛异常？
+- [ ] 空序列、`term < 1`、非法 token 的行为是否与本文档一致？
+- [ ] 若修改了任何签名，是否同步更新了本文档与调用点？
+- [ ] 若改动/新增了 `defs/*.txt`，是否重新运行 `.\build.ps1 -Mode gen` 并一并提交 `Definitions.h`？
+
+## 附：当前记号实现位置
+
+每个记号独立位于 `Header/notation/<name>.hpp`，并提供 `omegay::notation` 下的 `XxxNotation`（`kName` / `expand` / `suffix`）。当前已包含：
+
+- `empty.hpp` — EmptyNotation
+- `pps1.hpp` — PPS / PPS4 系列
+- `PPS-family.hpp` — PPS 家族
+- `Omega-YMagma.hpp` — ω-Y (medium/strong)
+- `mrss121.hpp` — MrSS1.2.1
+- `omega_y.hpp` — ω-Y sequence
+- `epsilon-y.hpp` — ε-Y (1-Y)
+- `BMSFamily.hpp` — BMS 家族
+- `upms.hpp` — UPMS
+- `gy.hpp` — G-Y
+- `xy-v1.hpp` — X-Y V1（维度参数 [1,0,1]，逻辑移植自 X-Y1.js）
+- `xy-v2.hpp` — X-Y V2（维度参数 [1,0,1]，逻辑移植自 X-Y2.js）
+- `xy-v3.hpp` — X-Y V3（维度参数 [1,0,1]，新增，逻辑移植自 X-Y.js）
+- `denshare.hpp` — DEN 系列公共部分（类型/解析器/比较/工具，命名空间 `omegay::notation::denshare`）
+- `den1.hpp` — DEN1（Defective embedding notation，逻辑移植自 DEN.ts；文本接口）
+- `blp.hpp` — blp（即 DEN2 / IBLP，逻辑移植自 DEN2.ts；文本接口）
+- `iblp.hpp` — iblp（即 DEN3，逻辑移植自 DEN3.ts；文本接口）
+- `m1ynss.hpp` — Minus1_Y_nSS 基础族（IDR 20104，参数化，见 3.4）
+- `tm1ynss.hpp` — T_Minus1_Y_nSS（IDR 20105，参数化）
+- `bm1ynss.hpp` — Abs_B / Rel_B_Minus1_Y_nSS（IDR 20106 / 20107，参数化，共享模板 `BranchNotation<bool kRel>`）
+- `bt1ynss.hpp` — BT*(n+1)SS v1（IDR 20108，参数化，start=1）
+- `bt2ynss.hpp` — strong BT*(n+1)SS v2（IDR 20109，参数化，start=1）
+- `bt3ynss.hpp` — weak BT*(n+1)SS v3（IDR 20110，参数化，start=1；同时提供 `expand_text_n` / `expand_text_n_alter`）
+- `btlynss.hpp` — BTL(n+1)SS（IDR 20111，参数化，start=1）
+
+`Expander.cpp` —— 唯一调用点（`IDM_FS` / `IDM_FSALTER` 分支，经 `notationTable()` 分派）
+
+---
+
+*2026/09/25 版本二 version1.3*

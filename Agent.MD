@@ -198,12 +198,12 @@ Minus1_Y_nSS 系列在 TS 侧是“参数为 n 的工厂”，网页可无限生
   `Expander.vcxproj -> x64\Release\Expander.exe`，`All 21442 functions were compiled`，
   `构建完成。`；无新增警告（既有 C6246/C6262/C28251 为历史遗留）。
 - Docs 增补：
-  - `Docs/API.txt` 追加 Minus1_Y_nSS 系列小节（m1ynss / tm1ynss / bm1ynss /
+  - `Docs/API.md` 追加 Minus1_Y_nSS 系列小节（m1ynss / tm1ynss / bm1ynss /
     bt1ynss / bt2ynss / bt3ynss / btlynss 的接口约定、expand_text_n/param_*、
     各族说明与 detail 命名空间）；
-  - `Docs/CONTRIBUTING.txt` 新增 3.4 参数化文本记号（expand_text_n / param_*），
+  - `Docs/CONTRIBUTING.md` 新增 3.4 参数化文本记号（expand_text_n / param_*），
     "附：当前记号实现位置" 补入 Minus1/BT 系列头文件；
-  - `Docs/关于记号的贡献特殊说明.txt`（原 0 字节空文件）补写记号贡献要点
+  - `Docs/关于记号的贡献特殊说明.md`（原 0 字节空文件）补写记号贡献要点
     （来源许可 / 文件落位 / 接口形态 / golden 验证）。
 
 ---

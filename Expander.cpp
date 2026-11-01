@@ -40,6 +40,7 @@
 #include "Header/notation/bt2ynss.hpp"
 #include "Header/notation/bt3ynss.hpp"
 #include "Header/notation/btlynss.hpp"
+#include "Header/notation/translator.hpp"
 #include "Header/notation/gy.hpp"
 #include "Header/notation/xy-v1.hpp"
 #include "Header/notation/xy-v2.hpp"
@@ -133,6 +134,18 @@ namespace {
     constexpr int IDC_PICKER_SEARCH = 7101;
     constexpr int IDC_PICKER_LIST = 7102;
     constexpr int IDC_PICKER_STATUS = 7103;
+
+    // ---- 互译器页面 ----
+    constexpr wchar_t kTranslatorWindowClass[] = L"OmegaYTranslator";
+    constexpr int IDC_TRANSLATOR_COMBO = 7201;   // 互译器下拉选择
+    constexpr int IDC_TRANSLATOR_INPUT = 7202;   // 输入（源记号表达式）
+    constexpr int IDC_TRANSLATOR_OUTPUT = 7203;  // 输出（目标记号表达式，只读）
+    constexpr int IDC_TRANSLATOR_BTN = 7204;     // “互译”按钮
+    constexpr int IDC_TRANSLATOR_STATUS = 7205;  // 状态栏
+    constexpr int IDC_TRANSLATOR_DESC = 7206;    // 互译器说明
+    constexpr int IDC_TRANSLATOR_DIR = 7207;     // 方向（源 → 目标）
+    constexpr int IDM_TRANSLATOR = 110;          // 工具菜单：“互译器”
+    HWND g_hTranslatorWindow = nullptr;
 
     struct NotationEntry {
         const wchar_t* display_name;
@@ -1018,6 +1031,27 @@ namespace {
         return notation_table;
     }
 
+    // ---- 互译器表 ----
+    // 登记在“互译器页面”中的所有互译器。契约见 Header/notation/translator.hpp，
+    // 规范见 Docs/互译器规范.md。表很小，直接用普通静态数组承载。
+    static const omegay::translator::Translator kTranslatorTable[] = {
+            { .display_name = L"恒等互译器",
+              .id = "identity",
+              .source = L"任意",
+              .target = L"相同（不改变）",
+              .description = L"占位互译器：把输入原样返回，作为互译器框架的基线与调试工具。"
+                             L"选中它输入任意文本，点击“互译”后输出应与输入逐字节一致。",
+              .translate = &omegay::translator::identityTranslate },
+        };
+
+    static const std::vector<omegay::translator::Translator> translator_table(
+        kTranslatorTable,
+        kTranslatorTable + sizeof(kTranslatorTable) / sizeof(kTranslatorTable[0]));
+
+    [[nodiscard]] const std::vector<omegay::translator::Translator>& translatorTable() {
+        return translator_table;
+    }
+
     struct MenuDeleter { void operator()(HMENU m)  const noexcept { if (m) ::DestroyMenu(m); } };
     struct BrushDeleter { void operator()(HBRUSH b) const noexcept { if (b) ::DeleteObject(b); } };
     using MenuPtr = std::unique_ptr<std::remove_pointer_t<HMENU>, MenuDeleter>;
@@ -1404,6 +1438,12 @@ namespace {
 
         // 定义改为直接命令项：点击后打开记号选择窗体，选定后弹出对应定义
         ::AppendMenuW(hMenu, MF_STRING, IDM_DEFINITION_PICK, L"定义(&D)...");
+
+        // 工具：互译器等独立功能页面
+        HMENU hTools = ::CreatePopupMenu();
+        ::AppendMenuW(hTools, MF_STRING, IDM_TRANSLATOR, L"互译器(&T)...");
+        ::AppendMenuW(hMenu, MF_POPUP,
+            reinterpret_cast<UINT_PTR>(hTools), L"工具(&T)");
 
         HMENU hHelp = ::CreatePopupMenu();
         ::AppendMenuW(hHelp, MF_STRING, IDM_ABOUT, L"关于(&A)...");
@@ -1938,6 +1978,218 @@ namespace {
         ::UpdateWindow(hwnd);
     }
 
+    // ================= 互译器页面 =================
+
+    struct TranslatorState {
+        HWND hCombo{};    // 互译器下拉选择
+        HWND hInput{};    // 输入（源记号表达式）
+        HWND hOutput{};   // 输出（目标记号表达式，只读 RichEdit）
+        HWND hBtn{};      // “互译”按钮
+        HWND hStatus{};   // 状态栏
+        HWND hDesc{};     // 互译器说明
+        HWND hDir{};      // 方向（源 → 目标）
+        BrushPtr background;
+        int index = 0;    // 当前选中的互译器表索引
+    };
+
+    [[nodiscard]] TranslatorState* getTranslator(HWND h) {
+        return reinterpret_cast<TranslatorState*>(::GetWindowLongPtrW(h, GWLP_USERDATA));
+    }
+
+    [[nodiscard]] const omegay::translator::Translator& currentTranslator(
+        const TranslatorState* st) {
+        const auto& table = translatorTable();
+        int idx = st ? st->index : 0;
+        if (idx < 0 || idx >= static_cast<int>(table.size())) idx = 0;
+        return table[idx];
+    }
+
+    void updateTranslatorUI(HWND hwnd, TranslatorState* st) {
+        const auto& e = currentTranslator(st);
+        std::wstring dir = e.source;
+        dir += L"  →  ";
+        dir += e.target;
+        ::SetWindowTextW(st->hDir, dir.c_str());
+        ::SetWindowTextW(st->hDesc, e.description);
+    }
+
+    void runTranslator(HWND hwnd, TranslatorState* st) {
+        const auto& e = currentTranslator(st);
+        wchar_t buf[1024]{};
+        ::GetWindowTextW(st->hInput, buf, 1024);
+        std::string utf8in = wstring_to_utf8(buf);
+        if (utf8in.empty()) {
+            ::SetWindowTextW(st->hStatus, L"请输入要互译的表达式");
+            return;
+        }
+        std::string result;
+        try {
+            result = e.translate(utf8in);
+        }
+        catch (...) {
+            // 契约要求互译函数不得抛异常；此处兜底，避免互译器缺陷崩溃程序。
+            result = omegay::translator::kParseError;
+        }
+        setResultText(st->hOutput, utf8_to_wstring(result));
+        std::wstring status = L"互译完成：";
+        status += e.display_name;
+        ::SetWindowTextW(st->hStatus, status.c_str());
+    }
+
+    LRESULT CALLBACK TranslatorProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+        switch (msg) {
+        case WM_CREATE: {
+            auto* cs = reinterpret_cast<CREATESTRUCTW*>(lParam);
+            auto* st = new TranslatorState{};
+            st->background.reset(::CreateSolidBrush(::GetSysColor(COLOR_WINDOW)));
+            ::SetWindowLongPtrW(hwnd, GWLP_USERDATA,
+                reinterpret_cast<LONG_PTR>(st));
+
+            HINSTANCE hInst = cs->hInstance;
+
+            ::CreateWindowExW(0, L"STATIC", L"互译器:",
+                WS_CHILD | WS_VISIBLE | SS_LEFT,
+                12, 14, 56, 18, hwnd, nullptr, hInst, nullptr);
+
+            st->hCombo = ::CreateWindowExW(0, WC_COMBOBOXW, L"",
+                WS_CHILD | WS_VISIBLE | WS_TABSTOP | CBS_DROPDOWNLIST | WS_VSCROLL,
+                68, 10, 250, 220, hwnd,
+                reinterpret_cast<HMENU>(static_cast<UINT_PTR>(IDC_TRANSLATOR_COMBO)),
+                hInst, nullptr);
+
+            st->hDir = ::CreateWindowExW(0, L"STATIC", L"",
+                WS_CHILD | WS_VISIBLE | SS_LEFT,
+                328, 14, 240, 18, hwnd, nullptr, hInst, nullptr);
+
+            st->hDesc = ::CreateWindowExW(0, L"STATIC", L"",
+                WS_CHILD | WS_VISIBLE | SS_LEFT,
+                12, 38, 536, 40, hwnd, nullptr, hInst, nullptr);
+
+            ::CreateWindowExW(0, L"STATIC", L"输入 (源记号表达式):",
+                WS_CHILD | WS_VISIBLE | SS_LEFT,
+                12, 84, 300, 18, hwnd, nullptr, hInst, nullptr);
+
+            st->hInput = ::CreateWindowExW(0, L"EDIT", L"",
+                WS_CHILD | WS_VISIBLE | WS_BORDER | WS_TABSTOP |
+                ES_LEFT | ES_AUTOHSCROLL,
+                12, 104, 536, 24, hwnd,
+                reinterpret_cast<HMENU>(static_cast<UINT_PTR>(IDC_TRANSLATOR_INPUT)),
+                hInst, nullptr);
+
+            st->hBtn = ::CreateWindowExW(0, L"BUTTON", L"互译",
+                WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_DEFPUSHBUTTON,
+                12, 138, 90, 28, hwnd,
+                reinterpret_cast<HMENU>(static_cast<UINT_PTR>(IDC_TRANSLATOR_BTN)),
+                hInst, nullptr);
+
+            st->hStatus = ::CreateWindowExW(0, L"STATIC", L"",
+                WS_CHILD | WS_VISIBLE | SS_LEFT,
+                112, 144, 436, 22, hwnd, nullptr, hInst, nullptr);
+
+            ::CreateWindowExW(0, L"STATIC", L"输出 (目标记号表达式):",
+                WS_CHILD | WS_VISIBLE | SS_LEFT,
+                12, 180, 300, 18, hwnd, nullptr, hInst, nullptr);
+
+            st->hOutput = ::CreateWindowExW(0, MSFTEDIT_CLASS, L"",
+                WS_CHILD | WS_VISIBLE | WS_BORDER | WS_VSCROLL | WS_HSCROLL |
+                ES_MULTILINE | ES_READONLY | ES_AUTOVSCROLL | ES_AUTOHSCROLL,
+                12, 200, 536, 248, hwnd,
+                reinterpret_cast<HMENU>(static_cast<UINT_PTR>(IDC_TRANSLATOR_OUTPUT)),
+                hInst, nullptr);
+
+            // 填充互译器下拉框并默认选中第一个
+            const auto& table = translatorTable();
+            for (const auto& t : table)
+                ::SendMessageW(st->hCombo, CB_ADDSTRING, 0,
+                    reinterpret_cast<LPARAM>(t.display_name));
+            ::SendMessageW(st->hCombo, CB_SETCURSEL, 0, 0);
+            updateTranslatorUI(hwnd, st);
+
+            std::wstring ready = L"就绪：共 ";
+            ready += std::to_wstring(table.size());
+            ready += L" 个互译器";
+            ::SetWindowTextW(st->hStatus, ready.c_str());
+            break;
+        }
+        case WM_COMMAND: {
+            auto* st = getTranslator(hwnd);
+            if (!st) break;
+            const int id = LOWORD(wParam);
+            if (id == IDC_TRANSLATOR_COMBO && HIWORD(wParam) == CBN_SELCHANGE) {
+                const int sel = static_cast<int>(
+                    ::SendMessageW(st->hCombo, CB_GETCURSEL, 0, 0));
+                if (sel >= 0) {
+                    st->index = sel;
+                    updateTranslatorUI(hwnd, st);
+                }
+                return 0;
+            }
+            if (id == IDC_TRANSLATOR_BTN) {
+                runTranslator(hwnd, st);
+                return 0;
+            }
+            break;
+        }
+        case WM_CTLCOLORSTATIC:
+        case WM_CTLCOLOREDIT:
+        case WM_CTLCOLORBTN: {
+            auto* st = getTranslator(hwnd);
+            if (!st) return ::DefWindowProcW(hwnd, msg, wParam, lParam);
+            HDC hdc = reinterpret_cast<HDC>(wParam);
+            ::SetBkMode(hdc, TRANSPARENT);
+            ::SetTextColor(hdc, ::GetSysColor(COLOR_WINDOWTEXT));
+            return reinterpret_cast<LRESULT>(st->background.get());
+        }
+        case WM_CLOSE:
+            ::DestroyWindow(hwnd);
+            break;
+        case WM_DESTROY:
+            delete getTranslator(hwnd);
+            ::SetWindowLongPtrW(hwnd, GWLP_USERDATA, 0);
+            g_hTranslatorWindow = nullptr;
+            break;
+        default:
+            return ::DefWindowProcW(hwnd, msg, wParam, lParam);
+        }
+        return 0;
+    }
+
+    void registerTranslatorClass(HINSTANCE hInst) {
+        static bool registered = false;
+        if (registered) return;
+
+        WNDCLASSW wc{};
+        wc.lpfnWndProc = TranslatorProc;
+        wc.hInstance = hInst;
+        wc.lpszClassName = kTranslatorWindowClass;
+        wc.hbrBackground = ::GetSysColorBrush(COLOR_WINDOW);
+        wc.hCursor = ::LoadCursorW(nullptr, IDC_ARROW);
+        ::RegisterClassW(&wc);
+        registered = true;
+    }
+
+    // 打开“互译器”页面（单例：已打开则带回前台）。
+    void showTranslatorWindow(HINSTANCE hInst, HWND hParent) {
+        if (::IsWindow(g_hTranslatorWindow)) {
+            ::ShowWindow(g_hTranslatorWindow, SW_RESTORE);
+            ::SetForegroundWindow(g_hTranslatorWindow);
+            return;
+        }
+
+        registerTranslatorClass(hInst);
+
+        HWND hwnd = ::CreateWindowExW(
+            0, kTranslatorWindowClass, L"互译器",
+            WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU,
+            CW_USEDEFAULT, CW_USEDEFAULT, 580, 510,
+            hParent, nullptr, hInst, nullptr);
+        if (!hwnd) return;
+
+        g_hTranslatorWindow = hwnd;
+        ::ShowWindow(hwnd, SW_SHOW);
+        ::UpdateWindow(hwnd);
+    }
+
     /*void showEntryDemo(HWND hwnd, UiState* ui) {
         std::vector<int> seq;
         int term = 0;
@@ -2131,6 +2383,13 @@ namespace {
                 HINSTANCE hInst = reinterpret_cast<HINSTANCE>(
                     ::GetWindowLongPtrW(hwnd, GWLP_HINSTANCE));
                 expander_help_about::showSourceWindow(hInst, hwnd);
+                break;
+            }
+
+            case IDM_TRANSLATOR: {
+                HINSTANCE hInst = reinterpret_cast<HINSTANCE>(
+                    ::GetWindowLongPtrW(hwnd, GWLP_HINSTANCE));
+                showTranslatorWindow(hInst, hwnd);
                 break;
             }
 
