@@ -14,7 +14,9 @@ namespace expander_links {
         { "《大数理论》",      "https://github.com/zhiqiucao/googology" },
         { "basmat",         "https://github.com/kyodaisuu/basmat" },
         { "X-Y Expander",       "https://gomen520.github.io" },
-        { "Free Software Foundtion" , "https://www.fsf.org/"}
+        { "Free Software Foundtion" , "https://www.fsf.org/"},
+        { "npm", "https://www.npmjs.com/"},
+        { "upx", "https://upx.github.io/"}
 
     };
     inline constexpr int kFriendLinkCount =
