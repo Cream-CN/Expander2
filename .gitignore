@@ -402,3 +402,5 @@ FodyWeavers.xsd
 /tools/bml_golden
 
 !/defs/law.txt
+/Expander_prev.png
+/MFC_prev.png
