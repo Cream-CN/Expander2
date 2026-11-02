@@ -405,3 +405,5 @@ FodyWeavers.xsd
 /Expander_prev.png
 /MFC_prev.png
 /CLIBuild.ps1
+*.tsv
+/_gen_registry.inc
