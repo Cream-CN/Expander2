@@ -1094,6 +1094,48 @@ Third PPS4
 PPS4 的第三型变体。
 )DEFTXT";
 
+constexpr std::string_view kDef_IDR_DEF_TS_OMEGA_DBMS = R"DEFTXT(
+TSωDBMS
+
+TSωDBMS 是 SDBMS 家族的“超限 ω 行高”成员（Transfinite SωDBMS），TS 源为 src/notations/MN/SDBMS/TS_omega_DBMS.ts，C++ 移植见 Header/notation/ts_omega_dbms.hpp。本实现按用户要求去掉了 ∞ 顶层元素（Limit）相关逻辑：不再接受 "Limit"/"limit"/"LIMIT" 输入、不生成 "Limit" 显示、移除 infinity_FS 与 init 的 INFINITY 种子；表达式内部的极限/后继判定、limit_approximation、compute_new_height 的极限高度展开等超限语义全部保留。
+
+表达式结构：Expr 是若干 Column 的序列；Column 是若干 Entry 的序列；Entry=(parent, Height)；Height 是多槽递归的 HeightEntry[]，每个 HeightEntry=(anchor, position)，position 是 Expr（递归矩阵）。plain 显示为 value+1^(槽序列)，槽序列形如 (a1+1@pos1, a2+1@pos2, …)，每个槽先写 anchor+1、再写 @ 与 position 的 plain 序数（ω 记作 w）；空表达式表示 0；空列显示为 "(0)"。
+
+序数表示：与 TS2DBMS 相同，Ordinal 取 {epsilon, expr} 与 {cnf, terms} 两种形式，CNF 运算与矩阵往返机制一致（relative_to_cnf / relative_from_cnf、root_substitute、suspend/unsuspend）。display_ordinal 遇可判定的 ε 数时直接把对应 CNF 值显示为矩阵。
+
+合法性：解析按列、条目、高度槽逐层校验；每个条目的各槽 anchor ≤ parent 且 parent < 列数；同一高度内槽的 anchor 严格递增、position 严格递减、且非末槽的 position 必须为后继（非极限）；列内条目 parent 严格递减、compare_height 严格递增。越界或非法输入返回解析失败提示。
+
+极限与后继：非空且末列非空为极限表达式；末列为空为后继表达式，前驱即删去末列。行高末槽 position 非空（极限位置）时，表达式为“极限高度”展开路径。
+
+compute_new_height(h, expr, r)：取 h 末槽 (anchor, position)。position 非空时返回 height_fill_dec(h, 前驱(position), r)；h 单槽时返回第 anchor 列末项行高（可为未定义）；否则取倒数第二槽 position 作界，在第 anchor 列上找 compare_height(h, 该行) ≤ 0 的下标，并视前项修正。
+
+极限高度切口 limit_approximation：末槽为 (anchor, alpha)；lower（末列删末项后的行高，可为未定义）若满足下界，取 beta = lower 对应槽 position，校验前缀一致与 beta < alpha；差 = beta 为空 ? alpha : matrix_tail(beta, alpha)，近似 = height_fs(差, m, 同变体)，返回 prefix + [(anchor, beta 为空 ? 近似 : matrix_add(beta, 近似))]；近似为空时报“零极限近似”。
+
+展开骨架：right 为末列下标，末列末项为 (r, h)。极限高度路径：末列替换为 (r, limit_approximation(...))，返回前部+[末列替换]，不复制、不执行 shorter 删除。后继路径：并入中项与第 r 列后，复制循环 w=1..m，i=r+1..right，偏移量 (right−r)·w，父值与各槽锚值均按 value≥r 加 offset；FS（shorter=true）复制后删去末列，FS_alter（shorter=false）保留末列。
+
+资源上限：单次物化长度超过 100000 视为超限，返回错误提示串而非继续展开。
+)DEFTXT";
+
+constexpr std::string_view kDef_IDR_DEF_TS2DBMS = R"DEFTXT(
+TS2DBMS
+
+TS2DBMS 是 SDBMS 家族的“超限二元行高”成员（Transfinite S2DBMS），TS 源为 src/notations/MN/SDBMS/TS2DBMS.ts，C++ 移植见 Header/notation/ts2dbms.hpp。本实现按用户要求去掉了 ∞ 顶层元素（Limit）相关逻辑：不再接受 "Limit"/"limit"/"LIMIT" 输入、不生成 "Limit" 显示、移除 infinity_FS 与 init 的 INFINITY 种子；表达式内部的极限/后继判定与 compute_new_height 的 limit 高度切口、CNF 转换、fundamental_sequence 分派等超限语义全部保留。
+
+表达式结构：Expr 是若干 Column 的序列；Column 是若干 Entry 的序列；Entry=(parent, Height)；Height=(anchor, level)，level 是 Expr（递归矩阵）。plain 显示为 value+1^(level,anchor+1)，上标为一对：(level,anchor+1)，先写 level 的 plain 序数（ω 记作 w）、后写 anchor+1；空表达式表示 0；空列显示为 "(0)"；"(0)" 在解析时可写作 "()" 或 "0"。
+
+序数表示：Ordinal 取两种形式——{epsilon, expr}（ε 数，直接携带自身矩阵）与 {cnf, terms}（CNF，项 = (exponent, coefficient)）。比较/加法/乘法/尾差/ω 幂等运算均在 CNF 上完成；CNF↔矩阵往返经 relative_to_cnf / relative_from_cnf（含 convert_matrix 相对化、root_substitute、suspend/unsuspend）实现。display_ordinal 遇可判定的 ε 数时直接把对应 CNF 值显示为矩阵。
+
+合法性：解析按列、条目、高度对逐层校验；每个条目的 anchor ≤ parent 且 parent < 列数；列内条目 parent 严格递减、compare_height 严格递增；高度对 (level, anchor+1) 中 anchor 为 1 基、level 为 plain 序数。越界或非法输入返回解析失败提示。
+
+极限与后继：非空且末列非空为极限表达式；末列为空为后继表达式，前驱即删去末列。
+
+compute_new_height(h, expr, r)：设 v=h.anchor、alpha=h.level，取第 v 列，从首项起找第一个 compare_height(h, 该行) ≤ 0 的下标。整列大于 h 时：若 height1(第 v 列) 小于 alpha，则 alpha 是极限时返回 limit 切口（{limit, alpha}），否则返回后继行高 (r, alpha 前驱)；否则返回第 v 列末项行高（可为未定义）。否则新行高为 (col[j].parent, alpha)，并视前项修正。
+
+展开骨架：right 为末列下标，末列末项为 (r, h)。limit 切口路径：以 height1(替换列) 的 CNF 为基底，差=tail(base, cnf(alpha))，近似=height_fs(差, m, 同变体)，新行高=cnf(base + cnf(近似))，返回前部+[末列替换]，不合并根列、不复制、不执行 shorter 删除。后继路径：并入中项与第 r 列后，复制循环 w=1..m，i=r+1..right，偏移量 (right−r)·w，父值与锚值均按 value≥r 加 offset；FS（shorter=true）复制后删去末列，FS_alter（shorter=false）保留末列。展开按 m 次取基本列；超出物化长度上限（100000）时返回资源上限提示。
+
+资源上限：单次物化长度超过 100000 视为超限，返回错误提示串而非继续展开。
+)DEFTXT";
+
 constexpr std::string_view kDef_IDR_DEF_TUPMS = R"DEFTXT(
 TUPMS（Transfinite UPMS，超限 UPMS）
 )DEFTXT";
@@ -1251,6 +1293,8 @@ constexpr Entry kTable[] = {
     { IDR_DEF_TON_MC, kDef_IDR_DEF_TON_MC },
     { IDR_DEF_TON_MPC, kDef_IDR_DEF_TON_MPC },
     { IDR_DEF_TPPS4, kDef_IDR_DEF_TPPS4 },
+    { IDR_DEF_TS_OMEGA_DBMS, kDef_IDR_DEF_TS_OMEGA_DBMS },
+    { IDR_DEF_TS2DBMS, kDef_IDR_DEF_TS2DBMS },
     { IDR_DEF_TUPMS, kDef_IDR_DEF_TUPMS },
     { IDR_DEF_UP1DBMS, kDef_IDR_DEF_UP1DBMS },
     { IDR_DEF_UP1MN, kDef_IDR_DEF_UP1MN },

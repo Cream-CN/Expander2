@@ -4,8 +4,10 @@
 #include <windows.h>
 #include <commctrl.h>
 #include <richedit.h>
+#include <gdiplus.h>
 
 #pragma comment(lib, "comctl32.lib")
+#pragma comment(lib, "gdiplus.lib")
 
 #include "Header/common/utf8.hpp"
 #include "Header/common/sequence.hpp"
@@ -75,6 +77,8 @@
 #include "Header/notation/s_omega_p1_dbms.hpp"
 #include "Header/notation/s_omega2_dbms.hpp"
 #include "Header/notation/s_omega_square_dbms.hpp"
+#include "Header/notation/ts2dbms.hpp"
+#include "Header/notation/ts_omega_dbms.hpp"
 #include "Header/notation/up1mn.hpp"
 #include "Header/notation/up1dbms.hpp"
 #include "Header/notation/up2mn_v1a.hpp"
@@ -1003,6 +1007,20 @@ namespace {
               .definition_resource_id = IDR_DEF_S_OMEGA_SQUARE_DBMS,
               .expand_text = &notation::SOmegaSquareDBMSNotation::expand_text,
               .expand_text_alter = &notation::SOmegaSquareDBMSNotation::expand_text_alter,
+              .tags = { L"MN", L"SDBMS", L"文本" } },
+
+            { .display_name = L"TS2DBMS", .id = "ts-2-dbms",
+              .expand = nullptr, .suffix = &notation::Ts2DbmsNotation::suffix,
+              .definition_resource_id = IDR_DEF_TS2DBMS,
+              .expand_text = &notation::Ts2DbmsNotation::expand_text,
+              .expand_text_alter = &notation::Ts2DbmsNotation::expand_text_alter,
+              .tags = { L"MN", L"SDBMS", L"文本" } },
+
+            { .display_name = L"TSωDBMS", .id = "ts-omega-dbms",
+              .expand = nullptr, .suffix = &notation::TsOmegaDbmsNotation::suffix,
+              .definition_resource_id = IDR_DEF_TS_OMEGA_DBMS,
+              .expand_text = &notation::TsOmegaDbmsNotation::expand_text,
+              .expand_text_alter = &notation::TsOmegaDbmsNotation::expand_text_alter,
               .tags = { L"MN", L"SDBMS", L"文本" } },
 
             { .display_name = L"Aω2MN2", .id = "a-omega2-mn-2",
@@ -1992,18 +2010,62 @@ namespace {
         ::UpdateWindow(hwnd);
     }
 
-    // ================= 顶栏图标条（Expander.ico + MFC.ico） =================
+    // ================= 顶栏图标条（Expander.ico + MFC.ico + namePic.jpg） =================
     // “关于 / 互译器 / 主界面”共用：顶部并排显示软件图标 Expander.ico 与 MFC.ico，
-    // 统一按 48×48 显示。图标句柄归本结构所有，父窗口销毁时须调用 destroyIconStrip 释放。
+    // 以及右侧的 Assets/namePic.jpg 名字图（等比缩放到与图标同高）。
+    // 统一按 48×48 显示。图标/位图句柄归本结构所有，父窗口销毁时须调用 destroyIconStrip 释放。
     constexpr int IDC_ICON_EXPANDER = 7301;
     constexpr int IDC_ICON_MFC      = 7302;
+    constexpr int IDC_ICON_NAMEPIC  = 7303;   // Assets/namePic.jpg 名字图
 
     struct IconStrip {
-        HWND  hIcon1{};    // Expander.ico
-        HWND  hIcon2{};    // MFC.ico
+        HWND  hIcon1{};      // Expander.ico
+        HWND  hIcon2{};      // MFC.ico
+        HWND  hNamePic{};    // Assets/namePic.jpg（名字图）
         HICON hIcoExpander{};
         HICON hIcoMfc{};
+        HBITMAP hBmpNamePic{};  // namePic.jpg 等比缩放后的位图（归本结构所有）
     };
+
+    // 定位资源文件：优先 exe 所在目录，其次当前工作目录（与 defs/law.txt 同款策略）。
+    [[nodiscard]] std::wstring findAssetFile(const wchar_t* fileName) {
+        wchar_t exePath[MAX_PATH]{};
+        ::GetModuleFileNameW(nullptr, exePath, MAX_PATH);
+        std::wstring exeDir;
+        if (exePath[0] != L'\0') {
+            exeDir = exePath;
+            const size_t slash = exeDir.find_last_of(L"\\/");
+            if (slash != std::wstring::npos) exeDir.resize(slash + 1);
+        }
+        const std::wstring candidates[] = { exeDir + fileName, fileName };
+        for (const std::wstring& p : candidates) {
+            if (::GetFileAttributesW(p.c_str()) != INVALID_FILE_ATTRIBUTES)
+                return p;
+        }
+        return std::wstring();
+    }
+
+    // 用 GDI+ 从文件加载 JPG，并按目标高度等比缩放为 DIB 位图；失败返回 nullptr。
+    [[nodiscard]] HBITMAP loadJpegScaled(const std::wstring& path,
+                                         int dstH, int& outW) {
+        Gdiplus::Bitmap src(path.c_str());
+        if (src.GetLastStatus() != Gdiplus::Ok) return nullptr;
+        const int sw = src.GetWidth();
+        const int sh = src.GetHeight();
+        if (sw <= 0 || sh <= 0) return nullptr;
+        const int dstW = std::max(1, (dstH * sw) / sh);
+        Gdiplus::Bitmap dst(dstW, dstH, PixelFormat32bppARGB);
+        Gdiplus::Graphics g(&dst);
+        g.SetInterpolationMode(Gdiplus::InterpolationModeHighQualityBicubic);
+        g.Clear(Gdiplus::Color(255, 255, 255, 255));
+        g.DrawImage(&src, Gdiplus::Rect(0, 0, dstW, dstH),
+                    0, 0, sw, sh, Gdiplus::UnitPixel);
+        HBITMAP hbmp = nullptr;
+        if (dst.GetHBITMAP(Gdiplus::Color(255, 255, 255), &hbmp) != Gdiplus::Ok)
+            return nullptr;
+        outW = dstW;
+        return hbmp;
+    }
 
     [[nodiscard]] IconStrip* createIconStrip(HWND hParent, HINSTANCE hInst,
                                              int x, int y, int size = 48) {
@@ -2034,6 +2096,29 @@ namespace {
             ::SendMessageW(s->hIcon2, STM_SETICON,
                 reinterpret_cast<WPARAM>(s->hIcoMfc), 0);
         }
+
+        // 第三个：Assets/namePic.jpg 名字图，等比缩放到与图标同高，位于 MFC.ico 右侧。
+        // 文件缺失或解码失败时静默跳过，不影响原有两个图标。
+        const std::wstring assetPath = findAssetFile(L"Assets\\namePic.jpg");
+        if (!assetPath.empty()) {
+            int nameW = 0;
+            s->hBmpNamePic = loadJpegScaled(assetPath, size, nameW);
+            if (s->hBmpNamePic && nameW > 0) {
+                s->hNamePic = ::CreateWindowExW(0, L"STATIC", L"",
+                    WS_CHILD | WS_VISIBLE | SS_BITMAP,
+                    x + 2 * (size + 12), y, nameW, size, hParent,
+                    reinterpret_cast<HMENU>(static_cast<UINT_PTR>(IDC_ICON_NAMEPIC)),
+                    hInst, nullptr);
+                if (!s->hNamePic) {
+                    ::DeleteObject(s->hBmpNamePic);
+                    s->hBmpNamePic = nullptr;
+                }
+                else {
+                    ::SendMessageW(s->hNamePic, STM_SETIMAGE,
+                        IMAGE_BITMAP, reinterpret_cast<LPARAM>(s->hBmpNamePic));
+                }
+            }
+        }
         return s;
     }
 
@@ -2041,6 +2126,7 @@ namespace {
         if (!s) return;
         if (s->hIcoExpander) ::DestroyIcon(s->hIcoExpander);
         if (s->hIcoMfc)     ::DestroyIcon(s->hIcoMfc);
+        if (s->hBmpNamePic) ::DeleteObject(s->hBmpNamePic);
     }
 
     // ================= 互译器页面 =================
@@ -2132,7 +2218,7 @@ namespace {
 
             st->hDesc = ::CreateWindowExW(0, L"STATIC", L"",
                 WS_CHILD | WS_VISIBLE | SS_LEFT,
-                12, 98, 536, 40, hwnd, nullptr, hInst, nullptr);
+                12, 98, 556, 40, hwnd, nullptr, hInst, nullptr);
 
             ::CreateWindowExW(0, L"STATIC", L"输入 (源记号表达式):",
                 WS_CHILD | WS_VISIBLE | SS_LEFT,
@@ -2141,7 +2227,7 @@ namespace {
             st->hInput = ::CreateWindowExW(0, L"EDIT", L"",
                 WS_CHILD | WS_VISIBLE | WS_BORDER | WS_TABSTOP |
                 ES_LEFT | ES_AUTOHSCROLL,
-                12, 164, 536, 24, hwnd,
+                12, 164, 556, 24, hwnd,
                 reinterpret_cast<HMENU>(static_cast<UINT_PTR>(IDC_TRANSLATOR_INPUT)),
                 hInst, nullptr);
 
@@ -2153,7 +2239,7 @@ namespace {
 
             st->hStatus = ::CreateWindowExW(0, L"STATIC", L"",
                 WS_CHILD | WS_VISIBLE | SS_LEFT,
-                112, 204, 436, 22, hwnd, nullptr, hInst, nullptr);
+                112, 204, 456, 22, hwnd, nullptr, hInst, nullptr);
 
             ::CreateWindowExW(0, L"STATIC", L"输出 (目标记号表达式):",
                 WS_CHILD | WS_VISIBLE | SS_LEFT,
@@ -2162,7 +2248,7 @@ namespace {
             st->hOutput = ::CreateWindowExW(0, MSFTEDIT_CLASS, L"",
                 WS_CHILD | WS_VISIBLE | WS_BORDER | WS_VSCROLL | WS_HSCROLL |
                 ES_MULTILINE | ES_READONLY | ES_AUTOVSCROLL | ES_AUTOHSCROLL,
-                12, 260, 536, 248, hwnd,
+                12, 260, 556, 248, hwnd,
                 reinterpret_cast<HMENU>(static_cast<UINT_PTR>(IDC_TRANSLATOR_OUTPUT)),
                 hInst, nullptr);
 
@@ -2254,7 +2340,7 @@ namespace {
         HWND hwnd = ::CreateWindowExW(
             0, kTranslatorWindowClass, L"互译器",
             WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU,
-            CW_USEDEFAULT, CW_USEDEFAULT, 580, 580,
+            CW_USEDEFAULT, CW_USEDEFAULT, 600, 580,   // 600：为顶部 namePic 名字图让位
             hParent, nullptr, hInst, nullptr);
         if (!hwnd) return;
 
@@ -2483,7 +2569,7 @@ namespace {
 
             ui->hEditSeq = ::CreateWindowExW(0, L"EDIT", L"",
                 WS_CHILD | WS_VISIBLE | WS_BORDER | ES_LEFT,
-                10, mh + 30, 200, 20,
+                10, mh + 30, 420, 20,
                 hwnd, nullptr, hInst, nullptr);
 
             ::CreateWindowExW(0, L"STATIC", L"项数:",
@@ -2521,13 +2607,13 @@ namespace {
 
             ui->hNotationLabel = ::CreateWindowExW(0, L"STATIC", L"",
                 WS_CHILD | WS_VISIBLE | SS_LEFT,
-                170, mh + 87, 280, 20,
+                170, mh + 87, 400, 20,
                 hwnd, nullptr, hInst, nullptr);
             updateNotationLabel(ui);
 
             ui->hBtnFSalter = ::CreateWindowExW(0, L"BUTTON", L"展开",
                 WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
-                10, mh + 115, 200, 25,
+                10, mh + 115, 420, 25,
                 hwnd,
                 reinterpret_cast<HMENU>(static_cast<UINT_PTR>(IDM_FSALTER)),
                 hInst, nullptr);
@@ -2805,6 +2891,12 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance,
                     _In_ PWSTR lpCmdLine, _In_ int nCmdShow) {
     ::LoadLibraryW(L"Msftedit.dll");
 
+    // GDI+：用于加载 Assets/namePic.jpg 等 JPG 资源；失败时相关控件静默跳过。
+    Gdiplus::GdiplusStartupInput gdiplusInput;
+    ULONG_PTR gdiplusToken = 0;
+    if (Gdiplus::GdiplusStartup(&gdiplusToken, &gdiplusInput, nullptr) != Gdiplus::Ok)
+        gdiplusToken = 0;
+
     INITCOMMONCONTROLSEX icc{};
     icc.dwSize = sizeof(icc);
     icc.dwICC = ICC_LISTVIEW_CLASSES;
@@ -2820,7 +2912,7 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance,
     HWND hwnd = ::CreateWindowExW(
         0, L"OmegaY", L"Expander",
         WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX,
-        CW_USEDEFAULT, CW_USEDEFAULT, 470, 280,
+        CW_USEDEFAULT, CW_USEDEFAULT, 600, 280,   // 600：为顶部 namePic 名字图让位
         nullptr, nullptr, hInstance, nullptr);
     if (!hwnd) return 0;
 
@@ -2832,5 +2924,7 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance,
         ::TranslateMessage(&msg);
         ::DispatchMessageW(&msg);
     }
+    if (gdiplusToken != 0)
+        Gdiplus::GdiplusShutdown(gdiplusToken);
     return 0;
 }

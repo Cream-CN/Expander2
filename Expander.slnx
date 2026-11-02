@@ -6,4 +6,8 @@
   <Project Path="Expander.vcxproj" Id="9fd7bb5a-9956-4ee1-a537-69d481697d0a">
     <BuildType Solution="Debug|x64" Project="Release" />
   </Project>
+  <Project Path="ExpanderCLI.vcxproj" Id="0a2b3c4d-5e6f-4a8b-9c0d-1e2f3a4b5c6d">
+    <BuildType Solution="Debug|x64" Project="Debug" />
+    <BuildType Solution="Release|x64" Project="Release" />
+  </Project>
 </Solution>

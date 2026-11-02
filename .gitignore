@@ -404,3 +404,4 @@ FodyWeavers.xsd
 !/defs/law.txt
 /Expander_prev.png
 /MFC_prev.png
+/CLIBuild.ps1
