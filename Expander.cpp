@@ -1,97 +1,24 @@
-﻿//Copyright(c) Cream-CN 2026
+//Copyright(c) Cream-CN 2026
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
 #include <windows.h>
 #include <commctrl.h>
 #include <richedit.h>
+#include <gdiplus.h>
 
 #pragma comment(lib, "comctl32.lib")
+#pragma comment(lib, "gdiplus.lib")
 
 #include "Header/common/utf8.hpp"
-#include "Header/common/sequence.hpp"
-#include "Header/common/Matrix.hpp"
 #include "Header/core/arena.hpp"
 #include "Header/core/entry.hpp"
-#include "Header/notation/empty.hpp"
-#include "Header/notation/prss.hpp"
-#include "Header/notation/PPS-family.hpp"
-#include "Header/notation/Omega-YMagma.hpp"
-#include "Header/notation/mrss121.hpp"
-#include "Header/notation/omega_y.hpp"
-#include "Header/notation/epsilon-y.hpp"
-#include "Header/notation/BMSFamily.hpp"
-#include "Header/notation/upms.hpp"
-#include "Header/notation/bsm.hpp"
-#include "Header/notation/bhm.hpp"
-#include "Header/notation/cms.hpp"
-#include "Header/notation/dsm.hpp"
-#include "Header/notation/blm.hpp"
-#include "Header/notation/wmm.hpp"
-#include "Header/notation/gms.hpp"
-#include "Header/notation/lpms.hpp"
-#include "Header/notation/tbm.hpp"
-#include "Header/notation/tupms.hpp"
-#include "Header/notation/btbm.hpp"
-#include "Header/notation/btbw.hpp"
-#include "Header/notation/bbm.hpp"
-#include "Header/notation/m1ynss.hpp"
-#include "Header/notation/tm1ynss.hpp"
-#include "Header/notation/bm1ynss.hpp"
-#include "Header/notation/bt1ynss.hpp"
-#include "Header/notation/bt2ynss.hpp"
-#include "Header/notation/bt3ynss.hpp"
-#include "Header/notation/btlynss.hpp"
+#include "Header/notation/registry.hpp"   // OOP 内核：全部记号 + 统一接口 + 注册中心
 #include "Header/notation/translator.hpp"
-#include "Header/notation/gy.hpp"
-#include "Header/notation/xy-v1.hpp"
-#include "Header/notation/xy-v2.hpp"
-#include "Header/notation/xy-v3.hpp"
-#include "Header/notation/den1.hpp"
-#include "Header/notation/blp.hpp"
-#include "Header/notation/iblp.hpp"
-#include "Header/notation/ton.hpp"
-#include "Header/notation/ton_i.hpp"
-#include "Header/notation/ton_dor.hpp"
-#include "Header/notation/ton_drc.hpp"
-#include "Header/notation/ton_drp.hpp"
-#include "Header/notation/ton_drpc.hpp"
-#include "Header/notation/ton_ibp.hpp"
-#include "Header/notation/ton_mc.hpp"
-#include "Header/notation/ton_mpc.hpp"
-#include "Header/notation/e0mn.hpp"
-#include "Header/notation/strong_e0mn.hpp"
-#include "Header/notation/omega_mn.hpp"
-#include "Header/notation/pcf_omega_mn.hpp"
-#include "Header/notation/t_omega_mn.hpp"
-#include "Header/notation/n_mn.hpp"
-#include "Header/notation/s_omega2_mn.hpp"
-#include "Header/notation/sa_omega2_mn.hpp"
-#include "Header/notation/s_omega_pow_omega_mn.hpp"
-#include "Header/notation/s1dbms.hpp"
-#include "Header/notation/s2dbms.hpp"
-#include "Header/notation/s_omega_dbms_v1.hpp"
-#include "Header/notation/s_omega_dbms_v2.hpp"
-#include "Header/notation/s_omega_dbms_v3.hpp"
-#include "Header/notation/s_omega_p1_dbms.hpp"
-#include "Header/notation/s_omega2_dbms.hpp"
-#include "Header/notation/s_omega_square_dbms.hpp"
-#include "Header/notation/up1mn.hpp"
-#include "Header/notation/up1dbms.hpp"
-#include "Header/notation/up2mn_v1a.hpp"
-#include "Header/notation/up2mn_v1b.hpp"
-#include "Header/notation/up2mn_v1b_plus.hpp"
-#include "Header/notation/up2dbms_v1.hpp"
-#include "Header/notation/up2dbms_v1b_plus.hpp"
-#include "Header/notation/up2dbms_v1c.hpp"
-#include "Header/notation/up2dbms_v2.hpp"
-#include "Header/notation/aw2mn2.hpp"
-#include "Header/notation/aw2mn3.hpp"
-#include "Header/notation/waw2mn2.hpp"
-#include "Header/notation/waw2mn3.hpp"
 #include <memory>
 #include <string>
 #include <string_view>
 #include <vector>
+#include <deque>
 #include <array>
 #include <algorithm>
 #include <cwctype>
@@ -182,862 +109,67 @@ namespace {
         // 记号标签（用于选择窗体的搜索与展示）。最多 16 个，以 nullptr 结尾；
         // 未用的槽位保持 nullptr。可在下表按需增删。
         std::array<const wchar_t*, 16> tags{};
+
+        // OOP 内核指针（2026-11 重构）：指向注册中心中的 INotation 实例。
+        // 上面的函数指针字段保留（由注册中心派生、语义等价），但展开调用
+        // 统一走本指针的 INotation::expand()（含 FS 截断与后缀语义）。
+        const omegay::notation::INotation* notation = nullptr;
     };
 
-    std::string bmsExpandTextWith(
-        Bms::Version ver, std::string_view text, int term)
-    {
-        long parsedTerm = term;                 // parse_matrix 需要 long&
-        omegay::common::Matrix m =
-            omegay::common::parse_matrix(text, parsedTerm);
-
-        if (m.empty())
-            return "解析失败，请确认你没有使用全角括号，逗号";
-
-        if (!omegay::notation::BMSFamilyNotation::is_standard(m, ver))
-            return "输入的矩阵为非标准表达式";
-
-        const int t = parsedTerm < 1 ? 1 : static_cast<int>(parsedTerm);
-
-        auto result = omegay::notation::BMSFamilyNotation::expand(m, t, ver);
-        return omegay::common::matrix_to_string(result);
-    }
-    std::string bmsExpandV1(std::string_view t, int n) { return bmsExpandTextWith(Bms::Version::V1, t, n); }
-    std::string bmsExpandV2(std::string_view t, int n) { return bmsExpandTextWith(Bms::Version::V2, t, n); }
-    std::string bmsExpandV21(std::string_view t, int n) { return bmsExpandTextWith(Bms::Version::V21, t, n); }
-    std::string bmsExpandV22(std::string_view t, int n) { return bmsExpandTextWith(Bms::Version::V22, t, n); }
-    std::string bmsExpandV23(std::string_view t, int n) { return bmsExpandTextWith(Bms::Version::V23, t, n); }
-    std::string bmsExpandV3(std::string_view t, int n) { return bmsExpandTextWith(Bms::Version::V3, t, n); }
-    std::string bmsExpandV31(std::string_view t, int n) { return bmsExpandTextWith(Bms::Version::V31, t, n); }
-    std::string bmsExpandV32(std::string_view t, int n) { return bmsExpandTextWith(Bms::Version::V32, t, n); }
-    std::string bmsExpandV33(std::string_view t, int n) { return bmsExpandTextWith(Bms::Version::V33, t, n); }
-    std::string bmsExpandV4(std::string_view t, int n) { return bmsExpandTextWith(Bms::Version::V4, t, n); }
-    inline bool isBmsTextEntry(const NotationEntry& e) {
-        return e.expand_text == &bmsExpandV1
-            || e.expand_text == &bmsExpandV2
-            || e.expand_text == &bmsExpandV21
-            || e.expand_text == &bmsExpandV22
-            || e.expand_text == &bmsExpandV23
-            || e.expand_text == &bmsExpandV3
-            || e.expand_text == &bmsExpandV31
-            || e.expand_text == &bmsExpandV32
-            || e.expand_text == &bmsExpandV33
-            || e.expand_text == &bmsExpandV4;
-    }
-
-    // ---- UPMS 文本 ⇄ Matrix（省略尾随零的写法） ----
-    [[nodiscard]] omegay::common::Matrix
-        parseUpmsText(std::string_view s) {
-        std::vector<std::vector<int>> cols;
-        const std::size_t n = s.size();
-        std::size_t i = 0;
-
-        while (i < n) {
-            while (i < n && s[i] != '(') ++i;
-            if (i >= n) break;
-            ++i; // 跳过 '('
-
-            std::vector<int> col;
-            int  cur = 0;
-            bool neg = false;
-            bool in_num = false;
-
-            while (i < n && s[i] != ')') {
-                const char c = s[i];
-                if (c >= '0' && c <= '9') {
-                    cur = cur * 10 + (c - '0');
-                    in_num = true;
-                }
-                else if (c == '-' && !in_num) {
-                    neg = true;
-                    in_num = true;
-                }
-                else if (c == ',') {
-                    if (in_num) col.push_back(neg ? -cur : cur);
-                    cur = 0; neg = false; in_num = false;
-                }
-                ++i;
-            }
-            if (in_num) col.push_back(neg ? -cur : cur);
-            if (col.empty()) col.push_back(0);
-            cols.push_back(std::move(col));
-
-            if (i < n) ++i; // 跳过 ')'
-        }
-
-        if (cols.empty()) return {};
-
-        std::size_t max_rows = 0;
-        for (const auto& c : cols)
-            if (c.size() > max_rows) max_rows = c.size();
-        const int nr = static_cast<int>(max_rows);
-
-        omegay::common::Matrix m(nr, static_cast<int>(cols.size()));
-        for (int c = 0; c < static_cast<int>(cols.size()); ++c)
-            for (int r = 0; r < static_cast<int>(cols[c].size()); ++r)
-                m(r, c) = cols[c][r];
-        return m;
-    }
-
-    [[nodiscard]] std::string
-        formatUpmsText(const omegay::common::Matrix& m) {
-        if (m.empty()) return {};
-        std::string out;
-        for (int c = 0; c < m.cols(); ++c) {
-            int last_nonzero = 0;
-            for (int r = m.rows() - 1; r >= 0; --r) {
-                if (m(r, c) != 0) { last_nonzero = r; break; }
-            }
-            out += '(';
-            for (int r = 0; r <= last_nonzero; ++r) {
-                if (r > 0) out += ',';
-                out += std::to_string(m(r, c));
-            }
-            out += ')';
-        }
-        return out;
-    }
-
-    std::string upmsExpandText(std::string_view text, int term) {
-        const auto m = parseUpmsText(text);
-        if (m.empty())
-            return "解析失败，请确认你没有使用全角括号，逗号";
-
-        const auto result = omegay::notation::UPMSNotation::expand(m, term);
-        const auto out = formatUpmsText(result);
-        if (out.empty())
-            return "后继形展开为空矩阵，或未能定位坏根";
-        return out;
-    }
-
-    // 记号表用普通静态数组承载。用 std::vector 花括号初始化会让 MSVC 在
-    // 动态初始化函数中构造 initializer_list 后备数组（111 项 × 224 字节 ≈
-    // 24 KB），被 /analyze 建模为栈占用并逐条重复报告 C6262；数组方式下
-    // 数据位于静态存储区（常量初始化，无栈开销），再一次性搬入 vector。
-    static const NotationEntry kNotationTable[] = {
-            { .display_name = L"空记号", .id = "empty",
-              .expand = &notation::EmptyNotation::expand,
-              .suffix = &notation::EmptyNotation::suffix,
-              .definition_resource_id = IDR_DEF_EMPTY,
-              .tags = { L"测试", L"基础" } },
-
-            { .display_name = L"PrSS", .id = "prss",
-              .expand = &notation::PrSSNotation::expand,
-              .suffix = &notation::PrSSNotation::suffix,
-              .definition_resource_id = IDR_DEF_PRSS,
-              .tags = { L"PrSS", L"原始数列", L"数列", L"入门", L"基础" } },
-
-            { .display_name = L"PPS", .id = "pps",
-              .expand = &notation::PPSNotation::expand,
-              .suffix = &notation::PPSNotation::suffix,
-              .definition_resource_id = IDR_DEF_PPS,
-              .tags = { L"PPS", L"原始数列", L"数列", L"入门" } },
-
-            { .display_name = L"PPS4", .id = "pps4",
-              .expand = &notation::PPS4Notation::expand,
-              .suffix = &notation::PPS4Notation::suffix,
-              .definition_resource_id = IDR_DEF_PPS4,
-              .tags = { L"PPS", L"原始数列", L"4行", L"数列" } },
-
-            { .display_name = L"Weak PPS4", .id = "wpps4",
-              .expand = &notation::WPPS4Notation::expand,
-              .suffix = &notation::WPPS4Notation::suffix,
-              .definition_resource_id = IDR_DEF_WPPS4,
-              .tags = { L"PPS", L"弱", L"4行", L"数列" } },
-
-            { .display_name = L"Third PPS4", .id = "tpps4",
-              .expand = &notation::TPPS4Notation::expand,
-              .suffix = &notation::TPPS4Notation::suffix,
-              .definition_resource_id = IDR_DEF_TPPS4,
-              .tags = { L"PPS", L"第三", L"4行", L"数列" } },
-
-            { .display_name = L"Ex. Weak PPS4", .id = "ewpps4",
-              .expand = &notation::EWPPS4Notation::expand,
-              .suffix = &notation::EWPPS4Notation::suffix,
-              .definition_resource_id = IDR_DEF_EWPPS4,
-              .tags = { L"PPS", L"扩展弱", L"4行", L"数列" } },
-
-            { .display_name = L"Second PPS4", .id = "spps4",
-              .expand = &notation::SecondPPS4Notation::expand,
-              .suffix = &notation::SecondPPS4Notation::suffix,
-              .definition_resource_id = IDR_DEF_SPPS4,
-              .tags = { L"PPS", L"第二", L"4行", L"数列" } },
-
-            { .display_name = L"2-pps4", .id = "2-pps4",
-              .expand = &notation::PPS2Notation::expand,
-              .suffix = &notation::PPS2Notation::suffix,
-              .definition_resource_id = IDR_DEF_2PPS4,
-              .tags = { L"PPS", L"2行", L"4行", L"数列" } },
-
-            { .display_name = L"ω-Y (medium)", .id = "omega-y-medium",
-              .expand = &notation::OmegaYMediumNotation::expand,
-              .suffix = &notation::OmegaYMediumNotation::suffix,
-              .definition_resource_id = IDR_DEF_OMEGA_Y_MEDIUM,
-              .tags = { L"Y序列", L"ω-Y", L"中等", L"数列" } },
-
-            { .display_name = L"ω-Y (strong)", .id = "omega-y-strong",
-              .expand = &notation::OmegaYStrongNotation::expand,
-              .suffix = &notation::OmegaYStrongNotation::suffix,
-              .definition_resource_id = IDR_DEF_OMEGA_Y_STRONG,
-              .tags = { L"Y序列", L"ω-Y", L"强", L"数列" } },
-
-            { .display_name = L"MrSS1.2.1", .id = "mrss121",
-              .expand = &notation::Mrss121Notation::expand,
-              .suffix = &notation::Mrss121Notation::suffix,
-              .definition_resource_id = IDR_DEF_MRSS121,
-              .expand_text = &notation::Mrss121Notation::expand_string,
-              .tags = { L"MrSS", L"矩阵", L"数列" } },
-
-            { .display_name = L"BMS v1.0", .id = "bms-v1",
-              .expand = nullptr, .suffix = &notation::BMSFamilyNotation::suffix,
-              .definition_resource_id = IDR_DEF_BMS_V1,
-              .expand_text = &bmsExpandV1,
-              .tags = { L"BMS", L"矩阵", L"旧版" } },
-
-            { .display_name = L"BMS v2.0", .id = "bms-v2",
-              .expand = nullptr, .suffix = &notation::BMSFamilyNotation::suffix,
-              .definition_resource_id = IDR_DEF_BMS_V2,
-              .expand_text = &bmsExpandV2,
-              .tags = { L"BMS", L"矩阵" } },
-
-            { .display_name = L"BMS v2.1", .id = "bms-v21",
-              .expand = nullptr, .suffix = &notation::BMSFamilyNotation::suffix,
-              .definition_resource_id = IDR_DEF_BMS_V21,
-              .expand_text = &bmsExpandV21,
-              .tags = { L"BMS", L"矩阵" } },
-
-            { .display_name = L"BMS v2.2", .id = "bms-v22",
-              .expand = nullptr, .suffix = &notation::BMSFamilyNotation::suffix,
-              .definition_resource_id = IDR_DEF_BMS_V22,
-              .expand_text = &bmsExpandV22,
-              .tags = { L"BMS", L"矩阵" } },
-
-            { .display_name = L"BMS v2.3", .id = "bms-v23",
-              .expand = nullptr, .suffix = &notation::BMSFamilyNotation::suffix,
-              .definition_resource_id = IDR_DEF_BMS_V23,
-              .expand_text = &bmsExpandV23,
-              .tags = { L"BMS", L"矩阵" } },
-
-            { .display_name = L"BMS v3.0", .id = "bms-v3",
-              .expand = nullptr, .suffix = &notation::BMSFamilyNotation::suffix,
-              .definition_resource_id = IDR_DEF_BMS_V3,
-              .expand_text = &bmsExpandV3,
-              .tags = { L"BMS", L"矩阵" } },
-
-            { .display_name = L"BMS v3.1", .id = "bms-v31",
-              .expand = nullptr, .suffix = &notation::BMSFamilyNotation::suffix,
-              .definition_resource_id = IDR_DEF_BMS_V31,
-              .expand_text = &bmsExpandV31,
-              .tags = { L"BMS", L"矩阵" } },
-
-            { .display_name = L"BMS v3.2", .id = "bms-v32",
-              .expand = nullptr, .suffix = &notation::BMSFamilyNotation::suffix,
-              .definition_resource_id = IDR_DEF_BMS_V32,
-              .expand_text = &bmsExpandV32,
-              .tags = { L"BMS", L"矩阵" } },
-
-            { .display_name = L"BMS v3.3", .id = "bms-v33",
-              .expand = nullptr, .suffix = &notation::BMSFamilyNotation::suffix,
-              .definition_resource_id = IDR_DEF_BMS_V33,
-              .expand_text = &bmsExpandV33,
-              .tags = { L"BMS", L"矩阵" } },
-
-            { .display_name = L"BMS v4.0", .id = "bms-v4",
-              .expand = nullptr, .suffix = &notation::BMSFamilyNotation::suffix,
-              .definition_resource_id = IDR_DEF_BMS_V4,
-              .expand_text = &bmsExpandV4,
-              .tags = { L"BMS", L"矩阵", L"最新" } },
-
-            { .display_name = L"ω-Y sequence", .id = "omega-y-sequence",
-              .expand = &notation::OmegaYNotation::expand,
-              .suffix = &notation::OmegaYNotation::suffix,
-              .definition_resource_id = IDR_DEF_OMEGA_Y_SEQUENCE,
-              .tags = { L"Y序列", L"ω-Y", L"数列" } },
-
-            { .display_name = L"ε-Y", .id = "epsilon-y",
-              .expand = &notation::EpsilonYNotation::expand,
-              .suffix = &notation::EpsilonYNotation::suffix,
-              .definition_resource_id = IDR_DEF_EPSILON_Y,
-              .tags = { L"Y序列", L"ε-Y", L"数列" } },
-
-            { .display_name = L"UPMS", .id = "upms",
-              .expand = nullptr, .suffix = &notation::UPMSNotation::suffix,
-              .definition_resource_id = IDR_DEF_UPMS,
-              .expand_text = &upmsExpandText,
-              .tags = { L"UPMS", L"矩阵", L"文本" } },
-
-            { .display_name = L"BSM", .id = "bsm",
-              .expand = nullptr, .suffix = &notation::BSMNotation::suffix,
-              .definition_resource_id = IDR_DEF_BSM,
-              .expand_text = &notation::BSMNotation::expand_text,
-              .expand_text_alter = &notation::BSMNotation::expand_text,
-              .tags = { L"BSM", L"BM-like", L"矩阵", L"文本" } },
-
-            { .display_name = L"BHM", .id = "bhm",
-              .expand = nullptr, .suffix = &notation::BHMNotation::suffix,
-              .definition_resource_id = IDR_DEF_BHM,
-              .expand_text = &notation::BHMNotation::expand_text,
-              .expand_text_alter = &notation::BHMNotation::expand_text_alter,
-              .tags = { L"BHM", L"BM-like", L"矩阵", L"文本" } },
-
-            { .display_name = L"1BM-BHM", .id = "1-bm-bhm",
-              .expand = nullptr, .suffix = &notation::BM_BHMNotation<1>::suffix,
-              .definition_resource_id = IDR_DEF_1BM_BHM,
-              .expand_text = &notation::BM_BHMNotation<1>::expand_text,
-              .expand_text_alter = &notation::BM_BHMNotation<1>::expand_text_alter,
-              .tags = { L"BM-BHM", L"BM-like", L"矩阵", L"文本" } },
-
-            { .display_name = L"2BM-BHM", .id = "2-bm-bhm",
-              .expand = nullptr, .suffix = &notation::BM_BHMNotation<2>::suffix,
-              .definition_resource_id = IDR_DEF_2BM_BHM,
-              .expand_text = &notation::BM_BHMNotation<2>::expand_text,
-              .expand_text_alter = &notation::BM_BHMNotation<2>::expand_text_alter,
-              .tags = { L"BM-BHM", L"BM-like", L"矩阵", L"文本" } },
-
-            { .display_name = L"3BM-BHM", .id = "3-bm-bhm",
-              .expand = nullptr, .suffix = &notation::BM_BHMNotation<3>::suffix,
-              .definition_resource_id = IDR_DEF_3BM_BHM,
-              .expand_text = &notation::BM_BHMNotation<3>::expand_text,
-              .expand_text_alter = &notation::BM_BHMNotation<3>::expand_text_alter,
-              .tags = { L"BM-BHM", L"BM-like", L"矩阵", L"文本" } },
-
-            { .display_name = L"CMS", .id = "cms",
-              .expand = nullptr, .suffix = &notation::CMSNotation::suffix,
-              .definition_resource_id = IDR_DEF_CMS,
-              .expand_text = &notation::CMSNotation::expand_text,
-              .tags = { L"CMS", L"BM-like", L"矩阵", L"文本" } },
-
-            { .display_name = L"DSM", .id = "dsm",
-              .expand = nullptr, .suffix = &notation::DSMNotation::suffix,
-              .definition_resource_id = IDR_DEF_DSM,
-              .expand_text = &notation::DSMNotation::expand_text,
-              .expand_text_alter = &notation::DSMNotation::expand_text_alter,
-              .tags = { L"DSM", L"BM-like", L"矩阵", L"文本" } },
-
-            { .display_name = L"BLM", .id = "blm",
-              .expand = nullptr, .suffix = &notation::BLMNotation::suffix,
-              .definition_resource_id = IDR_DEF_BLM,
-              .expand_text = &notation::BLMNotation::expand_text,
-              .tags = { L"BLM", L"BM-like", L"矩阵", L"文本" } },
-
-            { .display_name = L"wMM", .id = "wmm",
-              .expand = nullptr, .suffix = &notation::WMMNotation::suffix,
-              .definition_resource_id = IDR_DEF_WMM,
-              .expand_text = &notation::WMMNotation::expand_text,
-              .expand_text_alter = &notation::WMMNotation::expand_text_alter,
-              .tags = { L"wMM", L"BM-like", L"矩阵", L"文本" } },
-
-            // ---- GMS（General Matrix System）：3 系统 × 5 投影 = 15 记号 ----
-            { .display_name = L"GMS GBMS ω-P", .id = "gms-gbms-omega-p",
-              .expand = nullptr, .suffix = &notation::GbmsOmegaP::suffix,
-              .definition_resource_id = IDR_DEF_GMS_GBMS_OMEGA_P,
-              .expand_text = &notation::GbmsOmegaP::expand_text,
-              .tags = { L"GMS", L"GBMS", L"BM-like", L"矩阵", L"文本" } },
-            { .display_name = L"GMS GBMS pQSS", .id = "gms-gbms-pqss",
-              .expand = nullptr, .suffix = &notation::GbmsPQSS::suffix,
-              .definition_resource_id = IDR_DEF_GMS_GBMS_PQSS,
-              .expand_text = &notation::GbmsPQSS::expand_text,
-              .tags = { L"GMS", L"GBMS", L"BM-like", L"矩阵", L"文本" } },
-            { .display_name = L"GMS GBMS QSS", .id = "gms-gbms-qss",
-              .expand = nullptr, .suffix = &notation::GbmsQSS::suffix,
-              .definition_resource_id = IDR_DEF_GMS_GBMS_QSS,
-              .expand_text = &notation::GbmsQSS::expand_text,
-              .tags = { L"GMS", L"GBMS", L"BM-like", L"矩阵", L"文本" } },
-            { .display_name = L"GMS GBMS Full", .id = "gms-gbms-full",
-              .expand = nullptr, .suffix = &notation::GbmsFull::suffix,
-              .definition_resource_id = IDR_DEF_GMS_GBMS_FULL,
-              .expand_text = &notation::GbmsFull::expand_text,
-              .tags = { L"GMS", L"GBMS", L"BM-like", L"矩阵", L"文本" } },
-            { .display_name = L"GMS GBMS Weirdly Full", .id = "gms-gbms-weird",
-              .expand = nullptr, .suffix = &notation::GbmsWeirdlyFull::suffix,
-              .definition_resource_id = IDR_DEF_GMS_GBMS_WEIRD,
-              .expand_text = &notation::GbmsWeirdlyFull::expand_text,
-              .tags = { L"GMS", L"GBMS", L"BM-like", L"矩阵", L"文本" } },
-
-            { .display_name = L"GMS UPMS ω-P", .id = "gms-upms-omega-p",
-              .expand = nullptr, .suffix = &notation::UpmsOmegaP::suffix,
-              .definition_resource_id = IDR_DEF_GMS_UPMS_OMEGA_P,
-              .expand_text = &notation::UpmsOmegaP::expand_text,
-              .tags = { L"GMS", L"UPMS", L"BM-like", L"矩阵", L"文本" } },
-            { .display_name = L"GMS UPMS pQSS", .id = "gms-upms-pqss",
-              .expand = nullptr, .suffix = &notation::UpmsPQSS::suffix,
-              .definition_resource_id = IDR_DEF_GMS_UPMS_PQSS,
-              .expand_text = &notation::UpmsPQSS::expand_text,
-              .tags = { L"GMS", L"UPMS", L"BM-like", L"矩阵", L"文本" } },
-            { .display_name = L"GMS UPMS QSS", .id = "gms-upms-qss",
-              .expand = nullptr, .suffix = &notation::UpmsQSS::suffix,
-              .definition_resource_id = IDR_DEF_GMS_UPMS_QSS,
-              .expand_text = &notation::UpmsQSS::expand_text,
-              .tags = { L"GMS", L"UPMS", L"BM-like", L"矩阵", L"文本" } },
-            { .display_name = L"GMS UPMS Full", .id = "gms-upms-full",
-              .expand = nullptr, .suffix = &notation::UpmsFull::suffix,
-              .definition_resource_id = IDR_DEF_GMS_UPMS_FULL,
-              .expand_text = &notation::UpmsFull::expand_text,
-              .tags = { L"GMS", L"UPMS", L"BM-like", L"矩阵", L"文本" } },
-            { .display_name = L"GMS UPMS Weirdly Full", .id = "gms-upms-weird",
-              .expand = nullptr, .suffix = &notation::UpmsWeirdlyFull::suffix,
-              .definition_resource_id = IDR_DEF_GMS_UPMS_WEIRD,
-              .expand_text = &notation::UpmsWeirdlyFull::expand_text,
-              .tags = { L"GMS", L"UPMS", L"BM-like", L"矩阵", L"文本" } },
-
-            { .display_name = L"GMS LPMS2 ω-P", .id = "gms-lpms2-omega-p",
-              .expand = nullptr, .suffix = &notation::Lpms2OmegaP::suffix,
-              .definition_resource_id = IDR_DEF_GMS_LPMS2_OMEGA_P,
-              .expand_text = &notation::Lpms2OmegaP::expand_text,
-              .tags = { L"GMS", L"LPMS2", L"BM-like", L"矩阵", L"文本" } },
-            { .display_name = L"GMS LPMS2 pQSS", .id = "gms-lpms2-pqss",
-              .expand = nullptr, .suffix = &notation::Lpms2PQSS::suffix,
-              .definition_resource_id = IDR_DEF_GMS_LPMS2_PQSS,
-              .expand_text = &notation::Lpms2PQSS::expand_text,
-              .tags = { L"GMS", L"LPMS2", L"BM-like", L"矩阵", L"文本" } },
-            { .display_name = L"GMS LPMS2 QSS", .id = "gms-lpms2-qss",
-              .expand = nullptr, .suffix = &notation::Lpms2QSS::suffix,
-              .definition_resource_id = IDR_DEF_GMS_LPMS2_QSS,
-              .expand_text = &notation::Lpms2QSS::expand_text,
-              .tags = { L"GMS", L"LPMS2", L"BM-like", L"矩阵", L"文本" } },
-            { .display_name = L"GMS LPMS2 Full", .id = "gms-lpms2-full",
-              .expand = nullptr, .suffix = &notation::Lpms2Full::suffix,
-              .definition_resource_id = IDR_DEF_GMS_LPMS2_FULL,
-              .expand_text = &notation::Lpms2Full::expand_text,
-              .tags = { L"GMS", L"LPMS2", L"BM-like", L"矩阵", L"文本" } },
-            { .display_name = L"GMS LPMS2 Weirdly Full", .id = "gms-lpms2-weird",
-              .expand = nullptr, .suffix = &notation::Lpms2WeirdlyFull::suffix,
-              .definition_resource_id = IDR_DEF_GMS_LPMS2_WEIRD,
-              .expand_text = &notation::Lpms2WeirdlyFull::expand_text,
-              .tags = { L"GMS", L"LPMS2", L"BM-like", L"矩阵", L"文本" } },
-
-            { .display_name = L"LPMS", .id = "lpms",
-              .expand = nullptr, .suffix = &notation::LPMSNotation::suffix,
-              .definition_resource_id = IDR_DEF_LPMS,
-              .expand_text = &notation::LPMSNotation::expand_text,
-              .tags = { L"LPMS", L"BM-like", L"矩阵", L"文本" } },
-            { .display_name = L"LPTSS", .id = "lptss",
-              .expand = nullptr, .suffix = &notation::LPTSSNotation::suffix,
-              .definition_resource_id = IDR_DEF_LPTSS,
-              .expand_text = &notation::LPTSSNotation::expand_text,
-              .tags = { L"LPTSS", L"LPMS", L"BM-like", L"矩阵", L"文本" } },
-
-            { .display_name = L"TBM 超限巴斯丘矩阵", .id = "tbm",
-              .expand = nullptr, .suffix = &notation::TBMNotation::suffix,
-              .definition_resource_id = IDR_DEF_TBM,
-              .expand_text = &notation::TBMNotation::expand_text,
-              .tags = { L"TBM", L"BM-like", L"树形矩阵", L"文本" } },
-            { .display_name = L"TUPMS 超限 UPMS", .id = "tupms",
-              .expand = nullptr, .suffix = &notation::TUPMSNotation::suffix,
-              .definition_resource_id = IDR_DEF_TUPMS,
-              .expand_text = &notation::TUPMSNotation::expand_text,
-              .tags = { L"TUPMS", L"BM-like", L"树形矩阵", L"文本" } },
-            { .display_name = L"BTBM Bubby3 超限巴斯丘矩阵", .id = "btbm",
-              .expand = nullptr, .suffix = &notation::BTBMNotation::suffix,
-              .definition_resource_id = IDR_DEF_BTBM,
-              .expand_text = &notation::BTBMNotation::expand_text,
-              .tags = { L"BTBM", L"BM-like", L"分层树形矩阵", L"文本" } },
-            { .display_name = L"BTBM-weak 弱版 Bubby3 超限巴斯丘矩阵", .id = "btbm-weak",
-              .expand = nullptr, .suffix = &notation::BTBMWeakNotation::suffix,
-              .definition_resource_id = IDR_DEF_BTBM_WEAK,
-              .expand_text = &notation::BTBMWeakNotation::expand_text,
-              .tags = { L"BTBM-weak", L"BM-like", L"分层树形矩阵", L"文本" } },
-            { .display_name = L"BBM 分支巴斯丘矩阵", .id = "bbm",
-              .expand = nullptr, .suffix = &notation::BBMNotation::suffix,
-              .definition_resource_id = IDR_DEF_BBM,
-              .expand_text = &notation::BBMNotation::expand_text,
-              .tags = { L"BBM", L"BM-like", L"分层树形矩阵", L"文本" } },
-            { .display_name = L"(-1)Y-(n+1)SS 负一 Y 序列系统", .id = "-1y-(n+1)ss",
-              .expand = nullptr, .suffix = &notation::M1YnssNotation::suffix,
-              .definition_resource_id = IDR_DEF_M1YNSS,
-              .expand_text_n = &notation::M1YnssNotation::expand_text_n,
-              .param_min = 0, .param_max = 25, .param_default = 0,
-              .param_label = L"n (0-25):",
-              .tags = { L"Minus1", L"BM-like", L"参数化", L"文本" } },
-            { .display_name = L"T(n+1)SS 超限负一 Y 序列系统", .id = "t--1y-(n+1)ss",
-              .expand = nullptr, .suffix = &notation::TM1YnssNotation::suffix,
-              .definition_resource_id = IDR_DEF_TM1YNSS,
-              .expand_text_n = &notation::TM1YnssNotation::expand_text_n,
-              .param_min = 0, .param_max = 25, .param_default = 0,
-              .param_label = L"n (0-25):",
-              .tags = { L"Minus1", L"BM-like", L"参数化", L"递归嵌套", L"文本" } },
-            { .display_name = L"BT*(n+1)SS v1 超限星负一 Y 序列系统", .id = "bt1ynss",
-              .expand = nullptr, .suffix = &notation::BT1Notation::suffix,
-              .definition_resource_id = IDR_DEF_BT1YNSS,
-              .expand_text_n = &notation::BT1Notation::expand_text_n,
-              .param_min = 1, .param_max = 25, .param_default = 1,
-              .param_label = L"n (1-25):",
-              .tags = { L"Minus1", L"BM-like", L"参数化", L"递归嵌套", L"文本" } },
-            { .display_name = L"strong BT*(n+1)SS v2 超限星负一 Y 序列系统", .id = "bt2ynss",
-              .expand = nullptr, .suffix = &notation::BT2Notation::suffix,
-              .definition_resource_id = IDR_DEF_BT2YNSS,
-              .expand_text_n = &notation::BT2Notation::expand_text_n,
-              .param_min = 1, .param_max = 25, .param_default = 1,
-              .param_label = L"n (1-25):",
-              .tags = { L"Minus1", L"BM-like", L"参数化", L"递归嵌套", L"文本" } },
-            { .display_name = L"weak BT*(n+1)SS v3 超限星负一 Y 序列系统", .id = "bt3ynss",
-              .expand = nullptr, .suffix = &notation::BT3Notation::suffix,
-              .definition_resource_id = IDR_DEF_BT3YNSS,
-              .expand_text_n = &notation::BT3Notation::expand_text_n,
-              .expand_text_n_alter = &notation::BT3Notation::expand_text_n_alter,
-              .param_min = 1, .param_max = 25, .param_default = 1,
-              .param_label = L"n (1-25):",
-              .tags = { L"Minus1", L"BM-like", L"参数化", L"递归嵌套", L"文本" } },
-            { .display_name = L"BTL(n+1)SS 带标记超限星负一 Y 序列系统", .id = "btlynss",
-              .expand = nullptr, .suffix = &notation::BTlNotation::suffix,
-              .definition_resource_id = IDR_DEF_BTLYNSS,
-              .expand_text_n = &notation::BTlNotation::expand_text_n,
-              .param_min = 1, .param_max = 25, .param_default = 1,
-              .param_label = L"n (1-25):",
-              .tags = { L"Minus1", L"BM-like", L"参数化", L"递归嵌套", L"文本" } },
-            { .display_name = L"AbsB(n+1)SS 绝对分支负一 Y 序列系统", .id = "abs-bm1ynss",
-              .expand = nullptr, .suffix = &notation::AbsBM1Notation::suffix,
-              .definition_resource_id = IDR_DEF_ABS_BM1YNSS,
-              .expand_text_n = &notation::AbsBM1Notation::expand_text_n,
-              .param_min = 0, .param_max = 25, .param_default = 0,
-              .param_label = L"n (0-25):",
-              .tags = { L"Minus1", L"BM-like", L"参数化", L"递归嵌套", L"文本" } },
-            { .display_name = L"RelB(n+1)SS 相对分支负一 Y 序列系统", .id = "rel-bm1ynss",
-              .expand = nullptr, .suffix = &notation::RelBM1Notation::suffix,
-              .definition_resource_id = IDR_DEF_REL_BM1YNSS,
-              .expand_text_n = &notation::RelBM1Notation::expand_text_n,
-              .param_min = 0, .param_max = 25, .param_default = 0,
-              .param_label = L"n (0-25):",
-              .tags = { L"Minus1", L"BM-like", L"参数化", L"递归嵌套", L"文本" } },
-
-            { .display_name = L"G-Y", .id = "g-y",
-              .expand = &notation::GYNotation::expand,
-              .suffix = &notation::GYNotation::suffix,
-              .definition_resource_id = IDR_DEF_GY,
-              .tags = { L"Y序列", L"G-Y", L"数列" } },
-
-            { .display_name = L"X-Y V1", .id = "xy-v1",
-              .expand = &notation::XYV1Notation::expand,
-              .suffix = &notation::XYV1Notation::suffix,
-              .definition_resource_id = IDR_DEF_XY_V1,
-              .tags = { L"Y序列", L"X-Y", L"数列" } },
-
-            { .display_name = L"X-Y V2", .id = "xy-v2",
-              .expand = &notation::XYV2Notation::expand,
-              .suffix = &notation::XYV2Notation::suffix,
-              .definition_resource_id = IDR_DEF_XY_V2,
-              .tags = { L"Y序列", L"X-Y", L"数列" } },
-
-            { .display_name = L"X-Y V3", .id = "xy-v3",
-              .expand = &notation::XYV3Notation::expand,
-              .suffix = &notation::XYV3Notation::suffix,
-              .definition_resource_id = IDR_DEF_XY_V3,
-              .tags = { L"Y序列", L"X-Y", L"数列" } },
-
-            { .display_name = L"DEN1", .id = "den1",
-              .expand = nullptr, .suffix = &notation::Den1Notation::suffix,
-              .definition_resource_id = IDR_DEF_DEN1,
-              .expand_text = &notation::Den1Notation::expand_text,
-              .expand_text_alter = &notation::Den1Notation::expand_text_alter,
-              .tags = { L"DEN", L"文本", L"旧版" } },
-
-            { .display_name = L"blp", .id = "blp",
-              .expand = nullptr, .suffix = &notation::BlpNotation::suffix,
-              .definition_resource_id = IDR_DEF_BLP,
-              .expand_text = &notation::BlpNotation::expand_text,
-              .expand_text_alter = &notation::BlpNotation::expand_text_alter,
-              .tags = { L"blp", L"文本" } },
-
-            { .display_name = L"iblp", .id = "iblp",
-              .expand = nullptr, .suffix = &notation::IblpNotation::suffix,
-              .definition_resource_id = IDR_DEF_IBLP,
-              .expand_text = &notation::IblpNotation::expand_text,
-              .expand_text_alter = &notation::IblpNotation::expand_text_alter,
-              .tags = { L"iblp", L"文本", L"逆" } },
-
-            { .display_name = L"TON", .id = "ton-m",
-              .expand = nullptr, .suffix = &notation::TonNotation::suffix,
-              .definition_resource_id = IDR_DEF_TON_M,
-              .expand_text = &notation::TonNotation::expand_text,
-              .expand_text_alter = &notation::TonNotation::expand_text_alter,
-              .tags = { L"TON", L"序数记号", L"文本" } },
-
-            { .display_name = L"TON_I", .id = "ton-i",
-              .expand = nullptr, .suffix = &notation::TonINotation::suffix,
-              .definition_resource_id = IDR_DEF_TON_I,
-              .expand_text = &notation::TonINotation::expand_text,
-              .expand_text_alter = &notation::TonINotation::expand_text_alter,
-              .tags = { L"TON", L"n-built", L"文本" } },
-
-            { .display_name = L"TON_DoR", .id = "ton-dr",
-              .expand = nullptr, .suffix = &notation::TonDoRNotation::suffix,
-              .definition_resource_id = IDR_DEF_TON_DR,
-              .expand_text = &notation::TonDoRNotation::expand_text,
-              .expand_text_alter = &notation::TonDoRNotation::expand_text_alter,
-              .tags = { L"TON", L"反射度", L"文本" } },
-
-            { .display_name = L"TON_DRC", .id = "ton-drc",
-              .expand = nullptr, .suffix = &notation::TonDRCNotation::suffix,
-              .definition_resource_id = IDR_DEF_TON_DRC,
-              .expand_text = &notation::TonDRCNotation::expand_text,
-              .expand_text_alter = &notation::TonDRCNotation::expand_text_alter,
-              .tags = { L"TON", L"反射配置", L"文本" } },
-
-            { .display_name = L"TON_DRP", .id = "ton-drp",
-              .expand = nullptr, .suffix = &notation::TonDRPNotation::suffix,
-              .definition_resource_id = IDR_DEF_TON_DRP,
-              .expand_text = &notation::TonDRPNotation::expand_text,
-              .expand_text_alter = &notation::TonDRPNotation::expand_text_alter,
-              .tags = { L"TON", L"passthrough", L"文本" } },
-
-            { .display_name = L"TON_DRPC", .id = "ton-drpc",
-              .expand = nullptr, .suffix = &notation::TonDRPCNotation::suffix,
-              .definition_resource_id = IDR_DEF_TON_DRPC,
-              .expand_text = &notation::TonDRPCNotation::expand_text,
-              .expand_text_alter = &notation::TonDRPCNotation::expand_text_alter,
-              .tags = { L"TON", L"反射配置", L"passthrough", L"文本" } },
-
-            { .display_name = L"TON_IBP", .id = "ton-ibp",
-              .expand = nullptr, .suffix = &notation::TonIbpNotation::suffix,
-              .definition_resource_id = IDR_DEF_TON_IBP,
-              .expand_text = &notation::TonIbpNotation::expand_text,
-              .expand_text_alter = &notation::TonIbpNotation::expand_text_alter,
-              .tags = { L"TON", L"n-built", L"文本" } },
-
-            { .display_name = L"TON_MC", .id = "ton-mc",
-              .expand = nullptr, .suffix = &notation::TonMcNotation::suffix,
-              .definition_resource_id = IDR_DEF_TON_MC,
-              .expand_text = &notation::TonMcNotation::expand_text,
-              .expand_text_alter = &notation::TonMcNotation::expand_text_alter,
-              .tags = { L"TON", L"反射配置", L"文本" } },
-
-            { .display_name = L"TON_MPC", .id = "ton-mpc",
-              .expand = nullptr, .suffix = &notation::TonMpcNotation::suffix,
-              .definition_resource_id = IDR_DEF_TON_MPC,
-              .expand_text = &notation::TonMpcNotation::expand_text,
-              .expand_text_alter = &notation::TonMpcNotation::expand_text_alter,
-              .tags = { L"TON", L"反射配置", L"passthrough", L"文本" } },
-
-            // ---- MN 系列（e0MN / TωMN / SDBMS / SMN / UPMN / Aw2MN）----
-            { .display_name = L"e0MN", .id = "e0mn",
-              .expand = nullptr, .suffix = &notation::E0MNNotation::suffix,
-              .definition_resource_id = IDR_DEF_E0MN,
-              .expand_text = &notation::E0MNNotation::expand_text,
-              .expand_text_alter = &notation::E0MNNotation::expand_text_alter,
-              .tags = { L"MN", L"文本" } },
-
-            { .display_name = L"strong e0MN", .id = "strong-e0mn",
-              .expand = nullptr, .suffix = &notation::StrongE0MNNotation::suffix,
-              .definition_resource_id = IDR_DEF_STRONG_E0MN,
-              .expand_text = &notation::StrongE0MNNotation::expand_text,
-              .expand_text_alter = &notation::StrongE0MNNotation::expand_text_alter,
-              .tags = { L"MN", L"文本" } },
-
-            { .display_name = L"ωMN", .id = "omega-mn",
-              .expand = nullptr, .suffix = &notation::OmegaMNNotation::suffix,
-              .definition_resource_id = IDR_DEF_OMEGA_MN,
-              .expand_text = &notation::OmegaMNNotation::expand_text,
-              .expand_text_alter = &notation::OmegaMNNotation::expand_text_alter,
-              .tags = { L"MN", L"文本" } },
-
-            { .display_name = L"PCF's ωMN", .id = "pcf-omega-mn",
-              .expand = nullptr, .suffix = &notation::PcfOmegaMNNotation::suffix,
-              .definition_resource_id = IDR_DEF_PCF_OMEGA_MN,
-              .expand_text = &notation::PcfOmegaMNNotation::expand_text,
-              .expand_text_alter = &notation::PcfOmegaMNNotation::expand_text_alter,
-              .tags = { L"MN", L"文本" } },
-
-            { .display_name = L"TωMN", .id = "t-omega-mn",
-              .expand = nullptr, .suffix = &notation::TOmegaMNNotation::suffix,
-              .definition_resource_id = IDR_DEF_T_OMEGA_MN,
-              .expand_text = &notation::TOmegaMNNotation::expand_text,
-              .expand_text_alter = &notation::TOmegaMNNotation::expand_text_alter,
-              .tags = { L"MN", L"文本" } },
-
-            { .display_name = L"1MN", .id = "1-mn",
-              .expand = nullptr, .suffix = &notation::NMnNotation<1>::suffix,
-              .definition_resource_id = IDR_DEF_1MN,
-              .expand_text = &notation::NMnNotation<1>::expand_text,
-              .expand_text_alter = &notation::NMnNotation<1>::expand_text_alter,
-              .tags = { L"MN", L"文本" } },
-
-            { .display_name = L"2MN", .id = "2-mn",
-              .expand = nullptr, .suffix = &notation::NMnNotation<2>::suffix,
-              .definition_resource_id = IDR_DEF_2MN,
-              .expand_text = &notation::NMnNotation<2>::expand_text,
-              .expand_text_alter = &notation::NMnNotation<2>::expand_text_alter,
-              .tags = { L"MN", L"文本" } },
-
-            { .display_name = L"3MN", .id = "3-mn",
-              .expand = nullptr, .suffix = &notation::NMnNotation<3>::suffix,
-              .definition_resource_id = IDR_DEF_3MN,
-              .expand_text = &notation::NMnNotation<3>::expand_text,
-              .expand_text_alter = &notation::NMnNotation<3>::expand_text_alter,
-              .tags = { L"MN", L"文本" } },
-
-            { .display_name = L"Sω2MN", .id = "s-omega2-mn",
-              .expand = nullptr, .suffix = &notation::SOmega2MNNotation::suffix,
-              .definition_resource_id = IDR_DEF_S_OMEGA2_MN,
-              .expand_text = &notation::SOmega2MNNotation::expand_text,
-              .expand_text_alter = &notation::SOmega2MNNotation::expand_text_alter,
-              .tags = { L"MN", L"文本" } },
-
-            { .display_name = L"SAω2MN", .id = "sa-omega2-mn",
-              .expand = nullptr, .suffix = &notation::SAOmega2MNNotation::suffix,
-              .definition_resource_id = IDR_DEF_SA_OMEGA2_MN,
-              .expand_text = &notation::SAOmega2MNNotation::expand_text,
-              .expand_text_alter = &notation::SAOmega2MNNotation::expand_text_alter,
-              .tags = { L"MN", L"文本" } },
-
-            { .display_name = L"Sω^ωMN", .id = "s-omega-pow-omega-mn",
-              .expand = nullptr, .suffix = &notation::SOmegaPowOmegaMNNotation::suffix,
-              .definition_resource_id = IDR_DEF_S_OMEGA_POW_OMEGA_MN,
-              .expand_text = &notation::SOmegaPowOmegaMNNotation::expand_text,
-              .expand_text_alter = &notation::SOmegaPowOmegaMNNotation::expand_text_alter,
-              .tags = { L"MN", L"文本" } },
-
-            { .display_name = L"UP1MN", .id = "up1mn",
-              .expand = nullptr, .suffix = &notation::UP1MNNotation::suffix,
-              .definition_resource_id = IDR_DEF_UP1MN,
-              .expand_text = &notation::UP1MNNotation::expand_text,
-              .expand_text_alter = &notation::UP1MNNotation::expand_text_alter,
-              .tags = { L"MN", L"UPMN", L"文本" } },
-
-            { .display_name = L"UP2MN v1A", .id = "up2mn-v1a",
-              .expand = nullptr, .suffix = &notation::UP2MNV1ANotation::suffix,
-              .definition_resource_id = IDR_DEF_UP2MN_V1A,
-              .expand_text = &notation::UP2MNV1ANotation::expand_text,
-              .expand_text_alter = &notation::UP2MNV1ANotation::expand_text_alter,
-              .tags = { L"MN", L"UPMN", L"文本" } },
-
-            { .display_name = L"UP2MN v1B", .id = "up2mn-v1b",
-              .expand = nullptr, .suffix = &notation::UP2MNV1BNotation::suffix,
-              .definition_resource_id = IDR_DEF_UP2MN_V1B,
-              .expand_text = &notation::UP2MNV1BNotation::expand_text,
-              .expand_text_alter = &notation::UP2MNV1BNotation::expand_text_alter,
-              .tags = { L"MN", L"UPMN", L"文本" } },
-
-            { .display_name = L"UP2MN v1B+", .id = "up2mn-v1b-plus",
-              .expand = nullptr, .suffix = &notation::UP2MNV1BPlusNotation::suffix,
-              .definition_resource_id = IDR_DEF_UP2MN_V1B_PLUS,
-              .expand_text = &notation::UP2MNV1BPlusNotation::expand_text,
-              .expand_text_alter = &notation::UP2MNV1BPlusNotation::expand_text_alter,
-              .tags = { L"MN", L"UPMN", L"文本" } },
-
-            { .display_name = L"UP1DBMS", .id = "up1dbms",
-              .expand = nullptr, .suffix = &notation::UP1DBMSNotation::suffix,
-              .definition_resource_id = IDR_DEF_UP1DBMS,
-              .expand_text = &notation::UP1DBMSNotation::expand_text,
-              .expand_text_alter = &notation::UP1DBMSNotation::expand_text_alter,
-              .tags = { L"MN", L"UPMN", L"DBMS", L"文本" } },
-
-            { .display_name = L"UP2DBMS v1", .id = "up2dbms-v1",
-              .expand = nullptr, .suffix = &notation::UP2DBMSV1Notation::suffix,
-              .definition_resource_id = IDR_DEF_UP2DBMS_V1,
-              .expand_text = &notation::UP2DBMSV1Notation::expand_text,
-              .expand_text_alter = &notation::UP2DBMSV1Notation::expand_text_alter,
-              .tags = { L"MN", L"UPMN", L"DBMS", L"文本" } },
-
-            { .display_name = L"UP2DBMS v1B+", .id = "up2dbms-v1b-plus",
-              .expand = nullptr, .suffix = &notation::UP2DBMSV1BPlusNotation::suffix,
-              .definition_resource_id = IDR_DEF_UP2DBMS_V1B_PLUS,
-              .expand_text = &notation::UP2DBMSV1BPlusNotation::expand_text,
-              .expand_text_alter = &notation::UP2DBMSV1BPlusNotation::expand_text_alter,
-              .tags = { L"MN", L"UPMN", L"DBMS", L"文本" } },
-
-            { .display_name = L"UP2DBMS v1C", .id = "up2dbms-v1c",
-              .expand = nullptr, .suffix = &notation::UP2DBMSV1CNotation::suffix,
-              .definition_resource_id = IDR_DEF_UP2DBMS_V1C,
-              .expand_text = &notation::UP2DBMSV1CNotation::expand_text,
-              .expand_text_alter = &notation::UP2DBMSV1CNotation::expand_text_alter,
-              .tags = { L"MN", L"UPMN", L"DBMS", L"文本" } },
-
-            { .display_name = L"UP2DBMS v2", .id = "up2dbms-v2",
-              .expand = nullptr, .suffix = &notation::Up2DbmsV2Notation::suffix,
-              .definition_resource_id = IDR_DEF_UP2DBMS_V2,
-              .expand_text = &notation::Up2DbmsV2Notation::expand_text,
-              .expand_text_alter = &notation::Up2DbmsV2Notation::expand_text_alter,
-              .tags = { L"MN", L"UPMN", L"DBMS", L"文本" } },
-
-            { .display_name = L"S1DBMS", .id = "s1dbms",
-              .expand = nullptr, .suffix = &notation::S1DBMSNotation::suffix,
-              .definition_resource_id = IDR_DEF_S1DBMS,
-              .expand_text = &notation::S1DBMSNotation::expand_text,
-              .expand_text_alter = &notation::S1DBMSNotation::expand_text_alter,
-              .tags = { L"MN", L"SDBMS", L"文本" } },
-
-            { .display_name = L"S2DBMS", .id = "s2dbms",
-              .expand = nullptr, .suffix = &notation::S2DBMSNotation::suffix,
-              .definition_resource_id = IDR_DEF_S2DBMS,
-              .expand_text = &notation::S2DBMSNotation::expand_text,
-              .expand_text_alter = &notation::S2DBMSNotation::expand_text_alter,
-              .tags = { L"MN", L"SDBMS", L"文本" } },
-
-            { .display_name = L"SωDBMS v1", .id = "s-omega-dbms",
-              .expand = nullptr, .suffix = &notation::SOmegaDBMSV1Notation::suffix,
-              .definition_resource_id = IDR_DEF_S_OMEGA_DBMS,
-              .expand_text = &notation::SOmegaDBMSV1Notation::expand_text,
-              .expand_text_alter = &notation::SOmegaDBMSV1Notation::expand_text_alter,
-              .tags = { L"MN", L"SDBMS", L"文本" } },
-
-            { .display_name = L"SωDBMS v2", .id = "s-omega-dbms-v2",
-              .expand = nullptr, .suffix = &notation::SOmegaDBMSV2Notation::suffix,
-              .definition_resource_id = IDR_DEF_S_OMEGA_DBMS_V2,
-              .expand_text = &notation::SOmegaDBMSV2Notation::expand_text,
-              .expand_text_alter = &notation::SOmegaDBMSV2Notation::expand_text_alter,
-              .tags = { L"MN", L"SDBMS", L"文本" } },
-
-            { .display_name = L"SωDBMS v3", .id = "s-omega-dbms-v3",
-              .expand = nullptr, .suffix = &notation::SOmegaDBMSV3Notation::suffix,
-              .definition_resource_id = IDR_DEF_S_OMEGA_DBMS_V3,
-              .expand_text = &notation::SOmegaDBMSV3Notation::expand_text,
-              .expand_text_alter = &notation::SOmegaDBMSV3Notation::expand_text_alter,
-              .tags = { L"MN", L"SDBMS", L"文本" } },
-
-            { .display_name = L"Sω+1DBMS", .id = "s-omega-p1-dbms",
-              .expand = nullptr, .suffix = &notation::SOmegaP1DBMSNotation::suffix,
-              .definition_resource_id = IDR_DEF_S_OMEGA_P1_DBMS,
-              .expand_text = &notation::SOmegaP1DBMSNotation::expand_text,
-              .expand_text_alter = &notation::SOmegaP1DBMSNotation::expand_text_alter,
-              .tags = { L"MN", L"SDBMS", L"文本" } },
-
-            { .display_name = L"Sω2DBMS", .id = "s-omega2-dbms",
-              .expand = nullptr, .suffix = &notation::SOmega2DBMSNotation::suffix,
-              .definition_resource_id = IDR_DEF_S_OMEGA2_DBMS,
-              .expand_text = &notation::SOmega2DBMSNotation::expand_text,
-              .expand_text_alter = &notation::SOmega2DBMSNotation::expand_text_alter,
-              .tags = { L"MN", L"SDBMS", L"文本" } },
-
-            { .display_name = L"Sω^2DBMS", .id = "s-omega-square-dbms",
-              .expand = nullptr, .suffix = &notation::SOmegaSquareDBMSNotation::suffix,
-              .definition_resource_id = IDR_DEF_S_OMEGA_SQUARE_DBMS,
-              .expand_text = &notation::SOmegaSquareDBMSNotation::expand_text,
-              .expand_text_alter = &notation::SOmegaSquareDBMSNotation::expand_text_alter,
-              .tags = { L"MN", L"SDBMS", L"文本" } },
-
-            { .display_name = L"Aω2MN2", .id = "a-omega2-mn-2",
-              .expand = nullptr, .suffix = &notation::Aw2MN2Notation::suffix,
-              .definition_resource_id = IDR_DEF_A_OMEGA2_MN_2,
-              .expand_text = &notation::Aw2MN2Notation::expand_text,
-              .expand_text_alter = &notation::Aw2MN2Notation::expand_text_alter,
-              .tags = { L"MN", L"文本" } },
-
-            { .display_name = L"wAω2MN2", .id = "weak-a-omega2-mn-2",
-              .expand = nullptr, .suffix = &notation::WAw2MN2Notation::suffix,
-              .definition_resource_id = IDR_DEF_WEAK_A_OMEGA2_MN_2,
-              .expand_text = &notation::WAw2MN2Notation::expand_text,
-              .expand_text_alter = &notation::WAw2MN2Notation::expand_text_alter,
-              .tags = { L"MN", L"文本" } },
-
-            { .display_name = L"Aω2MN3", .id = "a-omega2-mn-3",
-              .expand = nullptr, .suffix = &notation::Aw2MN3Notation::suffix,
-              .definition_resource_id = IDR_DEF_A_OMEGA2_MN_3,
-              .expand_text = &notation::Aw2MN3Notation::expand_text,
-              .expand_text_alter = &notation::Aw2MN3Notation::expand_text_alter,
-              .tags = { L"MN", L"文本" } },
-
-            { .display_name = L"wAω2MN3", .id = "weak-a-omega2-mn-3",
-              .expand = nullptr, .suffix = &notation::WAw2MN3Notation::suffix,
-              .definition_resource_id = IDR_DEF_WEAK_A_OMEGA2_MN_3,
-              .expand_text = &notation::WAw2MN3Notation::expand_text,
-              .expand_text_alter = &notation::WAw2MN3Notation::expand_text_alter,
-              .tags = { L"MN", L"文本" } },
-        };
-
-    static const std::vector<NotationEntry> notation_table(
-        kNotationTable, kNotationTable + sizeof(kNotationTable) / sizeof(kNotationTable[0]));
-
+    // 记号表由 OOP 注册中心派生（2026-11 深度重构）：
+    //   单一事实来源 = Header/notation/registry.hpp 的 register_all_notations()；
+    //   本表保留 NotationEntry 结构（对外接口不变），字段由注册中心派生，
+    //   宽字符元数据在此一次性转换并静态驻留。展开调用统一走 entry.notation
+    //   ->expand()（含 FS 截断与后缀语义），函数指针字段仅供 UI 能力判断。
     [[nodiscard]] const std::vector<NotationEntry>& notationTable() {
+        static const std::vector<NotationEntry> notation_table = [] {
+            struct WideStore {
+                // deque（而非 vector）：元素插入不会使已 push 的 wstring 的 c_str() 指针失效。
+                // 用 vector 混存 display_name / tags 时，后续 push_back 触发重分配会让此前
+                // 保存的指针悬垂 → 列表显示乱码/不可见。display_name 与 tags 必须存同一容器，
+                // 且该容器须在插入时保持已有元素指针有效，故用 deque。
+                std::deque<std::wstring> names;
+                std::deque<std::wstring> labels;
+                std::vector<std::array<const wchar_t*, 16>> tags;
+            };
+            static WideStore store;
+
+            const auto& notations = omegay::notation::registered_notations();
+            std::vector<NotationEntry> t;
+            t.reserve(notations.size());
+            for (const auto& p : notations) {
+                const auto& meta = p->meta();
+                const auto& caps = p->caps();
+                NotationEntry e{};
+                store.names.push_back(utf8_to_wstring(meta.display_name));
+                e.display_name = store.names.back().c_str();
+                e.id = meta.id.data();
+                e.expand = caps.expand_seq;
+                e.suffix = caps.suffix;
+                e.definition_resource_id = meta.definition_resource_id;
+                e.expand_text = caps.text;
+                e.expand_text_alter = caps.text_alter;
+                e.expand_text_n = caps.text_n;
+                e.expand_text_n_alter = caps.text_n_alter;
+                e.param_min = meta.param_min;
+                e.param_max = meta.param_max;
+                e.param_default = meta.param_default;
+                store.labels.push_back(utf8_to_wstring(meta.param_label));
+                e.param_label = store.labels.back().c_str();
+                std::array<const wchar_t*, 16> tagArr{};
+                int slot = 0;
+                for (const auto& tag : meta.tags) {
+                    if (tag.empty() || slot >= 16) break;
+                    store.names.push_back(utf8_to_wstring(tag));
+                    tagArr[slot++] = store.names.back().c_str();
+                }
+                store.tags.push_back(std::move(tagArr));
+                e.tags = store.tags.back();
+                e.notation = p.get();
+                t.push_back(std::move(e));
+            }
+            return t;
+        }();
         return notation_table;
     }
 
@@ -1992,18 +1124,62 @@ namespace {
         ::UpdateWindow(hwnd);
     }
 
-    // ================= 顶栏图标条（Expander.ico + MFC.ico） =================
+    // ================= 顶栏图标条（Expander.ico + MFC.ico + namePic.jpg） =================
     // “关于 / 互译器 / 主界面”共用：顶部并排显示软件图标 Expander.ico 与 MFC.ico，
-    // 统一按 48×48 显示。图标句柄归本结构所有，父窗口销毁时须调用 destroyIconStrip 释放。
+    // 以及右侧的 Assets/namePic.jpg 名字图（等比缩放到与图标同高）。
+    // 统一按 48×48 显示。图标/位图句柄归本结构所有，父窗口销毁时须调用 destroyIconStrip 释放。
     constexpr int IDC_ICON_EXPANDER = 7301;
     constexpr int IDC_ICON_MFC      = 7302;
+    constexpr int IDC_ICON_NAMEPIC  = 7303;   // Assets/namePic.jpg 名字图
 
     struct IconStrip {
-        HWND  hIcon1{};    // Expander.ico
-        HWND  hIcon2{};    // MFC.ico
+        HWND  hIcon1{};      // Expander.ico
+        HWND  hIcon2{};      // MFC.ico
+        HWND  hNamePic{};    // Assets/namePic.jpg（名字图）
         HICON hIcoExpander{};
         HICON hIcoMfc{};
+        HBITMAP hBmpNamePic{};  // namePic.jpg 等比缩放后的位图（归本结构所有）
     };
+
+    // 定位资源文件：优先 exe 所在目录，其次当前工作目录（与 defs/law.txt 同款策略）。
+    [[nodiscard]] std::wstring findAssetFile(const wchar_t* fileName) {
+        wchar_t exePath[MAX_PATH]{};
+        ::GetModuleFileNameW(nullptr, exePath, MAX_PATH);
+        std::wstring exeDir;
+        if (exePath[0] != L'\0') {
+            exeDir = exePath;
+            const size_t slash = exeDir.find_last_of(L"\\/");
+            if (slash != std::wstring::npos) exeDir.resize(slash + 1);
+        }
+        const std::wstring candidates[] = { exeDir + fileName, fileName };
+        for (const std::wstring& p : candidates) {
+            if (::GetFileAttributesW(p.c_str()) != INVALID_FILE_ATTRIBUTES)
+                return p;
+        }
+        return std::wstring();
+    }
+
+    // 用 GDI+ 从文件加载 JPG，并按目标高度等比缩放为 DIB 位图；失败返回 nullptr。
+    [[nodiscard]] HBITMAP loadJpegScaled(const std::wstring& path,
+                                         int dstH, int& outW) {
+        Gdiplus::Bitmap src(path.c_str());
+        if (src.GetLastStatus() != Gdiplus::Ok) return nullptr;
+        const int sw = src.GetWidth();
+        const int sh = src.GetHeight();
+        if (sw <= 0 || sh <= 0) return nullptr;
+        const int dstW = std::max(1, (dstH * sw) / sh);
+        Gdiplus::Bitmap dst(dstW, dstH, PixelFormat32bppARGB);
+        Gdiplus::Graphics g(&dst);
+        g.SetInterpolationMode(Gdiplus::InterpolationModeHighQualityBicubic);
+        g.Clear(Gdiplus::Color(255, 255, 255, 255));
+        g.DrawImage(&src, Gdiplus::Rect(0, 0, dstW, dstH),
+                    0, 0, sw, sh, Gdiplus::UnitPixel);
+        HBITMAP hbmp = nullptr;
+        if (dst.GetHBITMAP(Gdiplus::Color(255, 255, 255), &hbmp) != Gdiplus::Ok)
+            return nullptr;
+        outW = dstW;
+        return hbmp;
+    }
 
     [[nodiscard]] IconStrip* createIconStrip(HWND hParent, HINSTANCE hInst,
                                              int x, int y, int size = 48) {
@@ -2034,6 +1210,29 @@ namespace {
             ::SendMessageW(s->hIcon2, STM_SETICON,
                 reinterpret_cast<WPARAM>(s->hIcoMfc), 0);
         }
+
+        // 第三个：Assets/namePic.jpg 名字图，等比缩放到与图标同高，位于 MFC.ico 右侧。
+        // 文件缺失或解码失败时静默跳过，不影响原有两个图标。
+        const std::wstring assetPath = findAssetFile(L"Assets\\namePic.jpg");
+        if (!assetPath.empty()) {
+            int nameW = 0;
+            s->hBmpNamePic = loadJpegScaled(assetPath, size, nameW);
+            if (s->hBmpNamePic && nameW > 0) {
+                s->hNamePic = ::CreateWindowExW(0, L"STATIC", L"",
+                    WS_CHILD | WS_VISIBLE | SS_BITMAP,
+                    x + 2 * (size + 12), y, nameW, size, hParent,
+                    reinterpret_cast<HMENU>(static_cast<UINT_PTR>(IDC_ICON_NAMEPIC)),
+                    hInst, nullptr);
+                if (!s->hNamePic) {
+                    ::DeleteObject(s->hBmpNamePic);
+                    s->hBmpNamePic = nullptr;
+                }
+                else {
+                    ::SendMessageW(s->hNamePic, STM_SETIMAGE,
+                        IMAGE_BITMAP, reinterpret_cast<LPARAM>(s->hBmpNamePic));
+                }
+            }
+        }
         return s;
     }
 
@@ -2041,6 +1240,7 @@ namespace {
         if (!s) return;
         if (s->hIcoExpander) ::DestroyIcon(s->hIcoExpander);
         if (s->hIcoMfc)     ::DestroyIcon(s->hIcoMfc);
+        if (s->hBmpNamePic) ::DeleteObject(s->hBmpNamePic);
     }
 
     // ================= 互译器页面 =================
@@ -2132,7 +1332,7 @@ namespace {
 
             st->hDesc = ::CreateWindowExW(0, L"STATIC", L"",
                 WS_CHILD | WS_VISIBLE | SS_LEFT,
-                12, 98, 536, 40, hwnd, nullptr, hInst, nullptr);
+                12, 98, 556, 40, hwnd, nullptr, hInst, nullptr);
 
             ::CreateWindowExW(0, L"STATIC", L"输入 (源记号表达式):",
                 WS_CHILD | WS_VISIBLE | SS_LEFT,
@@ -2141,7 +1341,7 @@ namespace {
             st->hInput = ::CreateWindowExW(0, L"EDIT", L"",
                 WS_CHILD | WS_VISIBLE | WS_BORDER | WS_TABSTOP |
                 ES_LEFT | ES_AUTOHSCROLL,
-                12, 164, 536, 24, hwnd,
+                12, 164, 556, 24, hwnd,
                 reinterpret_cast<HMENU>(static_cast<UINT_PTR>(IDC_TRANSLATOR_INPUT)),
                 hInst, nullptr);
 
@@ -2153,7 +1353,7 @@ namespace {
 
             st->hStatus = ::CreateWindowExW(0, L"STATIC", L"",
                 WS_CHILD | WS_VISIBLE | SS_LEFT,
-                112, 204, 436, 22, hwnd, nullptr, hInst, nullptr);
+                112, 204, 456, 22, hwnd, nullptr, hInst, nullptr);
 
             ::CreateWindowExW(0, L"STATIC", L"输出 (目标记号表达式):",
                 WS_CHILD | WS_VISIBLE | SS_LEFT,
@@ -2162,7 +1362,7 @@ namespace {
             st->hOutput = ::CreateWindowExW(0, MSFTEDIT_CLASS, L"",
                 WS_CHILD | WS_VISIBLE | WS_BORDER | WS_VSCROLL | WS_HSCROLL |
                 ES_MULTILINE | ES_READONLY | ES_AUTOVSCROLL | ES_AUTOHSCROLL,
-                12, 260, 536, 248, hwnd,
+                12, 260, 556, 248, hwnd,
                 reinterpret_cast<HMENU>(static_cast<UINT_PTR>(IDC_TRANSLATOR_OUTPUT)),
                 hInst, nullptr);
 
@@ -2254,7 +1454,7 @@ namespace {
         HWND hwnd = ::CreateWindowExW(
             0, kTranslatorWindowClass, L"互译器",
             WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU,
-            CW_USEDEFAULT, CW_USEDEFAULT, 580, 580,
+            CW_USEDEFAULT, CW_USEDEFAULT, 600, 580,   // 600：为顶部 namePic 名字图让位
             hParent, nullptr, hInst, nullptr);
         if (!hwnd) return;
 
@@ -2483,7 +1683,7 @@ namespace {
 
             ui->hEditSeq = ::CreateWindowExW(0, L"EDIT", L"",
                 WS_CHILD | WS_VISIBLE | WS_BORDER | ES_LEFT,
-                10, mh + 30, 200, 20,
+                10, mh + 30, 420, 20,
                 hwnd, nullptr, hInst, nullptr);
 
             ::CreateWindowExW(0, L"STATIC", L"项数:",
@@ -2521,13 +1721,13 @@ namespace {
 
             ui->hNotationLabel = ::CreateWindowExW(0, L"STATIC", L"",
                 WS_CHILD | WS_VISIBLE | SS_LEFT,
-                170, mh + 87, 280, 20,
+                170, mh + 87, 400, 20,
                 hwnd, nullptr, hInst, nullptr);
             updateNotationLabel(ui);
 
             ui->hBtnFSalter = ::CreateWindowExW(0, L"BUTTON", L"展开",
                 WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
-                10, mh + 115, 200, 25,
+                10, mh + 115, 420, 25,
                 hwnd,
                 reinterpret_cast<HMENU>(static_cast<UINT_PTR>(IDM_FSALTER)),
                 hInst, nullptr);
@@ -2641,7 +1841,13 @@ namespace {
 
                 std::string text;
 
-                if (entry.expand_text) {
+                const omegay::notation::ExpandMode mode =
+                    (id == IDM_FSALTER) ? omegay::notation::ExpandMode::FsAlter
+                                        : omegay::notation::ExpandMode::Fs;
+
+                if (entry.notation->has_text()) {
+                    // 文本型记号：输入读取与校验保持 UI 原行为；
+                    // 展开统一走 OOP 接口（含 FS_alter 分支与 FS 通用截断）。
                     wchar_t bufSeq[512]{};
                     wchar_t bufTerm[64]{};
                     ::GetWindowTextW(ui->hEditSeq, bufSeq, 512);
@@ -2668,45 +1874,16 @@ namespace {
                         break;
                     }
 
-                    if (entry.expand_text_alter && id == IDM_FSALTER) {
-                        // 记号自带 FS_alter（较长）展开：直接使用，不做通用截断
-                        text = entry.expand_text_alter(utf8Seq, term);
+                    omegay::notation::ExpandResult r =
+                        entry.notation->expand(mode, utf8Seq, term, 0);
+                    if (!r.ok) {
+                        ::MessageBoxW(hwnd, utf8_to_wstring(r.err).c_str(), L"错误",
+                            MB_OK | MB_ICONERROR);
+                        break;
                     }
-                    else {
-                        text = entry.expand_text(utf8Seq, term);
-
-                        // [FS 语义分派]（仅 IDM_FS 且记号未自带 FS 语义时截断）
-                        //   BMS  → 删除最后一列（BMS 标准文本）
-                        //   UPMS → 删除最后一列（省略尾随零文本）
-                        //   MrSS → pop_back（向量语义）
-                        if (id == IDM_FS && !entry.expand_text_alter) {
-                            if (isBmsTextEntry(entry)) {
-                                long t = term;
-                                omegay::common::Matrix m =
-                                    omegay::common::parse_matrix(text, t);
-                                if (m.cols() > 1) {
-                                    m.resize_cols(m.cols() - 1);
-                                    text = omegay::common::matrix_to_string(m);
-                                }
-                            }
-                            else if (entry.expand_text == &upmsExpandText) {
-                                auto m = parseUpmsText(text);
-                                if (m.cols() > 1) {
-                                    m.resize_cols(m.cols() - 1);
-                                    text = formatUpmsText(m);
-                                }
-                            }
-                            else {
-                                auto parsed = notation::Mrss121Notation::parse(text);
-                                if (parsed && parsed->size() > 1) {
-                                    parsed->pop_back();
-                                    text = notation::Mrss121Notation::to_string(*parsed);
-                                }
-                            }
-                        }
-                    }
+                    text = std::move(r.text);
                 }
-                else if (entry.expand_text_n) {
+                else if (entry.notation->has_text_n()) {
                     // 参数化记号：读取序列、项数与额外整数参数 n。
                     wchar_t bufSeq[512]{};
                     wchar_t bufTerm[64]{};
@@ -2749,27 +1926,37 @@ namespace {
                         break;
                     }
 
-                    // 参数化族的展开已包含完整 LNZ 语义，直接调用，不做通用截断。
-                    // FS_alter 按钮：若记号自带参数化 FS_alter（如 BT v3 的
-                    // FS_short），使用该入口，否则与 FS 相同。
-                    text = (id == IDM_FSALTER && entry.expand_text_n_alter)
-                        ? entry.expand_text_n_alter(utf8Seq, term, param)
-                        : entry.expand_text_n(utf8Seq, term, param);
+                    // 参数化族的展开已包含完整 LNZ 语义，统一入口内部完成
+                    // FS_alter 分支选择与 suffix 拼接，不做通用截断。
+                    omegay::notation::ExpandResult r =
+                        entry.notation->expand(mode, utf8Seq, term, param);
+                    if (!r.ok) {
+                        ::MessageBoxW(hwnd, utf8_to_wstring(r.err).c_str(), L"错误",
+                            MB_OK | MB_ICONERROR);
+                        break;
+                    }
+                    text = std::move(r.text);
                 }
                 else {
+                    // 序列型记号
                     std::vector<int> seq;
                     int term = 0;
                     if (!readSeqAndTerm(hwnd, ui, seq, term)) break;
 
-                    std::vector<int> result = entry.expand(seq, term);
-
-                    if (id == IDM_FS && result.size() > 1)
-                        result.pop_back();
-
-                    text = seq_to_string(result);
+                    // 原始文本交给统一入口（内部解析、展开、FS pop_back、suffix）
+                    wchar_t bufSeq[256]{};
+                    ::GetWindowTextW(ui->hEditSeq, bufSeq, 256);
+                    omegay::notation::ExpandResult r = entry.notation->expand(
+                        mode, wstring_to_utf8(bufSeq), term, 0);
+                    if (!r.ok) {
+                        ::MessageBoxW(hwnd, utf8_to_wstring(r.err).c_str(), L"错误",
+                            MB_OK | MB_ICONERROR);
+                        break;
+                    }
+                    text = std::move(r.text);
                 }
 
-                text += entry.suffix();
+                // 展开文本已含 suffix（统一入口内部拼接）
                 std::wstring wtext = utf8_to_wstring(text);
                 HINSTANCE hInst = reinterpret_cast<HINSTANCE>(
                     ::GetWindowLongPtrW(hwnd, GWLP_HINSTANCE));
@@ -2805,6 +1992,12 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance,
                     _In_ PWSTR lpCmdLine, _In_ int nCmdShow) {
     ::LoadLibraryW(L"Msftedit.dll");
 
+    // GDI+：用于加载 Assets/namePic.jpg 等 JPG 资源；失败时相关控件静默跳过。
+    Gdiplus::GdiplusStartupInput gdiplusInput;
+    ULONG_PTR gdiplusToken = 0;
+    if (Gdiplus::GdiplusStartup(&gdiplusToken, &gdiplusInput, nullptr) != Gdiplus::Ok)
+        gdiplusToken = 0;
+
     INITCOMMONCONTROLSEX icc{};
     icc.dwSize = sizeof(icc);
     icc.dwICC = ICC_LISTVIEW_CLASSES;
@@ -2820,7 +2013,7 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance,
     HWND hwnd = ::CreateWindowExW(
         0, L"OmegaY", L"Expander",
         WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX,
-        CW_USEDEFAULT, CW_USEDEFAULT, 470, 280,
+        CW_USEDEFAULT, CW_USEDEFAULT, 600, 280,   // 600：为顶部 namePic 名字图让位
         nullptr, nullptr, hInstance, nullptr);
     if (!hwnd) return 0;
 
@@ -2832,5 +2025,7 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance,
         ::TranslateMessage(&msg);
         ::DispatchMessageW(&msg);
     }
+    if (gdiplusToken != 0)
+        Gdiplus::GdiplusShutdown(gdiplusToken);
     return 0;
 }

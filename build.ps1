@@ -193,6 +193,8 @@ function Invoke-GenDefinitions {
         "def_s-omega-p1-dbms"   = "IDR_DEF_S_OMEGA_P1_DBMS"
         "def_s-omega2-dbms"     = "IDR_DEF_S_OMEGA2_DBMS"
         "def_s-omega-square-dbms" = "IDR_DEF_S_OMEGA_SQUARE_DBMS"
+        "def_ts2dbms"           = "IDR_DEF_TS2DBMS"
+        "def_ts-omega-dbms"     = "IDR_DEF_TS_OMEGA_DBMS"
         "def_a-omega2-mn-2"     = "IDR_DEF_A_OMEGA2_MN_2"
         "def_weak-a-omega2-mn-2" = "IDR_DEF_WEAK_A_OMEGA2_MN_2"
         "def_a-omega2-mn-3"     = "IDR_DEF_A_OMEGA2_MN_3"
