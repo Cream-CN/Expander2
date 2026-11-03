@@ -14,6 +14,7 @@
 #include "Header/core/entry.hpp"
 #include "Header/notation/registry.hpp"   // OOP 内核：全部记号 + 统一接口 + 注册中心
 #include "Header/notation/translator.hpp"
+#include "Header/notation/translator_0y_bms.hpp"
 #include <memory>
 #include <string>
 #include <string_view>
@@ -184,6 +185,20 @@ namespace {
               .description = L"占位互译器：把输入原样返回，作为互译器框架的基线与调试工具。"
                              L"选中它输入任意文本，点击“互译”后输出应与输入逐字节一致。",
               .translate = &omegay::translator::identityTranslate },
+            { .display_name = L"0-Y → BMS",
+              .id = "0y-to-bms",
+              .source = L"0-Y 序列",
+              .target = L"BMS 矩阵",
+              .description = L"用山脉图把 0-Y(a1,...,an) 互译为等价 BMS 矩阵文本"
+                             L"(a,b,c)(d,e,f)...；输入为正整数逗号序列（可带 0-Y(...) 外壳）。",
+              .translate = &omegay::translator::zeroYToBmsTranslate },
+            { .display_name = L"BMS → 0-Y",
+              .id = "bms-to-0y",
+              .source = L"BMS 矩阵",
+              .target = L"0-Y 序列",
+              .description = L"反着用山脉图，把 BMS 矩阵文本 (a,b,c)(d,e,f)... "
+                             L"互译为等价的 0-Y 序列（逗号分隔正整数）。",
+              .translate = &omegay::translator::bmsToZeroYTranslate },
         };
 
     static const std::vector<omegay::translator::Translator> translator_table(
