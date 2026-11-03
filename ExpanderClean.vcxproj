@@ -1,0 +1,256 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>18.0</VCProjectVersion>
+    <Keyword>Win32Proj</Keyword>
+    <ProjectGuid>{28722FBC-AF38-4CBB-8A18-E8CB1096BD0F}</ProjectGuid>
+    <RootNamespace>ExpanderClean</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <TargetName>ExpanderClean</TargetName>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v145</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <TargetName>ExpanderClean</TargetName>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v145</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <TargetName>ExpanderClean</TargetName>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v145</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <TargetName>ExpanderClean</TargetName>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v145</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>WIN32;_DEBUG;EXPANDER_CLEAN_UI;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <TreatSpecificWarningsAsErrors>6011;6387;6388;28182;33010;33011;33020;33021;6001;6201;6204;6383;6385;6386</TreatSpecificWarningsAsErrors>
+      <AdditionalOptions>/analyze /utf-8</AdditionalOptions>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+    <Manifest>
+      <EnableSegmentHeap>true</EnableSegmentHeap>
+    </Manifest>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>WIN32;NDEBUG;EXPANDER_CLEAN_UI;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <TreatSpecificWarningsAsErrors>6011;6387;6388;28182;33010;33011;33020;33021;6001;6201;6204;6383;6385;6386</TreatSpecificWarningsAsErrors>
+      <AdditionalOptions>/analyze /utf-8</AdditionalOptions>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+    <Manifest>
+      <EnableSegmentHeap>true</EnableSegmentHeap>
+    </Manifest>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>_DEBUG;EXPANDER_CLEAN_UI;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <TreatSpecificWarningsAsErrors>6011;6387;6388;28182;33010;33011;33020;33021;6001;6201;6204;6383;6385;6386</TreatSpecificWarningsAsErrors>
+      <AdditionalOptions>/analyze /utf-8</AdditionalOptions>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+    <Manifest>
+      <EnableSegmentHeap>true</EnableSegmentHeap>
+    </Manifest>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>NDEBUG;EXPANDER_CLEAN_UI;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <TreatSpecificWarningsAsErrors>6011;6387;6388;28182;33010;33011;33020;33021;6001;6201;6204;6383;6385;6386</TreatSpecificWarningsAsErrors>
+      <AdditionalOptions>/analyze /utf-8</AdditionalOptions>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>DebugFull</GenerateDebugInformation>
+      <SuppressStartupBanner>false</SuppressStartupBanner>
+    </Link>
+    <Manifest>
+      <EnableSegmentHeap>true</EnableSegmentHeap>
+      <SuppressStartupBanner>false</SuppressStartupBanner>
+    </Manifest>
+    <ResourceCompile>
+      <SuppressStartupBanner>false</SuppressStartupBanner>
+      <PreprocessorDefinitions>RC_CLEAN_UI</PreprocessorDefinitions>
+    </ResourceCompile>
+    <Xdcmake>
+      <SuppressStartupBanner>false</SuppressStartupBanner>
+    </Xdcmake>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClInclude Include="Definitions.h" />
+    <ClInclude Include="Errors.h" />
+    <ClInclude Include="Expander.h" />
+    <ClInclude Include="framework.h" />
+    <ClInclude Include="Header\common\Matrix.hpp" />
+    <ClInclude Include="Header\common\mrssshare.hpp" />
+    <ClInclude Include="Header\common\sequence.hpp" />
+    <ClInclude Include="Header\common\utf8.hpp" />
+    <ClInclude Include="Header\core\arena.hpp" />
+    <ClInclude Include="Header\core\entry.hpp" />
+    <ClInclude Include="Header\notation\BMSFamily.hpp" />
+    <ClInclude Include="Header\notation\registry.hpp" />
+    <ClInclude Include="Header\notation\empty.hpp" />
+    <ClInclude Include="Header\notation\epsilon-y.hpp" />
+    <ClInclude Include="Header\notation\MrSS121.hpp" />
+    <ClInclude Include="Header\notation\Omega-YMagma.hpp" />
+    <ClInclude Include="Header\notation\omega_y.hpp" />
+    <ClInclude Include="Header\notation\PPS-family.hpp" />
+    <ClInclude Include="Header\notation\prss.hpp" />
+    <ClInclude Include="Header\notation\upms.hpp" />
+    <ClInclude Include="Header\notation\xy-v1.hpp" />
+    <ClInclude Include="Header\notation\xy-v2.hpp" />
+    <ClInclude Include="Header\notation\xy-v3.hpp" />
+    <ClInclude Include="Header\notation\denshare.hpp" />
+    <ClInclude Include="Header\notation\den1.hpp" />
+    <ClInclude Include="Header\notation\blp.hpp" />
+    <ClInclude Include="Header\notation\iblp.hpp" />
+    <ClInclude Include="Header\notation\omega_mn.hpp" />
+    <ClInclude Include="Header\notation\t_omega_mn.hpp" />
+    <ClInclude Include="Header\notation\aw2mn2.hpp" />
+    <ClInclude Include="Header\notation\waw2mn2.hpp" />
+    <ClInclude Include="Header\notation\aw2mn3.hpp" />
+    <ClInclude Include="Header\notation\waw2mn3.hpp" />
+    <ClInclude Include="Header\notation\e0mn.hpp" />
+    <ClInclude Include="Header\notation\strong_e0mn.hpp" />
+    <ClInclude Include="Header\notation\pcf_omega_mn.hpp" />
+    <ClInclude Include="Header\notation\n_mn.hpp" />
+    <ClInclude Include="Header\notation\s_omega2_mn.hpp" />
+    <ClInclude Include="Header\notation\sa_omega2_mn.hpp" />
+    <ClInclude Include="Header\notation\s_omega_pow_omega_mn.hpp" />
+    <ClInclude Include="Header\notation\smnshare.hpp" />
+    <ClInclude Include="Header\notation\sdbms_core.hpp" />
+    <ClInclude Include="Header\notation\mn_smn_share.hpp" />
+    <ClInclude Include="Header\notation\mnup2share.hpp" />
+    <ClInclude Include="Header\notation\aw2mn_share.hpp" />
+    <ClInclude Include="Header\notation\s1dbms.hpp" />
+    <ClInclude Include="Header\notation\s2dbms.hpp" />
+    <ClInclude Include="Header\notation\s_omega_dbms_v1.hpp" />
+    <ClInclude Include="Header\notation\s_omega_dbms_v2.hpp" />
+    <ClInclude Include="Header\notation\s_omega_dbms_v3.hpp" />
+    <ClInclude Include="Header\notation\s_omega2_dbms.hpp" />
+    <ClInclude Include="Header\notation\s_omega_square_dbms.hpp" />
+    <ClInclude Include="Header\notation\s_omega_p1_dbms.hpp" />
+    <ClInclude Include="Header\notation\up1mn.hpp" />
+    <ClInclude Include="Header\notation\up1dbms.hpp" />
+    <ClInclude Include="Header\notation\up2mn_v1a.hpp" />
+    <ClInclude Include="Header\notation\up2mn_v1b.hpp" />
+    <ClInclude Include="Header\notation\up2mn_v1b_plus.hpp" />
+    <ClInclude Include="Header\notation\up2dbms_v1.hpp" />
+    <ClInclude Include="Header\notation\up2dbms_v1b_plus.hpp" />
+    <ClInclude Include="Header\notation\up2dbms_v1c.hpp" />
+    <ClInclude Include="Header\notation\up2dbms_v2.hpp" />
+    <ClInclude Include="Header\notation\tonshare.hpp" />
+    <ClInclude Include="Header\notation\ton.hpp" />
+    <ClInclude Include="Header\notation\ton_i.hpp" />
+    <ClInclude Include="Header\notation\ton_dor.hpp" />
+    <ClInclude Include="Header\notation\ton_drc.hpp" />
+    <ClInclude Include="Header\notation\ton_drp.hpp" />
+    <ClInclude Include="Header\notation\ton_drpc.hpp" />
+    <ClInclude Include="Header\notation\ton_ibp.hpp" />
+    <ClInclude Include="Header\notation\ton_mc.hpp" />
+    <ClInclude Include="Header\notation\ton_mpc.hpp" />
+    <ClInclude Include="Header\notation\translator.hpp" />
+    <ClInclude Include="Header\notation\translator_0y_bms.hpp" />
+    <ClInclude Include="Resource.h" />
+    <ClInclude Include="targetver.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Expander.cpp" />
+    <ClCompile Include="Header\Notation\gy.hpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="Expander.rc" />
+    <ResourceCompile Include="license.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="Expander.ico" />
+    <Image Include="small.ico" />
+    <Image Include="MFC.ico" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

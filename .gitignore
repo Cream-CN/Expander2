@@ -407,3 +407,10 @@ FodyWeavers.xsd
 /CLIBuild.ps1
 *.tsv
 /_gen_registry.inc
+
+# CLI 版已移出解决方案，不再由 git 跟踪（保留本地文件）
+/ExpanderCLI.cpp
+/ExpanderCLI.vcxproj
+/ExpanderCLI.vcxproj.filters
+/ExpanderCLI.vcxproj.user
+/ExpanderCLI/

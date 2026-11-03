@@ -37,6 +37,18 @@ IDI_MFC                 ICON                    "MFC.ico"
 
 /////////////////////////////////////////////////////////////////////////////
 //
+// 内嵌图片资源（RCDATA）。
+// 标准版：全部嵌入；清爽版（ExpanderClean.vcxproj 定义 RC_CLEAN_UI）不嵌入，
+// 同时代码里 #ifdef EXPANDER_CLEAN_UI 也不加载，从而真正做到 exe 不含图片字节。
+//
+#ifndef RC_CLEAN_UI
+IDB_AUTHOR_AVATAR       RCDATA                  "Assets\\pic1.jpg"
+IDB_ORG_AVATAR          RCDATA                  "Assets\\pic2.png"
+IDB_NAMEPIC             RCDATA                  "Assets\\namePic.jpg"
+#endif
+
+/////////////////////////////////////////////////////////////////////////////
+//
 // Menu
 //
 

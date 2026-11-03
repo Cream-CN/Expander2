@@ -42,6 +42,7 @@ namespace {
     constexpr int IDM_LEGAL = 1004;
     constexpr int IDM_THIRDPARTY_LICENSE = 1005; // 帮助菜单：第三方开源软件许可证
     constexpr int IDM_FRIENDLINK = 1006;         // 帮助菜单：友情链接
+    constexpr int IDM_ABOUT_AUTHOR = 1007;       // 帮助菜单：关于作者
     constexpr int IDM_FS = 101;
     constexpr int IDM_FSALTER = 102;
     constexpr int IDM_ENTRY_DEMO = 103;
@@ -607,6 +608,7 @@ namespace {
 
         HMENU hHelp = ::CreatePopupMenu();
         ::AppendMenuW(hHelp, MF_STRING, IDM_ABOUT, L"关于(&A)...");
+        ::AppendMenuW(hHelp, MF_STRING, IDM_ABOUT_AUTHOR, L"关于作者(&O)...");
         ::AppendMenuW(hHelp, MF_STRING, IDM_FRIENDLINK, L"友情链接(&F)...");
         ::AppendMenuW(hHelp, MF_STRING, IDM_LEGAL, L"法律声明(&L)...");
         ::AppendMenuW(hHelp, MF_STRING, IDM_THIRDPARTY_LICENSE,
@@ -1196,6 +1198,55 @@ namespace {
         return hbmp;
     }
 
+    // 从 RCDATA 资源读图（JPG/PNG 均可），按目标高度等比缩放为 DIB 位图。
+    // 与 loadJpegScaled 同语义，但数据来自 exe 内嵌资源，不再依赖外部文件。
+    [[nodiscard]] HBITMAP loadResourceImageScaled(HINSTANCE hInst, int resourceId,
+                                                   int dstH, int& outW) {
+        outW = 0;
+        HRSRC hrsrc = ::FindResourceW(hInst, MAKEINTRESOURCEW(resourceId), RT_RCDATA);
+        if (!hrsrc) return nullptr;
+        HGLOBAL hRes = ::LoadResource(hInst, hrsrc);
+        if (!hRes) return nullptr;
+        DWORD size = ::SizeofResource(hInst, hrsrc);
+        const void* pData = ::LockResource(hRes);
+        if (!pData || size == 0) return nullptr;
+
+        HGLOBAL hMem = ::GlobalAlloc(GMEM_MOVEABLE, size);
+        if (!hMem) return nullptr;
+        void* pWrite = ::GlobalLock(hMem);
+        if (!pWrite) { ::GlobalFree(hMem); return nullptr; }
+        ::memcpy(pWrite, pData, size);
+        ::GlobalUnlock(hMem);
+
+        IStream* pStream = nullptr;
+        if (FAILED(::CreateStreamOnHGlobal(hMem, TRUE, &pStream)) || !pStream) {
+            ::GlobalFree(hMem);
+            return nullptr;
+        }
+
+        HBITMAP hbmp = nullptr;
+        {
+            Gdiplus::Bitmap src(pStream);
+            pStream->Release();
+            if (src.GetLastStatus() == Gdiplus::Ok) {
+                const int sw = src.GetWidth();
+                const int sh = src.GetHeight();
+                if (sw > 0 && sh > 0) {
+                    const int dstW = std::max(1, (dstH * sw) / sh);
+                    Gdiplus::Bitmap dst(dstW, dstH, PixelFormat32bppARGB);
+                    Gdiplus::Graphics g(&dst);
+                    g.SetInterpolationMode(Gdiplus::InterpolationModeHighQualityBicubic);
+                    g.Clear(Gdiplus::Color(255, 255, 255, 255));
+                    g.DrawImage(&src, Gdiplus::Rect(0, 0, dstW, dstH),
+                                0, 0, sw, sh, Gdiplus::UnitPixel);
+                    if (dst.GetHBITMAP(Gdiplus::Color(255, 255, 255), &hbmp) == Gdiplus::Ok)
+                        outW = dstW;
+                }
+            }
+        }
+        return hbmp;
+    }
+
     [[nodiscard]] IconStrip* createIconStrip(HWND hParent, HINSTANCE hInst,
                                              int x, int y, int size = 48) {
         auto* s = new IconStrip{};
@@ -1227,25 +1278,22 @@ namespace {
         }
 
         // 第三个：Assets/namePic.jpg 名字图，等比缩放到与图标同高，位于 MFC.ico 右侧。
-        // 文件缺失或解码失败时静默跳过，不影响原有两个图标。
-        const std::wstring assetPath = findAssetFile(L"Assets\\namePic.jpg");
-        if (!assetPath.empty()) {
-            int nameW = 0;
-            s->hBmpNamePic = loadJpegScaled(assetPath, size, nameW);
-            if (s->hBmpNamePic && nameW > 0) {
-                s->hNamePic = ::CreateWindowExW(0, L"STATIC", L"",
-                    WS_CHILD | WS_VISIBLE | SS_BITMAP,
-                    x + 2 * (size + 12), y, nameW, size, hParent,
-                    reinterpret_cast<HMENU>(static_cast<UINT_PTR>(IDC_ICON_NAMEPIC)),
-                    hInst, nullptr);
-                if (!s->hNamePic) {
-                    ::DeleteObject(s->hBmpNamePic);
-                    s->hBmpNamePic = nullptr;
-                }
-                else {
-                    ::SendMessageW(s->hNamePic, STM_SETIMAGE,
-                        IMAGE_BITMAP, reinterpret_cast<LPARAM>(s->hBmpNamePic));
-                }
+        // 图片已内嵌为 RCDATA 资源（IDB_NAMEPIC），失败时静默跳过，不影响原有两个图标。
+        int nameW = 0;
+        s->hBmpNamePic = loadResourceImageScaled(hInst, IDB_NAMEPIC, size, nameW);
+        if (s->hBmpNamePic && nameW > 0) {
+            s->hNamePic = ::CreateWindowExW(0, L"STATIC", L"",
+                WS_CHILD | WS_VISIBLE | SS_BITMAP,
+                x + 2 * (size + 12), y, nameW, size, hParent,
+                reinterpret_cast<HMENU>(static_cast<UINT_PTR>(IDC_ICON_NAMEPIC)),
+                hInst, nullptr);
+            if (!s->hNamePic) {
+                ::DeleteObject(s->hBmpNamePic);
+                s->hBmpNamePic = nullptr;
+            }
+            else {
+                ::SendMessageW(s->hNamePic, STM_SETIMAGE,
+                    IMAGE_BITMAP, reinterpret_cast<LPARAM>(s->hBmpNamePic));
             }
         }
         return s;
@@ -1328,8 +1376,13 @@ namespace {
 
             HINSTANCE hInst = cs->hInstance;
 
-            // 顶部图标条：Expander.ico + MFC.ico（48×48）；下方内容整体下移 60 像素让位
+#ifndef EXPANDER_CLEAN_UI
+            // 顶部图标条：Expander.ico + MFC.ico + namePic.jpg（48×48）；下方内容整体下移 60 像素让位
             st->icons = createIconStrip(hwnd, hInst, 12, 12, 48);
+#else
+            // 清爽版：不创建顶部图标条，下方坐标整体作为新的顶部边距
+            st->icons = nullptr;
+#endif
 
             ::CreateWindowExW(0, L"STATIC", L"互译器:",
                 WS_CHILD | WS_VISIBLE | SS_LEFT,
@@ -1469,7 +1522,11 @@ namespace {
         HWND hwnd = ::CreateWindowExW(
             0, kTranslatorWindowClass, L"互译器",
             WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU,
+#ifndef EXPANDER_CLEAN_UI
             CW_USEDEFAULT, CW_USEDEFAULT, 600, 580,   // 600：为顶部 namePic 名字图让位
+#else
+            CW_USEDEFAULT, CW_USEDEFAULT, 600, 520,   // 清爽版：无顶部图标条，窗口更紧凑
+#endif
             hParent, nullptr, hInst, nullptr);
         if (!hwnd) return;
 
@@ -1686,10 +1743,16 @@ namespace {
 
             HINSTANCE hInst = reinterpret_cast<HINSTANCE>(
                 ::GetWindowLongPtrW(hwnd, GWLP_HINSTANCE));
-            // 顶部图标条：Expander.ico + MFC.ico（48×48）。mh 由 25 改为 60，
-            // 使下方控件整体下移 35 像素，为图标条让位。
+#ifndef EXPANDER_CLEAN_UI
+            // 顶部图标条：Expander.ico + MFC.ico + namePic.jpg（48×48）。
+            // mh = 60 使下方控件整体下移 35 像素，为图标条让位。
             ui->icons = createIconStrip(hwnd, hInst, 10, 10, 48);
             constexpr int mh = 60;
+#else
+            // 清爽版：去掉顶部图标条与 namePic，mh 直接从 10 开始，布局更紧凑。
+            ui->icons = nullptr;
+            constexpr int mh = 10;
+#endif
 
             ::CreateWindowExW(0, L"STATIC", L"序列 (用逗号分隔):",
                 WS_CHILD | WS_VISIBLE | SS_LEFT,
@@ -1809,6 +1872,13 @@ namespace {
                 HINSTANCE hInst = reinterpret_cast<HINSTANCE>(
                     ::GetWindowLongPtrW(hwnd, GWLP_HINSTANCE));
                 expander_help_about::showSourceWindow(hInst, hwnd);
+                break;
+            }
+
+            case IDM_ABOUT_AUTHOR: {
+                HINSTANCE hInst = reinterpret_cast<HINSTANCE>(
+                    ::GetWindowLongPtrW(hwnd, GWLP_HINSTANCE));
+                expander_help_about::showAuthorWindow(hInst, hwnd);
                 break;
             }
 
@@ -2028,7 +2098,11 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance,
     HWND hwnd = ::CreateWindowExW(
         0, L"OmegaY", L"Expander",
         WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX,
+#ifndef EXPANDER_CLEAN_UI
         CW_USEDEFAULT, CW_USEDEFAULT, 600, 280,   // 600：为顶部 namePic 名字图让位
+#else
+        CW_USEDEFAULT, CW_USEDEFAULT, 600, 220,   // 清爽版：无顶部图标条，窗口更紧凑
+#endif
         nullptr, nullptr, hInstance, nullptr);
     if (!hwnd) return 0;
 
