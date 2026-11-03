@@ -228,6 +228,7 @@
     <ClInclude Include="Header\notation\ton_mc.hpp" />
     <ClInclude Include="Header\notation\ton_mpc.hpp" />
     <ClInclude Include="Header\notation\translator.hpp" />
+    <ClInclude Include="Header\notation\translator_0y_bms.hpp" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="targetver.h" />
   </ItemGroup>
