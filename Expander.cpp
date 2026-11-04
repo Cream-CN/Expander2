@@ -1376,61 +1376,60 @@ namespace {
 
             HINSTANCE hInst = cs->hInstance;
 
-#ifndef EXPANDER_CLEAN_UI
-            // 顶部图标条：Expander.ico + MFC.ico + namePic.jpg（48×48）；下方内容整体下移 60 像素让位
-            st->icons = createIconStrip(hwnd, hInst, 12, 12, 48);
-#else
-            // 清爽版：不创建顶部图标条，下方坐标整体作为新的顶部边距
+            // 不再显示顶部图标条，ty 直接从 10 开始。
             st->icons = nullptr;
-#endif
+            constexpr int ty = 10;
+            constexpr int outH = 240; // 输出 RichEdit 高度
+            // 互译器窗口 400×500：客户区宽约 370，内容宽度取 350。
+            constexpr int kW = 350;
 
             ::CreateWindowExW(0, L"STATIC", L"互译器:",
                 WS_CHILD | WS_VISIBLE | SS_LEFT,
-                12, 74, 56, 18, hwnd, nullptr, hInst, nullptr);
+                10, ty + 14, 56, 18, hwnd, nullptr, hInst, nullptr);
 
             st->hCombo = ::CreateWindowExW(0, WC_COMBOBOXW, L"",
                 WS_CHILD | WS_VISIBLE | WS_TABSTOP | CBS_DROPDOWNLIST | WS_VSCROLL,
-                68, 70, 250, 220, hwnd,
+                66, ty + 10, 170, 220, hwnd,
                 reinterpret_cast<HMENU>(static_cast<UINT_PTR>(IDC_TRANSLATOR_COMBO)),
                 hInst, nullptr);
 
             st->hDir = ::CreateWindowExW(0, L"STATIC", L"",
                 WS_CHILD | WS_VISIBLE | SS_LEFT,
-                328, 74, 240, 18, hwnd, nullptr, hInst, nullptr);
+                244, ty + 14, 116, 18, hwnd, nullptr, hInst, nullptr);
 
             st->hDesc = ::CreateWindowExW(0, L"STATIC", L"",
                 WS_CHILD | WS_VISIBLE | SS_LEFT,
-                12, 98, 556, 40, hwnd, nullptr, hInst, nullptr);
+                10, ty + 38, kW, 40, hwnd, nullptr, hInst, nullptr);
 
             ::CreateWindowExW(0, L"STATIC", L"输入 (源记号表达式):",
                 WS_CHILD | WS_VISIBLE | SS_LEFT,
-                12, 144, 300, 18, hwnd, nullptr, hInst, nullptr);
+                10, ty + 84, 300, 18, hwnd, nullptr, hInst, nullptr);
 
             st->hInput = ::CreateWindowExW(0, L"EDIT", L"",
                 WS_CHILD | WS_VISIBLE | WS_BORDER | WS_TABSTOP |
                 ES_LEFT | ES_AUTOHSCROLL,
-                12, 164, 556, 24, hwnd,
+                10, ty + 104, kW, 24, hwnd,
                 reinterpret_cast<HMENU>(static_cast<UINT_PTR>(IDC_TRANSLATOR_INPUT)),
                 hInst, nullptr);
 
             st->hBtn = ::CreateWindowExW(0, L"BUTTON", L"互译",
                 WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_DEFPUSHBUTTON,
-                12, 198, 90, 28, hwnd,
+                10, ty + 138, 90, 28, hwnd,
                 reinterpret_cast<HMENU>(static_cast<UINT_PTR>(IDC_TRANSLATOR_BTN)),
                 hInst, nullptr);
 
             st->hStatus = ::CreateWindowExW(0, L"STATIC", L"",
                 WS_CHILD | WS_VISIBLE | SS_LEFT,
-                112, 204, 456, 22, hwnd, nullptr, hInst, nullptr);
+                110, ty + 144, 250, 22, hwnd, nullptr, hInst, nullptr);
 
             ::CreateWindowExW(0, L"STATIC", L"输出 (目标记号表达式):",
                 WS_CHILD | WS_VISIBLE | SS_LEFT,
-                12, 240, 300, 18, hwnd, nullptr, hInst, nullptr);
+                10, ty + 180, 300, 18, hwnd, nullptr, hInst, nullptr);
 
             st->hOutput = ::CreateWindowExW(0, MSFTEDIT_CLASS, L"",
                 WS_CHILD | WS_VISIBLE | WS_BORDER | WS_VSCROLL | WS_HSCROLL |
                 ES_MULTILINE | ES_READONLY | ES_AUTOVSCROLL | ES_AUTOHSCROLL,
-                12, 260, 556, 248, hwnd,
+                10, ty + 200, kW, outH, hwnd,
                 reinterpret_cast<HMENU>(static_cast<UINT_PTR>(IDC_TRANSLATOR_OUTPUT)),
                 hInst, nullptr);
 
@@ -1523,9 +1522,9 @@ namespace {
             0, kTranslatorWindowClass, L"互译器",
             WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU,
 #ifndef EXPANDER_CLEAN_UI
-            CW_USEDEFAULT, CW_USEDEFAULT, 600, 580,   // 600：为顶部 namePic 名字图让位
+            CW_USEDEFAULT, CW_USEDEFAULT, 400, 500,   // 400×500：紧凑互译器
 #else
-            CW_USEDEFAULT, CW_USEDEFAULT, 600, 520,   // 清爽版：无顶部图标条，窗口更紧凑
+            CW_USEDEFAULT, CW_USEDEFAULT, 400, 500,   // 清爽版：同为 400×500
 #endif
             hParent, nullptr, hInst, nullptr);
         if (!hwnd) return;
@@ -1743,16 +1742,12 @@ namespace {
 
             HINSTANCE hInst = reinterpret_cast<HINSTANCE>(
                 ::GetWindowLongPtrW(hwnd, GWLP_HINSTANCE));
-#ifndef EXPANDER_CLEAN_UI
-            // 顶部图标条：Expander.ico + MFC.ico + namePic.jpg（48×48）。
-            // mh = 60 使下方控件整体下移 35 像素，为图标条让位。
-            ui->icons = createIconStrip(hwnd, hInst, 10, 10, 48);
-            constexpr int mh = 60;
-#else
-            // 清爽版：去掉顶部图标条与 namePic，mh 直接从 10 开始，布局更紧凑。
+            // 不再显示顶部图标条，mh 直接从 10 开始。
             ui->icons = nullptr;
             constexpr int mh = 10;
-#endif
+
+            // 主窗口 400×400：客户区宽约 370，内容宽度取 360。
+            constexpr int kW = 360; // 主要控件统一宽度
 
             ::CreateWindowExW(0, L"STATIC", L"序列 (用逗号分隔):",
                 WS_CHILD | WS_VISIBLE | SS_LEFT,
@@ -1761,51 +1756,51 @@ namespace {
 
             ui->hEditSeq = ::CreateWindowExW(0, L"EDIT", L"",
                 WS_CHILD | WS_VISIBLE | WS_BORDER | ES_LEFT,
-                10, mh + 30, 420, 20,
+                10, mh + 32, kW, 24,
                 hwnd, nullptr, hInst, nullptr);
 
             ::CreateWindowExW(0, L"STATIC", L"项数:",
                 WS_CHILD | WS_VISIBLE | SS_LEFT,
-                10, mh + 55, 50, 20,
+                10, mh + 72, 50, 20,
                 hwnd, nullptr, hInst, nullptr);
 
             ui->hEditTerm = ::CreateWindowExW(0, L"EDIT", L"1",
                 WS_CHILD | WS_VISIBLE | WS_BORDER | ES_LEFT,
-                60, mh + 55, 80, 20,
+                60, mh + 72, 70, 24,
                 hwnd, nullptr, hInst, nullptr);
 
             // 参数化记号（如 Minus1 系列）使用的额外整数参数输入框，默认隐藏；
             // 选中带 expand_text_n 的记号时由 updateNotationLabel 显示。
             ui->hStaticParam = ::CreateWindowExW(0, L"STATIC", L"",
                 WS_CHILD | SS_LEFT,
-                150, mh + 55, 100, 20,
+                140, mh + 72, 80, 20,
                 hwnd, nullptr, hInst, nullptr);
             ui->hEditParam = ::CreateWindowExW(0, L"EDIT", L"",
                 WS_CHILD | WS_BORDER | ES_LEFT,
-                250, mh + 55, 60, 20,
+                225, mh + 72, 55, 24,
                 hwnd, nullptr, hInst, nullptr);
 
             ::CreateWindowExW(0, L"STATIC", L"记号:",
                 WS_CHILD | WS_VISIBLE | SS_LEFT,
-                10, mh + 85, 80, 20,
+                10, mh + 112, 50, 20,
                 hwnd, nullptr, hInst, nullptr);
 
             ui->hBtnNotation = ::CreateWindowExW(0, L"BUTTON", L"选择记号…",
                 WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_PUSHBUTTON,
-                60, mh + 83, 100, 25,
+                60, mh + 110, 90, 26,
                 hwnd,
                 reinterpret_cast<HMENU>(static_cast<UINT_PTR>(IDC_NOTATION_BTN)),
                 hInst, nullptr);
 
             ui->hNotationLabel = ::CreateWindowExW(0, L"STATIC", L"",
                 WS_CHILD | WS_VISIBLE | SS_LEFT,
-                170, mh + 87, 400, 20,
+                160, mh + 114, 210, 20,
                 hwnd, nullptr, hInst, nullptr);
             updateNotationLabel(ui);
 
             ui->hBtnFSalter = ::CreateWindowExW(0, L"BUTTON", L"展开",
                 WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
-                10, mh + 115, 420, 25,
+                10, mh + 175, kW, 34,
                 hwnd,
                 reinterpret_cast<HMENU>(static_cast<UINT_PTR>(IDM_FSALTER)),
                 hInst, nullptr);
@@ -2099,9 +2094,9 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance,
         0, L"OmegaY", L"Expander",
         WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX,
 #ifndef EXPANDER_CLEAN_UI
-        CW_USEDEFAULT, CW_USEDEFAULT, 600, 280,   // 600：为顶部 namePic 名字图让位
+        CW_USEDEFAULT, CW_USEDEFAULT, 400, 400,   // 400×400：紧凑主窗口
 #else
-        CW_USEDEFAULT, CW_USEDEFAULT, 600, 220,   // 清爽版：无顶部图标条，窗口更紧凑
+        CW_USEDEFAULT, CW_USEDEFAULT, 400, 400,   // 清爽版：同为 400×400
 #endif
         nullptr, nullptr, hInstance, nullptr);
     if (!hwnd) return 0;
