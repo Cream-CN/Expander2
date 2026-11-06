@@ -5,6 +5,17 @@
 
 namespace omegay::core {
 
+// 跨平台 restrict 宏：MSVC 用 __restrict，GCC/Clang 用 __restrict__。
+// 语义与 C99 restrict 略有差异，但足以让编译器在"两个数组互不重叠"上做
+// 更激进的向量化与消除冗余加载。非这三家编译器时退化为空（无副作用）。
+#if defined(_MSC_VER)
+    #define OMEGAY_RESTRICT __restrict
+#elif defined(__GNUC__) || defined(__clang__)
+    #define OMEGAY_RESTRICT __restrict__
+#else
+    #define OMEGAY_RESTRICT
+#endif
+
 // 统一的 ykey 计算：refresh_key() 与 make_ykey() 共用同一实现，
 // 保证两者的结果始终一致。
 [[nodiscard]] inline uint64_t make_ykey(const std::vector<int>& y) noexcept;
@@ -35,9 +46,11 @@ struct Entry {
 [[nodiscard]] inline uint64_t make_ykey(const std::vector<int>& y) noexcept {
     constexpr uint64_t kOffsetBasis = 14695981039346656037ULL; // FNV-1a offset basis
     constexpr uint64_t kPrime       = 1099511628211ULL;        // FNV-1a prime
-    uint64_t k = kOffsetBasis ^ static_cast<uint64_t>(y.size());
-    for (const int v : y)
-        k = (k ^ static_cast<uint32_t>(v)) * kPrime;
+    const int* OMEGAY_RESTRICT p = y.data();
+    const size_t n = y.size();
+    uint64_t k = kOffsetBasis ^ static_cast<uint64_t>(n);
+    for (size_t i = 0; i < n; ++i)
+        k = (k ^ static_cast<uint32_t>(p[i])) * kPrime;
     return k;
 }
 

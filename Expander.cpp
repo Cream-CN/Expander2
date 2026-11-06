@@ -42,6 +42,7 @@ namespace {
     constexpr int IDM_LEGAL = 1004;
     constexpr int IDM_THIRDPARTY_LICENSE = 1005; // 帮助菜单：第三方开源软件许可证
     constexpr int IDM_FRIENDLINK = 1006;         // 帮助菜单：友情链接
+    constexpr int IDM_ABOUT_AUTHOR = 1007;       // 帮助菜单：关于作者
     constexpr int IDM_FS = 101;
     constexpr int IDM_FSALTER = 102;
     constexpr int IDM_ENTRY_DEMO = 103;
@@ -607,6 +608,7 @@ namespace {
 
         HMENU hHelp = ::CreatePopupMenu();
         ::AppendMenuW(hHelp, MF_STRING, IDM_ABOUT, L"关于(&A)...");
+        ::AppendMenuW(hHelp, MF_STRING, IDM_ABOUT_AUTHOR, L"关于作者(&O)...");
         ::AppendMenuW(hHelp, MF_STRING, IDM_FRIENDLINK, L"友情链接(&F)...");
         ::AppendMenuW(hHelp, MF_STRING, IDM_LEGAL, L"法律声明(&L)...");
         ::AppendMenuW(hHelp, MF_STRING, IDM_THIRDPARTY_LICENSE,
@@ -1196,6 +1198,55 @@ namespace {
         return hbmp;
     }
 
+    // 从 RCDATA 资源读图（JPG/PNG 均可），按目标高度等比缩放为 DIB 位图。
+    // 与 loadJpegScaled 同语义，但数据来自 exe 内嵌资源，不再依赖外部文件。
+    [[nodiscard]] HBITMAP loadResourceImageScaled(HINSTANCE hInst, int resourceId,
+                                                   int dstH, int& outW) {
+        outW = 0;
+        HRSRC hrsrc = ::FindResourceW(hInst, MAKEINTRESOURCEW(resourceId), RT_RCDATA);
+        if (!hrsrc) return nullptr;
+        HGLOBAL hRes = ::LoadResource(hInst, hrsrc);
+        if (!hRes) return nullptr;
+        DWORD size = ::SizeofResource(hInst, hrsrc);
+        const void* pData = ::LockResource(hRes);
+        if (!pData || size == 0) return nullptr;
+
+        HGLOBAL hMem = ::GlobalAlloc(GMEM_MOVEABLE, size);
+        if (!hMem) return nullptr;
+        void* pWrite = ::GlobalLock(hMem);
+        if (!pWrite) { ::GlobalFree(hMem); return nullptr; }
+        ::memcpy(pWrite, pData, size);
+        ::GlobalUnlock(hMem);
+
+        IStream* pStream = nullptr;
+        if (FAILED(::CreateStreamOnHGlobal(hMem, TRUE, &pStream)) || !pStream) {
+            ::GlobalFree(hMem);
+            return nullptr;
+        }
+
+        HBITMAP hbmp = nullptr;
+        {
+            Gdiplus::Bitmap src(pStream);
+            pStream->Release();
+            if (src.GetLastStatus() == Gdiplus::Ok) {
+                const int sw = src.GetWidth();
+                const int sh = src.GetHeight();
+                if (sw > 0 && sh > 0) {
+                    const int dstW = std::max(1, (dstH * sw) / sh);
+                    Gdiplus::Bitmap dst(dstW, dstH, PixelFormat32bppARGB);
+                    Gdiplus::Graphics g(&dst);
+                    g.SetInterpolationMode(Gdiplus::InterpolationModeHighQualityBicubic);
+                    g.Clear(Gdiplus::Color(255, 255, 255, 255));
+                    g.DrawImage(&src, Gdiplus::Rect(0, 0, dstW, dstH),
+                                0, 0, sw, sh, Gdiplus::UnitPixel);
+                    if (dst.GetHBITMAP(Gdiplus::Color(255, 255, 255), &hbmp) == Gdiplus::Ok)
+                        outW = dstW;
+                }
+            }
+        }
+        return hbmp;
+    }
+
     [[nodiscard]] IconStrip* createIconStrip(HWND hParent, HINSTANCE hInst,
                                              int x, int y, int size = 48) {
         auto* s = new IconStrip{};
@@ -1227,25 +1278,22 @@ namespace {
         }
 
         // 第三个：Assets/namePic.jpg 名字图，等比缩放到与图标同高，位于 MFC.ico 右侧。
-        // 文件缺失或解码失败时静默跳过，不影响原有两个图标。
-        const std::wstring assetPath = findAssetFile(L"Assets\\namePic.jpg");
-        if (!assetPath.empty()) {
-            int nameW = 0;
-            s->hBmpNamePic = loadJpegScaled(assetPath, size, nameW);
-            if (s->hBmpNamePic && nameW > 0) {
-                s->hNamePic = ::CreateWindowExW(0, L"STATIC", L"",
-                    WS_CHILD | WS_VISIBLE | SS_BITMAP,
-                    x + 2 * (size + 12), y, nameW, size, hParent,
-                    reinterpret_cast<HMENU>(static_cast<UINT_PTR>(IDC_ICON_NAMEPIC)),
-                    hInst, nullptr);
-                if (!s->hNamePic) {
-                    ::DeleteObject(s->hBmpNamePic);
-                    s->hBmpNamePic = nullptr;
-                }
-                else {
-                    ::SendMessageW(s->hNamePic, STM_SETIMAGE,
-                        IMAGE_BITMAP, reinterpret_cast<LPARAM>(s->hBmpNamePic));
-                }
+        // 图片已内嵌为 RCDATA 资源（IDB_NAMEPIC），失败时静默跳过，不影响原有两个图标。
+        int nameW = 0;
+        s->hBmpNamePic = loadResourceImageScaled(hInst, IDB_NAMEPIC, size, nameW);
+        if (s->hBmpNamePic && nameW > 0) {
+            s->hNamePic = ::CreateWindowExW(0, L"STATIC", L"",
+                WS_CHILD | WS_VISIBLE | SS_BITMAP,
+                x + 2 * (size + 12), y, nameW, size, hParent,
+                reinterpret_cast<HMENU>(static_cast<UINT_PTR>(IDC_ICON_NAMEPIC)),
+                hInst, nullptr);
+            if (!s->hNamePic) {
+                ::DeleteObject(s->hBmpNamePic);
+                s->hBmpNamePic = nullptr;
+            }
+            else {
+                ::SendMessageW(s->hNamePic, STM_SETIMAGE,
+                    IMAGE_BITMAP, reinterpret_cast<LPARAM>(s->hBmpNamePic));
             }
         }
         return s;
@@ -1328,56 +1376,60 @@ namespace {
 
             HINSTANCE hInst = cs->hInstance;
 
-            // 顶部图标条：Expander.ico + MFC.ico（48×48）；下方内容整体下移 60 像素让位
-            st->icons = createIconStrip(hwnd, hInst, 12, 12, 48);
+            // 不再显示顶部图标条，ty 直接从 10 开始。
+            st->icons = nullptr;
+            constexpr int ty = 10;
+            constexpr int outH = 240; // 输出 RichEdit 高度
+            // 互译器窗口 400×500：客户区宽约 370，内容宽度取 350。
+            constexpr int kW = 350;
 
             ::CreateWindowExW(0, L"STATIC", L"互译器:",
                 WS_CHILD | WS_VISIBLE | SS_LEFT,
-                12, 74, 56, 18, hwnd, nullptr, hInst, nullptr);
+                10, ty + 14, 56, 18, hwnd, nullptr, hInst, nullptr);
 
             st->hCombo = ::CreateWindowExW(0, WC_COMBOBOXW, L"",
                 WS_CHILD | WS_VISIBLE | WS_TABSTOP | CBS_DROPDOWNLIST | WS_VSCROLL,
-                68, 70, 250, 220, hwnd,
+                66, ty + 10, 170, 220, hwnd,
                 reinterpret_cast<HMENU>(static_cast<UINT_PTR>(IDC_TRANSLATOR_COMBO)),
                 hInst, nullptr);
 
             st->hDir = ::CreateWindowExW(0, L"STATIC", L"",
                 WS_CHILD | WS_VISIBLE | SS_LEFT,
-                328, 74, 240, 18, hwnd, nullptr, hInst, nullptr);
+                244, ty + 14, 116, 18, hwnd, nullptr, hInst, nullptr);
 
             st->hDesc = ::CreateWindowExW(0, L"STATIC", L"",
                 WS_CHILD | WS_VISIBLE | SS_LEFT,
-                12, 98, 556, 40, hwnd, nullptr, hInst, nullptr);
+                10, ty + 38, kW, 40, hwnd, nullptr, hInst, nullptr);
 
             ::CreateWindowExW(0, L"STATIC", L"输入 (源记号表达式):",
                 WS_CHILD | WS_VISIBLE | SS_LEFT,
-                12, 144, 300, 18, hwnd, nullptr, hInst, nullptr);
+                10, ty + 84, 300, 18, hwnd, nullptr, hInst, nullptr);
 
             st->hInput = ::CreateWindowExW(0, L"EDIT", L"",
                 WS_CHILD | WS_VISIBLE | WS_BORDER | WS_TABSTOP |
                 ES_LEFT | ES_AUTOHSCROLL,
-                12, 164, 556, 24, hwnd,
+                10, ty + 104, kW, 24, hwnd,
                 reinterpret_cast<HMENU>(static_cast<UINT_PTR>(IDC_TRANSLATOR_INPUT)),
                 hInst, nullptr);
 
             st->hBtn = ::CreateWindowExW(0, L"BUTTON", L"互译",
                 WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_DEFPUSHBUTTON,
-                12, 198, 90, 28, hwnd,
+                10, ty + 138, 90, 28, hwnd,
                 reinterpret_cast<HMENU>(static_cast<UINT_PTR>(IDC_TRANSLATOR_BTN)),
                 hInst, nullptr);
 
             st->hStatus = ::CreateWindowExW(0, L"STATIC", L"",
                 WS_CHILD | WS_VISIBLE | SS_LEFT,
-                112, 204, 456, 22, hwnd, nullptr, hInst, nullptr);
+                110, ty + 144, 250, 22, hwnd, nullptr, hInst, nullptr);
 
             ::CreateWindowExW(0, L"STATIC", L"输出 (目标记号表达式):",
                 WS_CHILD | WS_VISIBLE | SS_LEFT,
-                12, 240, 300, 18, hwnd, nullptr, hInst, nullptr);
+                10, ty + 180, 300, 18, hwnd, nullptr, hInst, nullptr);
 
             st->hOutput = ::CreateWindowExW(0, MSFTEDIT_CLASS, L"",
                 WS_CHILD | WS_VISIBLE | WS_BORDER | WS_VSCROLL | WS_HSCROLL |
                 ES_MULTILINE | ES_READONLY | ES_AUTOVSCROLL | ES_AUTOHSCROLL,
-                12, 260, 556, 248, hwnd,
+                10, ty + 200, kW, outH, hwnd,
                 reinterpret_cast<HMENU>(static_cast<UINT_PTR>(IDC_TRANSLATOR_OUTPUT)),
                 hInst, nullptr);
 
@@ -1469,7 +1521,11 @@ namespace {
         HWND hwnd = ::CreateWindowExW(
             0, kTranslatorWindowClass, L"互译器",
             WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU,
-            CW_USEDEFAULT, CW_USEDEFAULT, 600, 580,   // 600：为顶部 namePic 名字图让位
+#ifndef EXPANDER_CLEAN_UI
+            CW_USEDEFAULT, CW_USEDEFAULT, 400, 500,   // 400×500：紧凑互译器
+#else
+            CW_USEDEFAULT, CW_USEDEFAULT, 400, 500,   // 清爽版：同为 400×500
+#endif
             hParent, nullptr, hInst, nullptr);
         if (!hwnd) return;
 
@@ -1686,10 +1742,12 @@ namespace {
 
             HINSTANCE hInst = reinterpret_cast<HINSTANCE>(
                 ::GetWindowLongPtrW(hwnd, GWLP_HINSTANCE));
-            // 顶部图标条：Expander.ico + MFC.ico（48×48）。mh 由 25 改为 60，
-            // 使下方控件整体下移 35 像素，为图标条让位。
-            ui->icons = createIconStrip(hwnd, hInst, 10, 10, 48);
-            constexpr int mh = 60;
+            // 不再显示顶部图标条，mh 直接从 10 开始。
+            ui->icons = nullptr;
+            constexpr int mh = 10;
+
+            // 主窗口 400×400：客户区宽约 370，内容宽度取 360。
+            constexpr int kW = 360; // 主要控件统一宽度
 
             ::CreateWindowExW(0, L"STATIC", L"序列 (用逗号分隔):",
                 WS_CHILD | WS_VISIBLE | SS_LEFT,
@@ -1698,51 +1756,51 @@ namespace {
 
             ui->hEditSeq = ::CreateWindowExW(0, L"EDIT", L"",
                 WS_CHILD | WS_VISIBLE | WS_BORDER | ES_LEFT,
-                10, mh + 30, 420, 20,
+                10, mh + 32, kW, 24,
                 hwnd, nullptr, hInst, nullptr);
 
             ::CreateWindowExW(0, L"STATIC", L"项数:",
                 WS_CHILD | WS_VISIBLE | SS_LEFT,
-                10, mh + 55, 50, 20,
+                10, mh + 72, 50, 20,
                 hwnd, nullptr, hInst, nullptr);
 
             ui->hEditTerm = ::CreateWindowExW(0, L"EDIT", L"1",
                 WS_CHILD | WS_VISIBLE | WS_BORDER | ES_LEFT,
-                60, mh + 55, 80, 20,
+                60, mh + 72, 70, 24,
                 hwnd, nullptr, hInst, nullptr);
 
             // 参数化记号（如 Minus1 系列）使用的额外整数参数输入框，默认隐藏；
             // 选中带 expand_text_n 的记号时由 updateNotationLabel 显示。
             ui->hStaticParam = ::CreateWindowExW(0, L"STATIC", L"",
                 WS_CHILD | SS_LEFT,
-                150, mh + 55, 100, 20,
+                140, mh + 72, 80, 20,
                 hwnd, nullptr, hInst, nullptr);
             ui->hEditParam = ::CreateWindowExW(0, L"EDIT", L"",
                 WS_CHILD | WS_BORDER | ES_LEFT,
-                250, mh + 55, 60, 20,
+                225, mh + 72, 55, 24,
                 hwnd, nullptr, hInst, nullptr);
 
             ::CreateWindowExW(0, L"STATIC", L"记号:",
                 WS_CHILD | WS_VISIBLE | SS_LEFT,
-                10, mh + 85, 80, 20,
+                10, mh + 112, 50, 20,
                 hwnd, nullptr, hInst, nullptr);
 
             ui->hBtnNotation = ::CreateWindowExW(0, L"BUTTON", L"选择记号…",
                 WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_PUSHBUTTON,
-                60, mh + 83, 100, 25,
+                60, mh + 110, 90, 26,
                 hwnd,
                 reinterpret_cast<HMENU>(static_cast<UINT_PTR>(IDC_NOTATION_BTN)),
                 hInst, nullptr);
 
             ui->hNotationLabel = ::CreateWindowExW(0, L"STATIC", L"",
                 WS_CHILD | WS_VISIBLE | SS_LEFT,
-                170, mh + 87, 400, 20,
+                160, mh + 114, 210, 20,
                 hwnd, nullptr, hInst, nullptr);
             updateNotationLabel(ui);
 
             ui->hBtnFSalter = ::CreateWindowExW(0, L"BUTTON", L"展开",
                 WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
-                10, mh + 115, 420, 25,
+                10, mh + 175, kW, 34,
                 hwnd,
                 reinterpret_cast<HMENU>(static_cast<UINT_PTR>(IDM_FSALTER)),
                 hInst, nullptr);
@@ -1809,6 +1867,13 @@ namespace {
                 HINSTANCE hInst = reinterpret_cast<HINSTANCE>(
                     ::GetWindowLongPtrW(hwnd, GWLP_HINSTANCE));
                 expander_help_about::showSourceWindow(hInst, hwnd);
+                break;
+            }
+
+            case IDM_ABOUT_AUTHOR: {
+                HINSTANCE hInst = reinterpret_cast<HINSTANCE>(
+                    ::GetWindowLongPtrW(hwnd, GWLP_HINSTANCE));
+                expander_help_about::showAuthorWindow(hInst, hwnd);
                 break;
             }
 
@@ -2028,7 +2093,11 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance,
     HWND hwnd = ::CreateWindowExW(
         0, L"OmegaY", L"Expander",
         WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX,
-        CW_USEDEFAULT, CW_USEDEFAULT, 600, 280,   // 600：为顶部 namePic 名字图让位
+#ifndef EXPANDER_CLEAN_UI
+        CW_USEDEFAULT, CW_USEDEFAULT, 400, 400,   // 400×400：紧凑主窗口
+#else
+        CW_USEDEFAULT, CW_USEDEFAULT, 400, 400,   // 清爽版：同为 400×400
+#endif
         nullptr, nullptr, hInstance, nullptr);
     if (!hwnd) return 0;
 
