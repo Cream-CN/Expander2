@@ -28,15 +28,22 @@ namespace omegay::notation {
     private:
         using Mountain = std::vector<std::vector<core::Entry*>>;
 
-        static int vertical_compare(const std::vector<int>& a,
-            const std::vector<int>& b) {
-            if (a.size() > b.size()) return 1;
-            if (a.size() < b.size()) return -1;
-            for (size_t i = a.size(); i-- > 0;) {
+        // 裸指针版：二分搜索 / std::sort 等热路径的每次比较都从 vector 对象
+        // 重新 load data()，提成指针 + restrict 后可让编译器只读一次并按索引
+        // 推进，且认定两数组不重叠，便于更激进的优化。
+        static int vertical_compare(const int* OMEGAY_RESTRICT a, size_t na,
+                                    const int* OMEGAY_RESTRICT b, size_t nb) {
+            if (na > nb) return 1;
+            if (na < nb) return -1;
+            for (size_t i = na; i-- > 0;) {
                 if (a[i] > b[i]) return 1;
                 if (a[i] < b[i]) return -1;
             }
             return 0;
+        }
+        static int vertical_compare(const std::vector<int>& a,
+            const std::vector<int>& b) {
+            return vertical_compare(a.data(), a.size(), b.data(), b.size());
         }
 
         static bool same_row(const core::Entry* a, const core::Entry* b) {
@@ -66,37 +73,40 @@ namespace omegay::notation {
         static core::Entry* find_lower(std::vector<core::Entry*>& column,
             const std::vector<int>& y) {
             if (column.empty()) return nullptr;
+            core::Entry* const* OMEGAY_RESTRICT colp = column.data();
             int i1 = 0, i2 = (int)column.size() - 1, i;
             while (i1 < i2) {
                 i = (i1 + i2) / 2;
-                if (vertical_compare(column[i]->y, y) < 0) i2 = i;
+                if (vertical_compare(colp[i]->y, y) < 0) i2 = i;
                 else i1 = i + 1;
             }
-            return column[i2];
+            return colp[i2];
         }
 
         static core::Entry* find_higherequal(std::vector<core::Entry*>& column,
             const std::vector<int>& y) {
             if (column.empty()) return nullptr;
+            core::Entry* const* OMEGAY_RESTRICT colp = column.data();
             int i1 = 0, i2 = (int)column.size() - 1, i;
             while (i1 < i2) {
                 i = (i1 + i2 + 1) / 2;
-                if (vertical_compare(column[i]->y, y) >= 0) i1 = i;
+                if (vertical_compare(colp[i]->y, y) >= 0) i1 = i;
                 else i2 = i - 1;
             }
-            return column[i1];
+            return colp[i1];
         }
 
         static std::vector<core::Entry*> yslice(std::vector<core::Entry*>& column,
             const std::vector<int>& lowequal,
             const std::vector<int>& high) {
             if (column.empty()) return {};
+            core::Entry* const* OMEGAY_RESTRICT colp = column.data();
             int start = 0, end = (int)column.size();
             {
                 int i1 = 0, i2 = (int)column.size() - 1, i;
                 while (i1 < i2) {
                     i = (i1 + i2) / 2;
-                    if (vertical_compare(column[i]->y, high) < 0) i2 = i;
+                    if (vertical_compare(colp[i]->y, high) < 0) i2 = i;
                     else i1 = i + 1;
                 }
                 start = i2;
@@ -105,7 +115,7 @@ namespace omegay::notation {
                 int i1 = start, i2 = (int)column.size() - 1, i;
                 while (i1 < i2) {
                     i = (i1 + i2) / 2;
-                    if (vertical_compare(column[i]->y, lowequal) < 0) i2 = i;
+                    if (vertical_compare(colp[i]->y, lowequal) < 0) i2 = i;
                     else i1 = i + 1;
                 }
                 end = i2;
@@ -120,10 +130,9 @@ namespace omegay::notation {
             return std::find(v.begin(), v.end(), e) != v.end();
         }
 
-        static std::vector<core::Entry*> collect_usual(
-            core::Entry* working_entry,
-            std::vector<core::Entry*> collection = {}) {
-            if (!working_entry) return collection;
+        static void collect_usual_into(core::Entry* working_entry,
+            std::vector<core::Entry*>& collection) {
+            if (!working_entry) return;
             for (auto* e : working_entry->leftleg_up) {
                 if (!e) continue;
                 auto* child = e->rightleg_down;
@@ -131,24 +140,31 @@ namespace omegay::notation {
                 if (contains(collection, child)) continue;
                 if (same_row(working_entry, child)) {
                     collection.push_back(child);
-                    collection = collect_usual(child, collection);
+                    collect_usual_into(child, collection);
                 }
             }
+        }
+        static std::vector<core::Entry*> collect_usual(core::Entry* working_entry) {
+            std::vector<core::Entry*> collection;
+            collect_usual_into(working_entry, collection);
             return collection;
         }
 
-        static std::vector<core::Entry*> collect1D(
-            core::Entry* working_entry,
-            std::vector<core::Entry*> collection = {}) {
-            if (!working_entry || !working_entry->rightleg_down) return collection;
+        static void collect1D_into(core::Entry* working_entry,
+            std::vector<core::Entry*>& collection) {
+            if (!working_entry || !working_entry->rightleg_down) return;
             for (auto* child : working_entry->rightleg_down->leftleg_up) {
                 if (!child) continue;
                 if (contains(collection, child)) continue;
                 if (same_row(working_entry, child)) {
                     collection.push_back(child);
-                    collection = collect1D(child, collection);
+                    collect1D_into(child, collection);
                 }
             }
+        }
+        static std::vector<core::Entry*> collect1D(core::Entry* working_entry) {
+            std::vector<core::Entry*> collection;
+            collect1D_into(working_entry, collection);
             return collection;
         }
 

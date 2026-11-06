@@ -414,3 +414,6 @@ FodyWeavers.xsd
 /ExpanderCLI.vcxproj.filters
 /ExpanderCLI.vcxproj.user
 /ExpanderCLI/
+
+# 清理归档：构建产物与散落的手动编译/诊断文件
+/ignore/
