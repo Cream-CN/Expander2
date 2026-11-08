@@ -40,14 +40,13 @@ namespace {
     /*constexpr int IDM_ABOUT = 1001;
     constexpr int IDM_EXIT = 1002;*/
     constexpr int IDM_LEGAL = 1004;
-    constexpr int IDM_THIRDPARTY_LICENSE = 1005; // 帮助菜单：第三方开源软件许可证
-    constexpr int IDM_FRIENDLINK = 1006;         // 帮助菜单：友情链接
-    constexpr int IDM_ABOUT_AUTHOR = 1007;       // 帮助菜单：关于作者
+    constexpr int IDM_THIRDPARTY_LICENSE = 1005;
+    constexpr int IDM_FRIENDLINK = 1006;
     constexpr int IDM_FS = 101;
     constexpr int IDM_FSALTER = 102;
     constexpr int IDM_ENTRY_DEMO = 103;
-    constexpr int IDC_NOTATION_BTN = 2100;   // 主窗口“选择记号…”按钮
-    constexpr int IDM_DEFINITION_PICK = 4000; // “定义(&D)…”菜单：打开记号选择窗体
+    constexpr int IDC_NOTATION_BTN = 2100;
+    constexpr int IDM_DEFINITION_PICK = 4000;
     constexpr wchar_t kDefWindowClass[] = L"OmegaYDefPopup";
     constexpr int IDC_POPUP_DEF_EDIT = 5001;
     constexpr int IDC_POPUP_DEF_CLOSE = 5002;
@@ -608,7 +607,6 @@ namespace {
 
         HMENU hHelp = ::CreatePopupMenu();
         ::AppendMenuW(hHelp, MF_STRING, IDM_ABOUT, L"关于(&A)...");
-        ::AppendMenuW(hHelp, MF_STRING, IDM_ABOUT_AUTHOR, L"关于作者(&O)...");
         ::AppendMenuW(hHelp, MF_STRING, IDM_FRIENDLINK, L"友情链接(&F)...");
         ::AppendMenuW(hHelp, MF_STRING, IDM_LEGAL, L"法律声明(&L)...");
         ::AppendMenuW(hHelp, MF_STRING, IDM_THIRDPARTY_LICENSE,
@@ -1867,13 +1865,6 @@ namespace {
                 HINSTANCE hInst = reinterpret_cast<HINSTANCE>(
                     ::GetWindowLongPtrW(hwnd, GWLP_HINSTANCE));
                 expander_help_about::showSourceWindow(hInst, hwnd);
-                break;
-            }
-
-            case IDM_ABOUT_AUTHOR: {
-                HINSTANCE hInst = reinterpret_cast<HINSTANCE>(
-                    ::GetWindowLongPtrW(hwnd, GWLP_HINSTANCE));
-                expander_help_about::showAuthorWindow(hInst, hwnd);
                 break;
             }
 
