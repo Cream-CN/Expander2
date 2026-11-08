@@ -73,6 +73,9 @@
 #include "ton_mpc.hpp"
 #include "e0mn.hpp"
 #include "strong_e0mn.hpp"
+#include "srd11242.hpp"
+#include "graph11242.hpp"
+#include "ipd11242.hpp"
 #include "omega_mn.hpp"
 #include "pcf_omega_mn.hpp"
 #include "t_omega_mn.hpp"
@@ -627,7 +630,7 @@ private:
 
     // >>> 生成元数据数组开始（tools/gen_registry.ps1 输出） >>>
 #ifndef EXPANDER_GEN_REGISTRY_META
-inline constexpr std::array<NotationMeta, 114> kMetaArray = {
+inline constexpr std::array<NotationMeta, 119> kMetaArray = {
     NotationMeta{ .id = "empty", .display_name = "空记号", .definition_resource_id = IDR_DEF_EMPTY, .tags = { "测试", "基础" } },
     NotationMeta{ .id = "prss", .display_name = "PrSS", .definition_resource_id = IDR_DEF_PRSS, .tags = { "PrSS", "原始数列", "数列", "入门", "基础" } },
     NotationMeta{ .id = "pps", .display_name = "PPS", .definition_resource_id = IDR_DEF_PPS, .tags = { "PPS", "原始数列", "数列", "入门" } },
@@ -742,6 +745,11 @@ inline constexpr std::array<NotationMeta, 114> kMetaArray = {
     NotationMeta{ .id = "weak-a-omega2-mn-2", .display_name = "wAω2MN2", .definition_resource_id = IDR_DEF_WEAK_A_OMEGA2_MN_2, .tags = { "MN", "文本" } },
     NotationMeta{ .id = "a-omega2-mn-3", .display_name = "Aω2MN3", .definition_resource_id = IDR_DEF_A_OMEGA2_MN_3, .tags = { "MN", "文本" } },
     NotationMeta{ .id = "weak-a-omega2-mn-3", .display_name = "wAω2MN3", .definition_resource_id = IDR_DEF_WEAK_A_OMEGA2_MN_3, .tags = { "MN", "文本" } },
+    NotationMeta{ .id = "srd", .display_name = "SRD", .definition_resource_id = 0, .tags = { "11242", "文本" } },
+    NotationMeta{ .id = "rpd", .display_name = "RPD", .definition_resource_id = 0, .tags = { "11242", "文本" } },
+    NotationMeta{ .id = "ard", .display_name = "ARD", .definition_resource_id = 0, .tags = { "11242", "文本" } },
+    NotationMeta{ .id = "ard2", .display_name = "ARD2", .definition_resource_id = 0, .tags = { "11242", "文本" } },
+    NotationMeta{ .id = "ipd", .display_name = "IPD", .definition_resource_id = 0, .tags = { "11242", "文本" } },
 };
 #endif
     // <<< 生成元数据数组结束 <<<
@@ -911,7 +919,12 @@ using AllNotations = TypeList<
     Reg<MakeTextAlter<notation::Aw2MN2Notation>, 110>,
     Reg<MakeTextAlter<notation::WAw2MN2Notation>, 111>,
     Reg<MakeTextAlter<notation::Aw2MN3Notation>, 112>,
-    Reg<MakeTextAlter<notation::WAw2MN3Notation>, 113>
+    Reg<MakeTextAlter<notation::WAw2MN3Notation>, 113>,
+    Reg<MakeTextAlter<notation::SrdNotation>, 114>,
+    Reg<MakeTextAlter<notation::RpdNotation>, 115>,
+    Reg<MakeTextAlter<notation::ArdNotation>, 116>,
+    Reg<MakeTextAlter<notation::Ard2Notation>, 117>,
+    Reg<MakeTextAlter<notation::IpdNotation>, 118>
 >;
     // <<< 生成类型列表结束 <<<
 
