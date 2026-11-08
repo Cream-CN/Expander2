@@ -12,7 +12,7 @@
 #include "Header/common/utf8.hpp"
 #include "Header/core/arena.hpp"
 #include "Header/core/entry.hpp"
-#include "Header/notation/registry.hpp"   // OOP 内核：全部记号 + 统一接口 + 注册中心
+#include "Header/notation/registry.hpp"
 #include "Header/notation/translator.hpp"
 #include "Header/notation/translator_0y_bms.hpp"
 #include <memory>
@@ -24,11 +24,11 @@
 #include <algorithm>
 #include <cwctype>
 #include <cstdint>
-#include <shellapi.h>   // ShellExecuteW：打开友情链接
+#include <shellapi.h>
 #include "Resource.h"
-#include "Definitions.h"   // 记号定义文本由标头编译进程序，绕过 rc.exe
-#include "HandA.h"         // 关于(&A)：展示软件信息（向下滚动的只读文本框）
-#include "linksFreind.h"   // 友情链接(&F)：showsOfFriLnks 结构体数组
+#include "Definitions.h"
+#include "HandA.h"
+#include "linksFreind.h"
 
 using namespace omegay;
 using namespace omegay::common;
