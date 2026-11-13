@@ -56,27 +56,22 @@ namespace {
     constexpr wchar_t kLicenseWindowClass[] = L"OmegaYLicense";
     constexpr int IDC_LICENSE_EDIT = 6002;
     HWND g_hLicenseWindow = nullptr;
-    // ---- 展开结果展示窗体：只读 RichEdit 5.0（Msftedit.dll / MSFTEDIT_CLASS） ----
     constexpr wchar_t kResultWindowClass[] = L"OmegaYResult";
     constexpr int IDC_RESULT_EDIT = 6003;
     HWND g_hResultWindow = nullptr;
-
-    // ---- 记号选择窗体 ----
     constexpr wchar_t kPickerWindowClass[] = L"OmegaYPicker";
     constexpr int IDC_PICKER_SEARCH = 7101;
     constexpr int IDC_PICKER_LIST = 7102;
     constexpr int IDC_PICKER_STATUS = 7103;
-
-    // ---- 互译器页面 ----
     constexpr wchar_t kTranslatorWindowClass[] = L"OmegaYTranslator";
-    constexpr int IDC_TRANSLATOR_COMBO = 7201;   // 互译器下拉选择
-    constexpr int IDC_TRANSLATOR_INPUT = 7202;   // 输入（源记号表达式）
-    constexpr int IDC_TRANSLATOR_OUTPUT = 7203;  // 输出（目标记号表达式，只读）
-    constexpr int IDC_TRANSLATOR_BTN = 7204;     // “互译”按钮
-    constexpr int IDC_TRANSLATOR_STATUS = 7205;  // 状态栏
-    constexpr int IDC_TRANSLATOR_DESC = 7206;    // 互译器说明
-    constexpr int IDC_TRANSLATOR_DIR = 7207;     // 方向（源 → 目标）
-    constexpr int IDM_TRANSLATOR = 110;          // 工具菜单：“互译器”
+    constexpr int IDC_TRANSLATOR_COMBO = 7201;
+    constexpr int IDC_TRANSLATOR_INPUT = 7202;
+    constexpr int IDC_TRANSLATOR_OUTPUT = 7203;
+    constexpr int IDC_TRANSLATOR_BTN = 7204;
+    constexpr int IDC_TRANSLATOR_STATUS = 7205;
+    constexpr int IDC_TRANSLATOR_DESC = 7206;
+    constexpr int IDC_TRANSLATOR_DIR = 7207;
+    constexpr int IDM_TRANSLATOR = 110;
     HWND g_hTranslatorWindow = nullptr;
 
     struct NotationEntry {
@@ -85,50 +80,20 @@ namespace {
         std::vector<int>(*expand)(const std::vector<int>&, int);
         std::string(*suffix)();
         int definition_resource_id;
-
-        // 可选的文本展开入口。若不为空，UI 会优先用它处理输入文本，
-        // 签名约定：std::string expand_string(std::string_view, int)
         std::string(*expand_text)(std::string_view, int) = nullptr;
-
-        // 可选的 FS_alter（较长）文本展开入口。
-        // 非空时，FS 使用 expand_text、FS_alter 使用本入口，两者均由记号自身实现，
-        // UI 不再对 FS 结果做通用截断（DEN1 / blp / iblp 即属此类）。
         std::string(*expand_text_alter)(std::string_view, int) = nullptr;
-
-        // 可选的“参数化族”文本展开入口。非空时，选中该记号会在主窗口显示一个
-        // 额外的整数参数输入框（如 Minus1 系列的元组宽度 n），展开时把参数一并传入。
-        // 签名约定：std::string expand_text_n(std::string_view text, int term, int param)
         std::string(*expand_text_n)(std::string_view, int, int) = nullptr;
-        // 可选的“参数化族”FS_alter 文本展开入口（如 BT v3 的 FS_short）。
-        // 非空且按下 FS_alter 按钮时使用本入口，否则使用 expand_text_n。
         std::string(*expand_text_n_alter)(std::string_view, int, int) = nullptr;
-        int param_min = 0;          // 参数允许的最小整数值（含）
-        int param_max = 25;         // 参数允许的最大整数值（含）
-        int param_default = 0;      // 选中该记号时输入框的默认值
-        const wchar_t* param_label = L"n:";  // 参数输入框前的标签
-
-        // 记号标签（用于选择窗体的搜索与展示）。最多 16 个，以 nullptr 结尾；
-        // 未用的槽位保持 nullptr。可在下表按需增删。
+        int param_min = 0;
+        int param_max = 25;
+        int param_default = 0;
+        const wchar_t* param_label = L"n:";
         std::array<const wchar_t*, 16> tags{};
-
-        // OOP 内核指针（2026-11 重构）：指向注册中心中的 INotation 实例。
-        // 上面的函数指针字段保留（由注册中心派生、语义等价），但展开调用
-        // 统一走本指针的 INotation::expand()（含 FS 截断与后缀语义）。
         const omegay::notation::INotation* notation = nullptr;
     };
-
-    // 记号表由 OOP 注册中心派生（2026-11 深度重构）：
-    //   单一事实来源 = Header/notation/registry.hpp 的 register_all_notations()；
-    //   本表保留 NotationEntry 结构（对外接口不变），字段由注册中心派生，
-    //   宽字符元数据在此一次性转换并静态驻留。展开调用统一走 entry.notation
-    //   ->expand()（含 FS 截断与后缀语义），函数指针字段仅供 UI 能力判断。
     [[nodiscard]] const std::vector<NotationEntry>& notationTable() {
         static const std::vector<NotationEntry> notation_table = [] {
             struct WideStore {
-                // deque（而非 vector）：元素插入不会使已 push 的 wstring 的 c_str() 指针失效。
-                // 用 vector 混存 display_name / tags 时，后续 push_back 触发重分配会让此前
-                // 保存的指针悬垂 → 列表显示乱码/不可见。display_name 与 tags 必须存同一容器，
-                // 且该容器须在插入时保持已有元素指针有效，故用 deque。
                 std::deque<std::wstring> names;
                 std::deque<std::wstring> labels;
                 std::vector<std::array<const wchar_t*, 16>> tags;
@@ -173,10 +138,6 @@ namespace {
         }();
         return notation_table;
     }
-
-    // ---- 互译器表 ----
-    // 登记在“互译器页面”中的所有互译器。契约见 Header/notation/translator.hpp，
-    // 规范见 Docs/互译器规范.md。表很小，直接用普通静态数组承载。
     static const omegay::translator::Translator kTranslatorTable[] = {
             { .display_name = L"恒等互译器",
               .id = "identity",
@@ -214,8 +175,6 @@ namespace {
     using MenuPtr = std::unique_ptr<std::remove_pointer_t<HMENU>, MenuDeleter>;
     using BrushPtr = std::unique_ptr<std::remove_pointer_t<HBRUSH>, BrushDeleter>;
 
-    // ================= 记号选择窗体 =================
-
     [[nodiscard]] std::wstring pickerLower(std::wstring_view s) {
         std::wstring out;
         out.reserve(s.size());
@@ -232,9 +191,6 @@ namespace {
         }
         return out;
     }
-
-    // 搜索打分：0 = 不匹配；分值越高排序越靠前。
-    // 支持四种命中：记号全名(=)、Tag全名(=)、记号前缀、记号部分名(包含)、Tag部分名(包含)。
     [[nodiscard]] int pickerMatchScore(const NotationEntry& e, const std::wstring& lq) {
         const std::wstring lname = pickerLower(e.display_name);
         if (lname == lq) return 5;
@@ -261,9 +217,9 @@ namespace {
         HWND hList{};
         HWND hStatus{};
         BrushPtr background;
-        std::vector<int> shown;   // 当前列表行 → 记号表索引
-        int current = 0;          // 打开窗体时的当前选择（用于首屏高亮）
-        int* pResult = nullptr;   // 确认时写入选中的记号表索引
+        std::vector<int> shown;
+        int current = 0;
+        int* pResult = nullptr;
     };
 
     [[nodiscard]] PickerState* getPicker(HWND h) {
@@ -487,8 +443,6 @@ namespace {
         ::RegisterClassW(&wc);
         registered = true;
     }
-
-    // 模态显示记号选择窗体；返回选中的记号表索引，取消返回 -1。
     int showNotationPicker(HINSTANCE hInst, HWND hParent, int current,
         const wchar_t* title = L"选择记号") {
         registerPickerClass(hInst);
@@ -503,8 +457,6 @@ namespace {
             0, 0, 560, 440,
             hParent, nullptr, hInst, &launch);
         if (!hDlg) return -1;
-
-        // 居中于父窗口，并整体下移 100px
         RECT pr{}, dr{};
         ::GetWindowRect(hParent, &pr);
         ::GetWindowRect(hDlg, &dr);
@@ -532,19 +484,19 @@ namespace {
         return result;
     }
 
-    struct IconStrip; // 顶部图标条（Expander.ico + MFC.ico），定义见互译器页面前的辅助代码
+    struct IconStrip;
 
     struct UiState {
         HWND hEditSeq{};
         HWND hEditTerm{};
         HWND hBtnFS{};
         HWND hBtnFSalter{};
-        HWND hBtnNotation{};    // “选择记号…”按钮
-        HWND hNotationLabel{};  // 当前记号（含标签）显示
-        HWND hStaticParam{};    // 参数化记号的参数标签
-        HWND hEditParam{};      // 参数化记号的参数输入框
-        int notation_index = 0; // 当前选中的记号表索引
-        IconStrip* icons{};     // 顶部图标条（Expander.ico + MFC.ico）
+        HWND hBtnNotation{};
+        HWND hNotationLabel{};
+        HWND hStaticParam{};
+        HWND hEditParam{};
+        int notation_index = 0;
+        IconStrip* icons{};
         BrushPtr background;
     };
 
@@ -561,8 +513,6 @@ namespace {
             label += L"]";
         }
         ::SetWindowTextW(ui->hNotationLabel, label.c_str());
-
-        // 仅参数化记号显示额外的参数输入框，并在切入时填入默认值。
         if (ui->hStaticParam && ui->hEditParam) {
             const bool hasParam = (e.expand_text_n != nullptr);
             const int show = hasParam ? SW_SHOW : SW_HIDE;
@@ -581,8 +531,6 @@ namespace {
     }
 
     [[nodiscard]] std::wstring loadDefinitionText(HINSTANCE, int resId) {
-        // 定义文本不再经过 rc.exe 的资源编译：直接从 Definitions.h 标头查表，
-        // 规避 rc.exe 对 UTF-8 源文件的编码误读(首尾乱码)与 \n 不转义的问题。
         std::string_view utf8 = expander_defs::lookup(resId);
         if (utf8.empty()) return L"暂缺，有提供的联系作者邮箱";
         return utf8_to_wstring(utf8);
@@ -595,16 +543,11 @@ namespace {
         ::AppendMenuW(hFile, MF_STRING, IDM_EXIT, L"退出(&X)");
         ::AppendMenuW(hMenu, MF_POPUP,
             reinterpret_cast<UINT_PTR>(hFile), L"文件(&F)");
-
-        // 定义改为直接命令项：点击后打开记号选择窗体，选定后弹出对应定义
         ::AppendMenuW(hMenu, MF_STRING, IDM_DEFINITION_PICK, L"定义(&D)...");
-
-        // 工具：互译器等独立功能页面
         HMENU hTools = ::CreatePopupMenu();
         ::AppendMenuW(hTools, MF_STRING, IDM_TRANSLATOR, L"互译器(&T)...");
         ::AppendMenuW(hMenu, MF_POPUP,
             reinterpret_cast<UINT_PTR>(hTools), L"工具(&T)");
-
         HMENU hHelp = ::CreatePopupMenu();
         ::AppendMenuW(hHelp, MF_STRING, IDM_ABOUT, L"关于(&A)...");
         ::AppendMenuW(hHelp, MF_STRING, IDM_FRIENDLINK, L"友情链接(&F)...");
@@ -752,7 +695,6 @@ namespace {
             reinterpret_cast<LPVOID>(static_cast<INT_PTR>(index)));
 
         if (hPopup) {
-            // 在系统默认位置的基础上整体下移 100px
             RECT r{};
             if (::GetWindowRect(hPopup, &r)) {
                 const int w = r.right - r.left, h = r.bottom - r.top;
@@ -778,7 +720,7 @@ namespace {
             static_cast<unsigned char>(utf8[0]) == 0xEF &&
             static_cast<unsigned char>(utf8[1]) == 0xBB &&
             static_cast<unsigned char>(utf8[2]) == 0xBF) {
-            utf8.remove_prefix(3); // 跳过 UTF-8 BOM
+            utf8.remove_prefix(3);
         }
         std::wstring w = utf8_to_wstring(utf8);
 
@@ -884,10 +826,7 @@ namespace {
         ::ShowWindow(hwnd, SW_SHOW);
         ::UpdateWindow(hwnd);
     }
-
-    // ---- 第三方开源软件许可证：内容读取自 defs/law.txt ----
     [[nodiscard]] std::wstring loadThirdPartyLicenseText() {
-        // 候选路径：exe 所在目录的 defs/law.txt，其次当前工作目录的 defs/law.txt
         wchar_t exePath[MAX_PATH]{};
         ::GetModuleFileNameW(nullptr, exePath, MAX_PATH);
         std::wstring exeDir;
@@ -1034,9 +973,6 @@ namespace {
         ::ShowWindow(hwnd, SW_SHOW);
         ::UpdateWindow(hwnd);
     }
-
-    // ---- 展开结果展示窗体：只读 RichEdit 5.0（Msftedit.dll / MSFTEDIT_CLASS） ----
-    // 取代原 MessageBox 弹窗：结果可能极长，RichEdit 支持选择/复制与双向滚动。
     void setResultText(HWND hRich, const std::wstring& text) {
         expander_help_about::applyRichEdit10pt(hRich);
         ::SetWindowTextW(hRich, text.c_str());
@@ -1138,25 +1074,18 @@ namespace {
         ::ShowWindow(hwnd, SW_SHOW);
         ::UpdateWindow(hwnd);
     }
-
-    // ================= 顶栏图标条（Expander.ico + MFC.ico + namePic.jpg） =================
-    // “关于 / 互译器 / 主界面”共用：顶部并排显示软件图标 Expander.ico 与 MFC.ico，
-    // 以及右侧的 Assets/namePic.jpg 名字图（等比缩放到与图标同高）。
-    // 统一按 48×48 显示。图标/位图句柄归本结构所有，父窗口销毁时须调用 destroyIconStrip 释放。
     constexpr int IDC_ICON_EXPANDER = 7301;
     constexpr int IDC_ICON_MFC      = 7302;
-    constexpr int IDC_ICON_NAMEPIC  = 7303;   // Assets/namePic.jpg 名字图
+    constexpr int IDC_ICON_NAMEPIC  = 7303;
 
     struct IconStrip {
-        HWND  hIcon1{};      // Expander.ico
-        HWND  hIcon2{};      // MFC.ico
-        HWND  hNamePic{};    // Assets/namePic.jpg（名字图）
+        HWND  hIcon1{};
+        HWND  hIcon2{};
+        HWND  hNamePic{};
         HICON hIcoExpander{};
         HICON hIcoMfc{};
-        HBITMAP hBmpNamePic{};  // namePic.jpg 等比缩放后的位图（归本结构所有）
+        HBITMAP hBmpNamePic{};
     };
-
-    // 定位资源文件：优先 exe 所在目录，其次当前工作目录（与 defs/law.txt 同款策略）。
     [[nodiscard]] std::wstring findAssetFile(const wchar_t* fileName) {
         wchar_t exePath[MAX_PATH]{};
         ::GetModuleFileNameW(nullptr, exePath, MAX_PATH);
@@ -1173,8 +1102,6 @@ namespace {
         }
         return std::wstring();
     }
-
-    // 用 GDI+ 从文件加载 JPG，并按目标高度等比缩放为 DIB 位图；失败返回 nullptr。
     [[nodiscard]] HBITMAP loadJpegScaled(const std::wstring& path,
                                          int dstH, int& outW) {
         Gdiplus::Bitmap src(path.c_str());
@@ -1195,9 +1122,6 @@ namespace {
         outW = dstW;
         return hbmp;
     }
-
-    // 从 RCDATA 资源读图（JPG/PNG 均可），按目标高度等比缩放为 DIB 位图。
-    // 与 loadJpegScaled 同语义，但数据来自 exe 内嵌资源，不再依赖外部文件。
     [[nodiscard]] HBITMAP loadResourceImageScaled(HINSTANCE hInst, int resourceId,
                                                    int dstH, int& outW) {
         outW = 0;
@@ -1274,9 +1198,6 @@ namespace {
             ::SendMessageW(s->hIcon2, STM_SETICON,
                 reinterpret_cast<WPARAM>(s->hIcoMfc), 0);
         }
-
-        // 第三个：Assets/namePic.jpg 名字图，等比缩放到与图标同高，位于 MFC.ico 右侧。
-        // 图片已内嵌为 RCDATA 资源（IDB_NAMEPIC），失败时静默跳过，不影响原有两个图标。
         int nameW = 0;
         s->hBmpNamePic = loadResourceImageScaled(hInst, IDB_NAMEPIC, size, nameW);
         if (s->hBmpNamePic && nameW > 0) {
@@ -1303,8 +1224,6 @@ namespace {
         if (s->hIcoMfc)     ::DestroyIcon(s->hIcoMfc);
         if (s->hBmpNamePic) ::DeleteObject(s->hBmpNamePic);
     }
-
-    // ================= 互译器页面 =================
 
     struct TranslatorState {
         HWND hCombo{};    // 互译器下拉选择
@@ -1430,8 +1349,6 @@ namespace {
                 10, ty + 200, kW, outH, hwnd,
                 reinterpret_cast<HMENU>(static_cast<UINT_PTR>(IDC_TRANSLATOR_OUTPUT)),
                 hInst, nullptr);
-
-            // 填充互译器下拉框并默认选中第一个
             const auto& table = translatorTable();
             for (const auto& t : table)
                 ::SendMessageW(st->hCombo, CB_ADDSTRING, 0,
@@ -1505,8 +1422,6 @@ namespace {
         ::RegisterClassW(&wc);
         registered = true;
     }
-
-    // 打开“互译器”页面（单例：已打开则带回前台）。
     void showTranslatorWindow(HINSTANCE hInst, HWND hParent) {
         if (::IsWindow(g_hTranslatorWindow)) {
             ::ShowWindow(g_hTranslatorWindow, SW_RESTORE);
@@ -1520,9 +1435,9 @@ namespace {
             0, kTranslatorWindowClass, L"互译器",
             WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU,
 #ifndef EXPANDER_CLEAN_UI
-            CW_USEDEFAULT, CW_USEDEFAULT, 400, 500,   // 400×500：紧凑互译器
+            CW_USEDEFAULT, CW_USEDEFAULT, 400, 500,
 #else
-            CW_USEDEFAULT, CW_USEDEFAULT, 400, 500,   // 清爽版：同为 400×500
+            CW_USEDEFAULT, CW_USEDEFAULT, 400, 500,
 #endif
             hParent, nullptr, hInst, nullptr);
         if (!hwnd) return;
@@ -1531,8 +1446,6 @@ namespace {
         ::ShowWindow(hwnd, SW_SHOW);
         ::UpdateWindow(hwnd);
     }
-
-    // ================= 友情链接页面 =================
     constexpr wchar_t kLinksWindowClass[] = L"OmegaYLinks";
     constexpr int IDC_LINKS_LIST = 7401;
     HWND g_hLinksWindow = nullptr;
@@ -1544,8 +1457,6 @@ namespace {
     [[nodiscard]] LinksState* getLinks(HWND h) {
         return reinterpret_cast<LinksState*>(::GetWindowLongPtrW(h, GWLP_USERDATA));
     }
-
-    // 用系统默认浏览器打开第 index 条友情链接的 URL。
     void openFriendLink(int index) {
         if (index < 0 || index >= expander_links::kFriendLinkCount) return;
         const std::wstring url = utf8_to_wstring(expander_links::kFriendLinks[index].Link);
@@ -1561,8 +1472,6 @@ namespace {
                 reinterpret_cast<LONG_PTR>(st));
 
             HINSTANCE hInst = cs->hInstance;
-
-            // 列表：两列（名称 / URL），点击第一列（名称）跳转
             st->hList = ::CreateWindowExW(
                 WS_EX_CLIENTEDGE, WC_LISTVIEWW, L"",
                 WS_CHILD | WS_VISIBLE | WS_TABSTOP | WS_VSCROLL |
@@ -1608,7 +1517,6 @@ namespace {
         case WM_NOTIFY: {
             auto* nmh = reinterpret_cast<NMHDR*>(lParam);
             if (nmh->idFrom == IDC_LINKS_LIST && nmh->code == NM_CLICK) {
-                // 单击第一列（名称）跳转到对应 URL
                 auto* na = reinterpret_cast<NMITEMACTIVATE*>(lParam);
                 if (na->iItem >= 0 && na->iSubItem == 0) {
                     openFriendLink(na->iItem);
@@ -1644,8 +1552,6 @@ namespace {
         ::RegisterClassW(&wc);
         registered = true;
     }
-
-    // 打开“友情链接”页面（单例：已打开则带回前台）。
     void showLinksWindow(HINSTANCE hInst, HWND hParent) {
         if (::IsWindow(g_hLinksWindow)) {
             ::ShowWindow(g_hLinksWindow, SW_RESTORE);
@@ -1740,12 +1646,9 @@ namespace {
 
             HINSTANCE hInst = reinterpret_cast<HINSTANCE>(
                 ::GetWindowLongPtrW(hwnd, GWLP_HINSTANCE));
-            // 不再显示顶部图标条，mh 直接从 10 开始。
             ui->icons = nullptr;
             constexpr int mh = 10;
-
-            // 主窗口 400×400：客户区宽约 370，内容宽度取 360。
-            constexpr int kW = 360; // 主要控件统一宽度
+            constexpr int kW = 360;
 
             ::CreateWindowExW(0, L"STATIC", L"序列 (用逗号分隔):",
                 WS_CHILD | WS_VISIBLE | SS_LEFT,
@@ -1766,9 +1669,6 @@ namespace {
                 WS_CHILD | WS_VISIBLE | WS_BORDER | ES_LEFT,
                 60, mh + 72, 70, 24,
                 hwnd, nullptr, hInst, nullptr);
-
-            // 参数化记号（如 Minus1 系列）使用的额外整数参数输入框，默认隐藏；
-            // 选中带 expand_text_n 的记号时由 updateNotationLabel 显示。
             ui->hStaticParam = ::CreateWindowExW(0, L"STATIC", L"",
                 WS_CHILD | SS_LEFT,
                 140, mh + 72, 80, 20,
@@ -1917,8 +1817,6 @@ namespace {
                                         : omegay::notation::ExpandMode::Fs;
 
                 if (entry.notation->has_text()) {
-                    // 文本型记号：输入读取与校验保持 UI 原行为；
-                    // 展开统一走 OOP 接口（含 FS_alter 分支与 FS 通用截断）。
                     wchar_t bufSeq[512]{};
                     wchar_t bufTerm[64]{};
                     ::GetWindowTextW(ui->hEditSeq, bufSeq, 512);
@@ -1955,7 +1853,6 @@ namespace {
                     text = std::move(r.text);
                 }
                 else if (entry.notation->has_text_n()) {
-                    // 参数化记号：读取序列、项数与额外整数参数 n。
                     wchar_t bufSeq[512]{};
                     wchar_t bufTerm[64]{};
                     wchar_t bufParam[64]{};
@@ -1996,9 +1893,6 @@ namespace {
                             MB_OK | MB_ICONERROR);
                         break;
                     }
-
-                    // 参数化族的展开已包含完整 LNZ 语义，统一入口内部完成
-                    // FS_alter 分支选择与 suffix 拼接，不做通用截断。
                     omegay::notation::ExpandResult r =
                         entry.notation->expand(mode, utf8Seq, term, param);
                     if (!r.ok) {
@@ -2009,12 +1903,9 @@ namespace {
                     text = std::move(r.text);
                 }
                 else {
-                    // 序列型记号
                     std::vector<int> seq;
                     int term = 0;
                     if (!readSeqAndTerm(hwnd, ui, seq, term)) break;
-
-                    // 原始文本交给统一入口（内部解析、展开、FS pop_back、suffix）
                     wchar_t bufSeq[256]{};
                     ::GetWindowTextW(ui->hEditSeq, bufSeq, 256);
                     omegay::notation::ExpandResult r = entry.notation->expand(
@@ -2026,8 +1917,6 @@ namespace {
                     }
                     text = std::move(r.text);
                 }
-
-                // 展开文本已含 suffix（统一入口内部拼接）
                 std::wstring wtext = utf8_to_wstring(text);
                 HINSTANCE hInst = reinterpret_cast<HINSTANCE>(
                     ::GetWindowLongPtrW(hwnd, GWLP_HINSTANCE));
@@ -2062,8 +1951,6 @@ namespace {
 int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance,
                     _In_ PWSTR lpCmdLine, _In_ int nCmdShow) {
     ::LoadLibraryW(L"Msftedit.dll");
-
-    // GDI+：用于加载 Assets/namePic.jpg 等 JPG 资源；失败时相关控件静默跳过。
     Gdiplus::GdiplusStartupInput gdiplusInput;
     ULONG_PTR gdiplusToken = 0;
     if (Gdiplus::GdiplusStartup(&gdiplusToken, &gdiplusInput, nullptr) != Gdiplus::Ok)
@@ -2085,9 +1972,9 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance,
         0, L"OmegaY", L"Expander",
         WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX,
 #ifndef EXPANDER_CLEAN_UI
-        CW_USEDEFAULT, CW_USEDEFAULT, 400, 400,   // 400×400：紧凑主窗口
+        CW_USEDEFAULT, CW_USEDEFAULT, 400, 400, 
 #else
-        CW_USEDEFAULT, CW_USEDEFAULT, 400, 400,   // 清爽版：同为 400×400
+        CW_USEDEFAULT, CW_USEDEFAULT, 400, 400,
 #endif
         nullptr, nullptr, hInstance, nullptr);
     if (!hwnd) return 0;
