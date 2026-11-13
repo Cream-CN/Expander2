@@ -3,18 +3,17 @@
 
 #include <windows.h>
 #include <richedit.h>   // MSFTEDIT_CLASS、CHARFORMAT2W、EM_* / EC_*
+#include <objidl.h>    // IStream / CreateStreamOnHGlobal（从 RCDATA 内存流解码图片）
 #include <string>
-#include "Resource.h"   // IDI_EXPANDER、IDI_MFC
+#include <gdiplus.h>
+#include "Resource.h"   // IDI_EXPANDER、IDI_MFC、IDB_AUTHOR_AVATAR、IDB_ORG_AVATAR
+
+#pragma comment(lib, "gdiplus.lib")
 
 namespace expander_help_about {
 
     inline constexpr wchar_t kSourceWindowClass[] = L"OmegaYSource";
     inline constexpr int    IDC_SOURCE_EDIT     = 6002;
-    inline constexpr int    IDC_ABOUT_ICON1     = 6003;   // “关于”窗体：Expander.ico
-    inline constexpr int    IDC_ABOUT_ICON2     = 6004;   // “关于”窗体：MFC.ico
-    inline constexpr int    kAboutIconSize      = 48;     // 图标显示尺寸（两枚统一 48×48）
-    inline constexpr int    kAboutIconMargin    = 12;     // 图标距左边距 / 两枚图标间距
-    inline constexpr int    kAboutTextTop       = kAboutIconMargin + kAboutIconSize + 10; // 文本区顶边
     inline HWND             g_hSourceWindow     = nullptr;
     inline HFONT            g_hSourceFont       = nullptr; // “关于”窗体文本框字体
     inline constexpr wchar_t kSourceText[] =
@@ -51,13 +50,9 @@ namespace expander_help_about {
         ::SendMessageW(hRich, EM_SETCHARFORMAT, SCF_ALL, reinterpret_cast<LPARAM>(&cf));
     }
 
-    // “关于”窗体的子窗口与图标句柄
+    // “关于”窗体的子窗口句柄
     struct AboutChildWindows {
         HWND  hEdit;
-        HWND  hIcon1;
-        HWND  hIcon2;
-        HICON hIcoExpander;
-        HICON hIcoMfc;
     };
 
     inline LRESULT CALLBACK SourceWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
@@ -68,43 +63,12 @@ namespace expander_help_about {
 
             auto* ch = new AboutChildWindows{};
 
-            // 两枚图标统一按 48×48 显示：Expander.ico（软件图标）与 MFC.ico
-            ch->hIcoExpander = static_cast<HICON>(::LoadImageW(
-                cs->hInstance, MAKEINTRESOURCEW(IDI_EXPANDER),
-                IMAGE_ICON, kAboutIconSize, kAboutIconSize, LR_DEFAULTCOLOR));
-            ch->hIcoMfc = static_cast<HICON>(::LoadImageW(
-                cs->hInstance, MAKEINTRESOURCEW(IDI_MFC),
-                IMAGE_ICON, kAboutIconSize, kAboutIconSize, LR_DEFAULTCOLOR));
-
-            ch->hIcon1 = ::CreateWindowExW(0, L"STATIC", L"",
-                WS_CHILD | WS_VISIBLE | SS_ICON,
-                kAboutIconMargin, kAboutIconMargin, kAboutIconSize, kAboutIconSize,
-                hwnd,
-                reinterpret_cast<HMENU>(static_cast<UINT_PTR>(IDC_ABOUT_ICON1)),
-                cs->hInstance, nullptr);
-            if (ch->hIcon1 && ch->hIcoExpander) {
-                ::SendMessageW(ch->hIcon1, STM_SETICON,
-                    reinterpret_cast<WPARAM>(ch->hIcoExpander), 0);
-            }
-
-            ch->hIcon2 = ::CreateWindowExW(0, L"STATIC", L"",
-                WS_CHILD | WS_VISIBLE | SS_ICON,
-                kAboutIconMargin + kAboutIconSize + kAboutIconMargin,
-                kAboutIconMargin, kAboutIconSize, kAboutIconSize,
-                hwnd,
-                reinterpret_cast<HMENU>(static_cast<UINT_PTR>(IDC_ABOUT_ICON2)),
-                cs->hInstance, nullptr);
-            if (ch->hIcon2 && ch->hIcoMfc) {
-                ::SendMessageW(ch->hIcon2, STM_SETICON,
-                    reinterpret_cast<WPARAM>(ch->hIcoMfc), 0);
-            }
-
-            // “关于”窗体：普通多行编辑框（尺寸与旧 RichEdit 相同），向下滚动展示文字
+            // “关于”窗体：只读多行编辑框，从窗体顶部铺满，向下滚动展示文字
             HWND hEdit = ::CreateWindowExW(
                 0, L"EDIT", L"",
                 WS_CHILD | WS_VISIBLE | WS_BORDER | WS_VSCROLL |
                 ES_MULTILINE | ES_READONLY | ES_AUTOVSCROLL,
-                2, kAboutTextTop, 10, 10,
+                2, 2, 10, 10,
                 hwnd,
                 reinterpret_cast<HMENU>(static_cast<UINT_PTR>(IDC_SOURCE_EDIT)),
                 cs->hInstance, nullptr);
@@ -135,17 +99,8 @@ namespace expander_help_about {
                 ::GetWindowLongPtrW(hwnd, GWLP_USERDATA));
             if (!ch) break;
             const int w = LOWORD(lParam), h = HIWORD(lParam);
-            if (ch->hIcon1) {
-                ::MoveWindow(ch->hIcon1, kAboutIconMargin, kAboutIconMargin,
-                    kAboutIconSize, kAboutIconSize, TRUE);
-            }
-            if (ch->hIcon2) {
-                ::MoveWindow(ch->hIcon2,
-                    kAboutIconMargin + kAboutIconSize + kAboutIconMargin,
-                    kAboutIconMargin, kAboutIconSize, kAboutIconSize, TRUE);
-            }
             if (ch->hEdit) {
-                ::MoveWindow(ch->hEdit, 2, kAboutTextTop, w - 4, h - kAboutTextTop - 2, TRUE);
+                ::MoveWindow(ch->hEdit, 2, 2, w - 4, h - 4, TRUE);
             }
             break;
         }
@@ -161,8 +116,6 @@ namespace expander_help_about {
                 auto* ch = reinterpret_cast<AboutChildWindows*>(
                     ::GetWindowLongPtrW(hwnd, GWLP_USERDATA));
                 if (ch) {
-                    if (ch->hIcoExpander) ::DestroyIcon(ch->hIcoExpander);
-                    if (ch->hIcoMfc)     ::DestroyIcon(ch->hIcoMfc);
                     delete ch;
                     ::SetWindowLongPtrW(hwnd, GWLP_USERDATA, 0);
                 }

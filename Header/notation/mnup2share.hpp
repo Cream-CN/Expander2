@@ -43,8 +43,6 @@ inline int expr_compare(const Expr& a, const Expr& b) {
     }
     return a.size() < b.size() ? -1 : a.size() > b.size() ? 1 : 0;
 }
-
-// TS vertical_increase：v.length <= sep 时返回 [0]*sep + [1]，否则 v[sep]++ 且 v[0..sep)=0。
 inline Vertical vertical_increase(const Vertical& v, int sep) {
     if (static_cast<int>(v.size()) <= sep) {
         Vertical r(static_cast<std::size_t>(sep), 0);

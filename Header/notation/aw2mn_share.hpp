@@ -1,14 +1,4 @@
-// Header/notation/aw2mn_share.hpp
-// Aω2MN2 / Aω2MN3（及弱版 wAω2MN2 / wAω2MN3）的共享实现核心。
-// 逻辑移植自 notation-explorer（hypcos）的 src/notations/MN/Aw2MN2.ts / Aw2MN3.ts
-// （家族/类别：category-hypcos-w2mn）。
-// 结构（TS）：Sep=Expr（递归！）；Entry=[value(1-based), Sep, mark?]；Column=Entry[]；
-// Expr=Column[]；Vertical=Sep[]。∞ 用 bool 标志表示。
-// 差异：Aω2MN2 用 subtract1 版 2（limit 分隔符分支：J 由 BR_separator 构造并仅在
-// vertical_increase(alpha,J) 高于 working_vertical 时入列）；Aω2MN3 用 subtract1 版 3
-// （is_one 提前返回；limit 分支用 while 循环加长 J 至两侧 vertical 相等）。
-// 弱版与普通版仅 weak=true（stretch 时 V0[x][y] 不低于 top_vertical 的条目保持原分隔符）。
-// UI 能力（display_equiv layer/marked、draw_diagram 等）不在文本记号契约内，未移植。
+
 #pragma once
 
 #include <cstddef>

@@ -1,10 +1,4 @@
-// Header/notation/aw2mn2.hpp
-// Aω2MN2 记号（display 名 "Aω2MN2"，TS id "a-omega2-mn-2"）。
-// 逻辑移植自 notation-explorer（hypcos）的 src/notations/MN/Aw2MN2.ts
-// （家族/类别：category-hypcos-w2mn，credit.hypcos_mn）。
-// 表达式结构：Sep=Expr（递归）；Vertical=Sep[]；Entry=[value(1-based), Sep, mark?]；
-// Column=Entry[]；Expr=Column[]；∞ 用 bool 标志表示。
-// 核心实现与弱版/版本3 共享 Header/notation/aw2mn_share.hpp（本记号：subtract1 版2、非弱版）。
+
 #pragma once
 
 #include <optional>
