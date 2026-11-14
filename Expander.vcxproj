@@ -70,6 +70,37 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Label="ExpanderOptimizationKnobs">
+    <ExpanderIsa Condition="'$(ExpanderIsa)' == ''">AVX2</ExpanderIsa>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)'=='Release' and '$(Platform)'=='x64' and '$(ExpanderIsa)'!='AVX2'">
+    <TargetName>$(ProjectName)_no_avx2</TargetName>
+    <IntDir>$(ProjectName)\x64\$(Configuration)_no_avx2\</IntDir>
+  </PropertyGroup>
+  <!-- Code Analysis：四个配置一律开启，并统一使用工程根目录下的 my.ruleset。
+       注意：只有 RunCodeAnalysis=true 时，VC 的 CodeAnalysis 目标才会把
+       CodeAnalysisRuleSet 翻译成 cl 的 /analyze:ruleset，并自动补上
+       /analyze:rulesetdirectory（my.ruleset 依赖 <Include> 引入内置规则集，
+       少了这个搜索目录 cl 会直接报 C1259 “无法分析规则集”）、
+       EspXEngine 插件（CppCoreCheck 系列规则要靠它才会真正跑起来）和
+       CODE_ANALYSIS 宏。只写 CodeAnalysisRuleSet 而不开 RunCodeAnalysis 时，
+       规则集对构建没有任何作用（静默失效）。 -->
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <CodeAnalysisRuleSet>$(ProjectDir)my.ruleset</CodeAnalysisRuleSet>
+    <RunCodeAnalysis>true</RunCodeAnalysis>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <CodeAnalysisRuleSet>$(ProjectDir)my.ruleset</CodeAnalysisRuleSet>
+    <RunCodeAnalysis>true</RunCodeAnalysis>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <CodeAnalysisRuleSet>$(ProjectDir)my.ruleset</CodeAnalysisRuleSet>
+    <RunCodeAnalysis>true</RunCodeAnalysis>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <CodeAnalysisRuleSet>$(ProjectDir)my.ruleset</CodeAnalysisRuleSet>
+    <RunCodeAnalysis>true</RunCodeAnalysis>
+  </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
@@ -78,7 +109,7 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <TreatSpecificWarningsAsErrors>6011;6387;6388;28182;33010;33011;33020;33021;6001;6201;6204;6383;6385;6386</TreatSpecificWarningsAsErrors>
-      <AdditionalOptions>/analyze /utf-8</AdditionalOptions>
+      <AdditionalOptions>/utf-8</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -98,7 +129,7 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <TreatSpecificWarningsAsErrors>6011;6387;6388;28182;33010;33011;33020;33021;6001;6201;6204;6383;6385;6386</TreatSpecificWarningsAsErrors>
-      <AdditionalOptions>/analyze /utf-8</AdditionalOptions>
+      <AdditionalOptions>/utf-8</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -116,7 +147,9 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <TreatSpecificWarningsAsErrors>6011;6387;6388;28182;33010;33011;33020;33021;6001;6201;6204;6383;6385;6386</TreatSpecificWarningsAsErrors>
-      <AdditionalOptions>/analyze /utf-8</AdditionalOptions>
+      <!-- Debug|x64 编译单元的节数溢出 COFF 限制（C1128），需要 /bigobj。
+           与 Code Analysis 无关：关闭分析后同样复现。 -->
+      <AdditionalOptions>/utf-8 /bigobj</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -131,17 +164,23 @@
       <WarningLevel>Level3</WarningLevel>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <Architecture>AVX2</Architecture>
+      <!-- /arch:AVX2。注意：老写法 <Architecture>AVX2</Architecture> 不是
+           ClCompile 的元数据，会被静默忽略（曾导致 AVX2 从未真正开启），
+           正确的元素是 EnableEnhancedInstructionSet。 -->
+      <EnableEnhancedInstructionSet Condition="'$(ExpanderIsa)'=='AVX2'">AdvancedVectorExtensions2</EnableEnhancedInstructionSet>
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <TreatSpecificWarningsAsErrors>6011;6387;6388;28182;33010;33011;33020;33021;6001;6201;6204;6383;6385;6386</TreatSpecificWarningsAsErrors>
-      <AdditionalOptions>/analyze /utf-8</AdditionalOptions>
+      <AdditionalOptions>/utf-8 /Ob3 /Gw</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>DebugFull</GenerateDebugInformation>
+      <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
+      <OptimizeReferences>true</OptimizeReferences>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <SuppressStartupBanner>false</SuppressStartupBanner>
     </Link>
     <Manifest>

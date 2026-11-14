@@ -234,6 +234,15 @@
     <ClInclude Include="Header\notation\ton_mpc.hpp">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="Header\notation\registry.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Header\notation\translator.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Header\notation\translator_0y_bms.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Expander.cpp">
@@ -256,6 +265,9 @@
       <Filter>资源文件</Filter>
     </Image>
     <Image Include="Expander.ico">
+      <Filter>资源文件</Filter>
+    </Image>
+    <Image Include="MFC.ico">
       <Filter>资源文件</Filter>
     </Image>
   </ItemGroup>

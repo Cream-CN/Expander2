@@ -417,3 +417,5 @@ FodyWeavers.xsd
 
 # 清理归档：构建产物与散落的手动编译/诊断文件
 /ignore/
+/Docs/构建参数与代码审阅.md
+/自定义的规则集.ruleset
