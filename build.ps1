@@ -26,6 +26,13 @@
     由于此前出现过 MSBuild 增量构建误判（改动了 Definitions.h 等头文件却未重编译），
     在修改任何 .hpp / Definitions.h / Resource.h 后使用全量重建（菜单 3 或 4）。
 
+    产物（Release|x64 会同时给出两个，放在同一目录 x64\Release\）：
+      Expander.exe          /arch:AVX2 主版本（更激进的优化，要求 CPU 支持 AVX2）
+      Expander_no_avx2.exe  x64 基线指令集版本，给不支持 AVX2 的机器兜底；
+                            obj/tlog 在独立目录 Expander\x64\Release_no_avx2\，
+                            指令集由 Expander.vcxproj 的 ExpanderIsa 开关决定。
+    只想构建 AVX2 版时加 -SkipCompat。
+
 .EXAMPLE
     powershell -ExecutionPolicy Bypass -File build.ps1
 
@@ -45,7 +52,8 @@ param(
     [switch]$Rebuild,                     # 兼容旧用法：等价于 -Mode rebuild
     [ValidateSet("gen", "build", "rebuild", "gen+build", "gen+rebuild")]
     [string]$Mode         = "",           # 非交互模式；留空则进入 TUI 菜单
-    [string]$Project      = ""            # 默认使用脚本所在目录的 Expander.slnx
+    [string]$Project      = "",           # 默认使用脚本所在目录的 Expander.slnx
+    [switch]$SkipCompat                   # 不生成 Expander_no_avx2.exe（仅 Release 有意义）
 )
 
 $ErrorActionPreference = "Stop"
@@ -336,13 +344,56 @@ function Invoke-MsBuild {
     if ($LASTEXITCODE -ne 0) { throw "MSBuild $label 失败，退出码 $LASTEXITCODE" }
 }
 
+function Invoke-CompatBuild {
+    # 额外产出不依赖 AVX2 的兼容版 Expander_no_avx2.exe。
+    # 与 AVX2 版共用输出目录（x64\Release\），只把指令集基线降回 x64 默认，
+    # 中间目录由 Expander.vcxproj 改到 Expander\x64\Release_no_avx2\，两套 obj 不互相污染。
+    Ensure-VsEnv
+    $proj = Join-Path $root "Expander.vcxproj"
+    if (-not (Test-Path -LiteralPath $proj)) { throw "错误: 找不到 $proj" }
+    Write-Host ""
+    Write-Host "==> [msbuild] 兼容版（无 AVX2）Expander_no_avx2.exe  $Configuration/$Platform ..." -ForegroundColor Green
+    $inner = "call `"$script:vcvars`" >nul 2>&1 && `"$script:msbuild`" `"$proj`" /m /p:Configuration=$Configuration /p:Platform=$Platform /p:ExpanderIsa=SSE2 /v:minimal /nologo"
+    Write-Host "执行: cmd /c $inner" -ForegroundColor DarkGray
+    & cmd /c $inner
+    if ($LASTEXITCODE -ne 0) { throw "MSBuild 兼容版构建失败，退出码 $LASTEXITCODE" }
+}
+
+function Invoke-CompatBuildIfNeeded {
+    if ($SkipCompat) {
+        Write-Host ""
+        Write-Host "==> 已跳过兼容版（-SkipCompat）。" -ForegroundColor DarkGray
+        return
+    }
+    if ($Configuration -ne "Release") {
+        Write-Host ""
+        Write-Host "==> $Configuration 配置不生成兼容版（只在 Release 下定义 ExpanderIsa 开关）。" -ForegroundColor DarkGray
+        return
+    }
+    Invoke-CompatBuild
+}
+
+function Show-Artifacts {
+    # 默认 OutDir 是 $(SolutionDir)$(Platform)\$(Configuration)\
+    $dir = Join-Path $root (Join-Path $Platform $Configuration)
+    $any = $false
+    foreach ($n in @("Expander.exe", "Expander_no_avx2.exe", "ExpanderClean.exe")) {
+        $p = Join-Path $dir $n
+        if (Test-Path -LiteralPath $p) {
+            if (-not $any) { Write-Host ""; Write-Host "产物 ($dir)：" -ForegroundColor Cyan; $any = $true }
+            $f = Get-Item -LiteralPath $p
+            Write-Host ("  {0,-22} {1,12:N0} 字节   {2}" -f $f.Name, $f.Length, $f.LastWriteTime.ToString("yyyy-MM-dd HH:mm:ss")) -ForegroundColor Cyan
+        }
+    }
+}
+
 function Invoke-Mode([string]$action) {
     switch ($action) {
         "gen"         { Invoke-GenDefinitions }
-        "build"       { Invoke-MsBuild "" }
-        "rebuild"     { Invoke-MsBuild " /t:Rebuild" }
-        "gen+build"   { Invoke-GenDefinitions; Invoke-MsBuild "" }
-        "gen+rebuild" { Invoke-GenDefinitions; Invoke-MsBuild " /t:Rebuild" }
+        "build"       { Invoke-MsBuild "";             Invoke-CompatBuildIfNeeded }
+        "rebuild"     { Invoke-MsBuild " /t:Rebuild";  Invoke-CompatBuildIfNeeded }
+        "gen+build"   { Invoke-GenDefinitions; Invoke-MsBuild "";            Invoke-CompatBuildIfNeeded }
+        "gen+rebuild" { Invoke-GenDefinitions; Invoke-MsBuild " /t:Rebuild"; Invoke-CompatBuildIfNeeded }
         default       { throw "未知模式: $action" }
     }
 }
@@ -367,6 +418,7 @@ function Show-Menu {
     Write-Host ""
     Write-Host "  提示：改动 Definitions.h / Resource.h / *.hpp 后建议选 3 或 4" -ForegroundColor DarkGray
     Write-Host "        （规避 MSBuild 增量构建误判）" -ForegroundColor DarkGray
+    Write-Host "        Release 会同时产出 Expander.exe（AVX2）与 Expander_no_avx2.exe（兼容版）" -ForegroundColor DarkGray
     Write-Host ""
 }
 
@@ -411,6 +463,7 @@ if ($action -eq "exit") { Write-Host "已退出。" -ForegroundColor Gray; exit 
 
 try {
     Invoke-Mode $action
+    if ($action -ne "gen") { Show-Artifacts }
     Write-Host ""
     Write-Host "构建完成。" -ForegroundColor Green
     exit 0
