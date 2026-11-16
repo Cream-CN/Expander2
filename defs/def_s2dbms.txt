@@ -16,6 +16,6 @@ compute_new_height(h, expr, r)（S2 特有）：设 v=h.h0、h1=h.h1，取第 v 
 (1) 若整列都大于 h（hj 不存在）：当 col_rh 的 h1（height1）小于 h1 时返回 Height=(r, h1−1)；否则返回 col_rh 末项行高，col_rh 为空时返回未定义（不插入中项）。
 (2) 否则：新值 new_value = col_rh[hj].value，新行高 = (new_value, h1)；若 hj>0 且 col_rh[hj−1] 的行高严格大于新行高，则改用该行高；返回之。
 
-展开骨架：right 为末列下标，末列末项为 (r, h)；用 compute_new_height 求出 new_h；末列删去末项后，若 new_h 有定义先并入中项 (r, new_h)，再并入第 r 列；复制循环 w=1..m，i=r+1..right，偏移量 (right−r)·w，按上述复制规则复制；FS（shorter=true）复制后删去末列，FS_alter（shorter=false）保留末列。
+展开骨架：right 为末列下标，末列末项为 (r, h)；用 compute_new_height 求出 new_h；末列删去末项后，若 new_h 有定义先并入中项 (r, new_h)，再并入第 r 列；复制循环 w=1..m，i=r+1..right，偏移量 (right−r)·w，按上述复制规则复制；展开复制后保留末列。
 
 记号极限：Limit[n]=(0)(1^(n,1))，实现只给出基本列与展开，其上确界序数以原始 TS 定义为准。

@@ -13,10 +13,7 @@ namespace omegay::notation {
 struct Den1Notation {
     static constexpr const char* kName = "DEN1";
 
-    // FS：较短展开。
     [[nodiscard]] static std::string expand_text(std::string_view text, int term);
-    // FS_alter：较长展开。
-    [[nodiscard]] static std::string expand_text_alter(std::string_view text, int term);
     [[nodiscard]] static std::string suffix() { return {}; }
 
     // 供测试 / 调试使用的解析与格式化。
@@ -362,7 +359,7 @@ using denshare::TextParser;
     return T.empty() ? expr : comp(expr, i, T);
 }
 
-// expand：核心展开。longer=false 对应 FS（较短），true 对应 FS_alter（较长）。
+// expand：核心展开。longer=true 为较长支（对外唯一入口）。
 [[nodiscard]] inline Den1Expr expand(const Den1Expr& raw, int fs_term, bool longer) {
     if (raw.rows.empty()) return raw;
     const Den1Row& active = raw.rows.back();
@@ -431,7 +428,7 @@ using denshare::TextParser;
     return expr;
 }
 
-// FS / FS_alter 的公共骨架。
+// 文本接口的公共骨架。
 [[nodiscard]] inline std::string expand_text_impl(std::string_view text, int term, bool longer) {
     if (term < 1) term = 1;
     auto parsed = parse(text);
@@ -456,10 +453,6 @@ using denshare::TextParser;
 // ---------------------------------------------------------------------
 
 [[nodiscard]] inline std::string Den1Notation::expand_text(std::string_view text, int term) {
-    return den1_detail::expand_text_impl(text, term, /*longer=*/false);
-}
-
-[[nodiscard]] inline std::string Den1Notation::expand_text_alter(std::string_view text, int term) {
     return den1_detail::expand_text_impl(text, term, /*longer=*/true);
 }
 

@@ -342,7 +342,7 @@ inline Sep S(const Column& c, int j, const Sep& bound) {
 struct StretchData {
     Sep threshold;
     Sep stretch_to;
-    bool force;
+    bool force = false;
 };
 
 inline StretchData stretch_data_top(const Mountain& m, const std::vector<std::vector<Vertical>>& V) {
@@ -353,7 +353,7 @@ inline StretchData stretch_data_top(const Mountain& m, const std::vector<std::ve
 
     const Sep& top_right_sep = m[static_cast<std::size_t>(right)][static_cast<std::size_t>(top)].second;
 
-    const Sep threshold = S(m[static_cast<std::size_t>(Ri)], Rj - 1, top_right_sep);
+    Sep threshold = S(m[static_cast<std::size_t>(Ri)], Rj - 1, top_right_sep);
     Sep stretch_to = S(m[static_cast<std::size_t>(right)], top - 1, top_right_sep);
     bool force = false;
     if (sep_is_one(top_right_sep)) {
@@ -529,9 +529,6 @@ struct SOmegaPowOmegaMNNotation {
     static constexpr const char* kName = "Sω^ωMN";
 
     [[nodiscard]] static std::string expand_text(std::string_view text, int term) {
-        return expand_text_impl(text, term, /*longer=*/false);
-    }
-    [[nodiscard]] static std::string expand_text_alter(std::string_view text, int term) {
         return expand_text_impl(text, term, /*longer=*/true);
     }
     [[nodiscard]] static std::string suffix() { return {}; }

@@ -65,9 +65,6 @@ struct TsOmegaDbmsNotation {
     static constexpr const char* kName = "TSωDBMS";
 
     [[nodiscard]] static std::string expand_text(std::string_view text, int term) {
-        return expand_text_impl(text, term, /*alter=*/false);
-    }
-    [[nodiscard]] static std::string expand_text_alter(std::string_view text, int term) {
         return expand_text_impl(text, term, /*alter=*/true);
     }
     [[nodiscard]] static std::string suffix() { return {}; }

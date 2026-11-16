@@ -10,7 +10,7 @@ namespace omegay::common {
 
 [[nodiscard]] inline std::vector<int> parse_sequence(std::string_view str) {
     std::vector<int> seq;
-    for (auto part : str | std::views::split(',')) {
+    for (const auto& part : str | std::views::split(',')) {
         std::string token{ part.begin(), part.end() };
         token.erase(std::remove_if(token.begin(), token.end(),
             [](unsigned char c) { return std::isspace(c); }), token.end());

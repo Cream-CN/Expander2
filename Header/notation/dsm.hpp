@@ -7,7 +7,7 @@
 // 最后由父项矩阵还原数值（construct_matrix_values）。
 //
 // 外层为 Y_FS_variants：极限的第 n 个基本列为三角矩阵
-// (0)(1)(2,1)...(n,...,1)；FS 在核心展开后再多删一列，FS_alter 不删。
+// (0)(1)(2,1)...(n,...,1)；较长支不删列，较短支在核心展开后再多删一列。
 #pragma once
 
 #include <algorithm>
@@ -25,7 +25,6 @@ namespace omegay::notation {
     struct DSMNotation {
         static constexpr const char* kName = "DSM";
         [[nodiscard]] static std::string expand_text(std::string_view, int);
-        [[nodiscard]] static std::string expand_text_alter(std::string_view, int);
         [[nodiscard]] static std::string suffix() { return {}; }
     };
 
@@ -494,11 +493,6 @@ namespace omegay::notation {
 
     [[nodiscard]] inline std::string
         DSMNotation::expand_text(std::string_view text, int term) {
-        return dsm_detail::run(text, term, true);
-    }
-
-    [[nodiscard]] inline std::string
-        DSMNotation::expand_text_alter(std::string_view text, int term) {
         return dsm_detail::run(text, term, false);
     }
 

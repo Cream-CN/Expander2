@@ -14,7 +14,6 @@ struct IblpNotation {
     static constexpr const char* kName = "iblp";
 
     [[nodiscard]] static std::string expand_text(std::string_view text, int term);
-    [[nodiscard]] static std::string expand_text_alter(std::string_view text, int term);
     [[nodiscard]] static std::string suffix() { return {}; }
 
     [[nodiscard]] static std::optional<denshare::Den3Expr> parse(std::string_view text);
@@ -341,8 +340,8 @@ using Rec = std::vector<std::optional<std::vector<int>>>;
     return expr;
 }
 
-// expand：核心展开。longer=false 对应 FS（较短），true 对应 FS_alter（较长）。
-// FS_alter 在全部压缩完成后会把结果裁剪回 len0 行。
+// expand：核心展开。longer=true 为较长支（对外唯一入口）。
+// 较长支在全部压缩完成后会把结果裁剪回 len0 行。
 [[nodiscard]] inline Den3Expr expand(const Den3Expr& raw, int fs_term, bool longer) {
     if (raw.rows.empty()) return raw;
     const Den3Row& active = raw.rows.back();
@@ -427,7 +426,7 @@ using Rec = std::vector<std::optional<std::vector<int>>>;
     return expr;
 }
 
-// FS / FS_alter 的公共骨架。与 DEN2 不同，DEN3 的 FS 不做 is_limit 预判，
+// 文本接口的公共骨架。与 DEN2 不同，DEN3 的 FS 不做 is_limit 预判，
 // 直接交给 expand（expand 内部会处理非极限情形）。
 [[nodiscard]] inline std::string expand_text_impl(std::string_view text, int term, bool longer) {
     if (term < 1) term = 1;
@@ -452,10 +451,6 @@ using Rec = std::vector<std::optional<std::vector<int>>>;
 // ---------------------------------------------------------------------
 
 [[nodiscard]] inline std::string IblpNotation::expand_text(std::string_view text, int term) {
-    return iblp_detail::expand_text_impl(text, term, /*longer=*/false);
-}
-
-[[nodiscard]] inline std::string IblpNotation::expand_text_alter(std::string_view text, int term) {
     return iblp_detail::expand_text_impl(text, term, /*longer=*/true);
 }
 

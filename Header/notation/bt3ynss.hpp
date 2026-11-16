@@ -7,7 +7,7 @@
 //  - compute_tail 返回全局栈下标 t 与层数 t_layer；root 走 skip_layer。
 //  - ascend_replace 带 critical_vert：每列重算 compute_vertical，m 之前从
 //    vertical 直接 from_height 重建，m 之后递归。
-//  - 同时提供 FS（expand_text_n）与 FS_short（expand_text_n_alter，lnz_m1 分支）。
+//  - 同时提供 FS（expand_text_n）与 FS_short（expand_text_n，lnz_m1 分支）。
 #pragma once
 
 #include <algorithm>
@@ -778,21 +778,6 @@ struct BT3Notation
     static constexpr int kParamMin = 1;
     static constexpr int kParamMax = 25;
     static std::string expand_text_n(std::string_view text, int term, int n)
-    {
-        try
-        {
-            n = (std::max)(kParamMin, (std::min)(kParamMax, n));
-            if (term < 1) term = 1;
-            Parser parser(text);
-            NodePtr m = parser.parse(n);
-            return bt3_display(bt3_lnz(false, m, term, n));
-        }
-        catch (...)
-        {
-            return bmlike::kParseError;
-        }
-    }
-    static std::string expand_text_n_alter(std::string_view text, int term, int n)
     {
         try
         {

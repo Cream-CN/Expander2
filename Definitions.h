@@ -46,7 +46,7 @@ constexpr std::string_view kDef_IDR_DEF_3MN = R"DEFTXT(
 
 ∞ 的基本列：Limit[n] 展开为第一列空列、第二列含 n 个条目 (value=1, sep=N−1) 的表达式。本记号 N=3，分隔符为 2，每个条目显示为三个逗号加列标，即 Limit[1] = ()(,,,1)，Limit[2] = ()(,,,1,,,1)，余类推。解析 "Limit" 得到 ∞ 标志。
 
-展开（参数 m≥1；FS 较短展开、FS_alter 较长展开）：先 fill_ghost 补幽灵行，连续 m 次 extend；较短展开删去末列，较长展开再做一次 subtract_1；最后 clear_ghost 删去 value=0 的幽灵条目。extend 中先求末列最右上条目的父位置 (Ri,Rj) 与岩浆检查表，subtract_1 删去末项后按竖向比较决定是否追加 (Ri+1, new_sep) 条目，再把坏根列从 Rj 起的条目拼接到末列，随后把坏根列右侧各列按 offset = right−Ri 复制到新位置；copy_column 中按岩浆检查表做行提升复制分隔符，表外条目仅在 value ≥ Ri+1 时列标加 offset。
+展开（参数 m≥1）：先 fill_ghost 补幽灵行，连续 m 次 extend；随后再做一次 subtract_1；最后 clear_ghost 删去 value=0 的幽灵条目。extend 中先求末列最右上条目的父位置 (Ri,Rj) 与岩浆检查表，subtract_1 删去末项后按竖向比较决定是否追加 (Ri+1, new_sep) 条目，再把坏根列从 Rj 起的条目拼接到末列，随后把坏根列右侧各列按 offset = right−Ri 复制到新位置；copy_column 中按岩浆检查表做行提升复制分隔符，表外条目仅在 value ≥ Ri+1 时列标加 offset。
 
 记号极限：模板参数 N 在本移植中仅作用于 ∞ 基本列分隔符 N−1；记号对应的序数阶位以原始 TS 定义为准。
 )DEFTXT";
@@ -66,7 +66,7 @@ Aω2MN3 是 hypcos_mn 在 notation-explorer 中提出的 Aw2MN 版本3 记号（
 
 ∞ 的基本列：Limit[n] = [[], [[1, sep_n]]]，其中 sep_n = [[], [[1, [[]]]]] 再接 n 个空列，显示为 ()(; 后接 n 个逗号再接 1；对 ∞ 展开时直接返回 infinity_fs(term)。
 
-展开（参数 m≥1，FS 较短展开 shorter=true，FS_alter 较长展开 shorter=false）：先对极限表达式反复调用 extend 共 m 次，较短展开随后删去末列，较长展开再调用一次 extend（is_small=true，不新增列）。extend 中依次完成：计算各列竖向 V0；由末列最右上条目经 Parent 求得坏根位置 BRij=(br, bj) 与宽度 width；记录坏根列前 bj 项及末列最右上项的分隔符 top_separators 与竖向 top_verticals；做岩浆检查；调用 subtract1 版本3；用 get_references 匹配末列竖向与 top_verticals；计算拉伸阈值与拉伸量；按 stretched 规则处理条目分隔符（本记号非弱版，无高位豁免）；最后按岩浆检查结果把坏根列右侧 width 列复制到列标加 width 的新位置（is_small 时只处理 dx=0）。
+展开（参数 m≥1）：先对极限表达式反复调用 extend 共 m 次，随后再调用一次 extend（is_small=true，不新增列）。extend 中依次完成：计算各列竖向 V0；由末列最右上条目经 Parent 求得坏根位置 BRij=(br, bj) 与宽度 width；记录坏根列前 bj 项及末列最右上项的分隔符 top_separators 与竖向 top_verticals；做岩浆检查；调用 subtract1 版本3；用 get_references 匹配末列竖向与 top_verticals；计算拉伸阈值与拉伸量；按 stretched 规则处理条目分隔符（本记号非弱版，无高位豁免）；最后按岩浆检查结果把坏根列右侧 width 列复制到列标加 width 的新位置（is_small 时只处理 dx=0）。
 
 subtract1 版本3（V3）：先删去末列最右上条目；alpha = 坏根列第 bj−1 项的竖向（bj=0 时为空竖向）；working_vertical = 末列最右上条目前一项的竖向（无前一项时为空竖向）。copy_entries_loop：若 alpha ≤ working_vertical 直接返回；否则在坏根列竖向表中定位 working_vertical 下方位置，把该位置之后、bj 之前的条目依次复制到末列，value 取被删条目的 value，working_vertical 随复制逐条 vertical_increase。
 
@@ -128,7 +128,7 @@ BHM（Bashicu Hyper Matrix，Bashicu 高阶矩阵系统）
 再沿 top-1 行父链找出所有 top 行父项等于 special_root 的候选根；
 对每个候选根计算阶差向量 V 与上升阈值向量 A，比较各自“一次展开加末列”
 的阈值，取第一个严格更小的候选根；随后从该根起按 w·V（仅在前 A 行）
-复制坏部指定项数。FS 少复制一段，FS_alter 的末段只复制根列一列。
+复制坏部指定项数，末段只复制根列一列。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_BLM = R"DEFTXT(
@@ -136,7 +136,7 @@ BLM（Bashicu Large Matrix，Bashicu 大矩阵系统）
 
 输入格式：与 BMS 相同的矩阵文本，列为 (v0,v1,...)，省略尾随零，例如 (0)(1,1)(2,2)(3,2)。
 记号极限输入 Limit，其第 n 个基本列为 (0)(1,1,...,1)。
-最后一列全为零时为后继型，删去最后一列。该记号只有 FS，没有 FS_alter。
+最后一列全为零时为后继型，删去最后一列。
 
 展开规则：BLM 的经典大函数式实现：自末列向上确定每一行的有效高度，
 逐候选根计算阶差向量 c，并维护一张根编号矩阵 b2（含其历史的共享传播语义）；
@@ -342,9 +342,8 @@ weak BT*(n+1)SS v3（超限星负一 Y 序列系统 weak 版）
 (0)），例如 n=2 时 (1,0) 显示为 (1)；带子表达式的列显示完整父标号分量与 *^ 项，
 例如 (0,1,*) 或 (1,0,*^(0))。无 ω / 数字简写。
 
-本族同时提供两种展开：
-- FS（展开按钮）：标准逐项展开；
-- FS_short（展开(FS_alter) 按钮）：在项数大时先截掉尾列 / 先展开一次再进入
+本族只有一种展开：
+- 展开：在项数大时先截掉尾列 / 先展开一次再进入
   常规展开（lnz_m1 分支），结果更短。
 
 展开逐级求父（顶层父按 vertical 差分高度比较并排除祖先链）、定根、求提升向量
@@ -420,7 +419,7 @@ CMS（Crane Matrix System，Crane 矩阵系统）
 
 输入格式：与 BMS 相同的矩阵文本，列为 (v0,v1,...)，省略尾随零，例如 (0)(1,1)(2,1)。
 记号极限输入 Limit，其第 n 个基本列为 (0)(1,1,...,1)。
-最后一列全为零时为后继型，删去最后一列。该记号只有 FS，没有 FS_alter。
+最后一列全为零时为后继型，删去最后一列。
 
 展开规则：取末列最后一个非零行 LNZ 与坏根 BR（末列在 LNZ 行的父项），
 计算阶差并仅在相对坏根“上升”的位置施加，先将坏部复制指定项数；
@@ -443,7 +442,7 @@ DSM（Diagonal Sudden Matrix，对角突变矩阵系统）
 （predecessor）链枚举目标项的候选祖先与候选项；以“一次强展开”为参照，
 取首个产生更小结果段的候选项，按其确定坏项。随后在父项矩阵上进行
 小展开（目标行等于坏行）或完整展开（复制上部、上升项斜向平移、
-基底项在新增行间竖连），最后由父项矩阵还原数值。FS 比 FS_alter 再多删一列。
+基底项在新增行间竖连），最后由父项矩阵还原数值。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_E0MN = R"DEFTXT(
@@ -459,7 +458,7 @@ e0 Mountain Notation（e0MN）是 test_alpha0 提出的基于"山"（Mountain）
 
 ∞ 的基本列：Limit[n]（n 为正整数）展开为 ()(1:ω^^n)，即第一列为空列、第二列为单个条目 (a=1, x=ω^^n) 的表达式；ω^^n 表示 n 层 ω 的指数塔。解析 "Limit" 得到 ∞ 标志，解析 "Limit[n]" 直接得到上述基本列。
 
-展开（FS 与 FS_alter，参数 m≥1）：FS 采用较短展开（shorter=true），FS_alter 采用较长展开（shorter=false）。二者都先对极限表达式反复应用反射 rfl 共 m 次；较短展开随后删去末列（即取前驱）；较长展开则再应用一次 rfl，并把列数截回前一步的列数。
+展开（参数 m≥1）：对极限表达式反复应用反射 rfl 共 m 次，随后再应用一次 rfl，并把列数截回前一步的列数。
 
 反射 rfl 对极限表达式 e 的步骤（设列数 l，末列末项 (a_n, x_n)，d = l − a_n，d 必须为正）：
 (1) 下降 down：取第 a_n 列（源列）中所有行高小于 x_n 的条目，拼接到删去末项后的末列末尾；若省略条件不成立且 ordFS(x_n, l−1) 非零，则在末列末尾追加条目 (a_n, ordFS(x_n, l−1))。省略条件为：x_n = 1，或末列不止一项且 ordFS(x_n, l−1) 小于等于倒数第二项的行高。
@@ -671,13 +670,12 @@ constexpr std::string_view kDef_IDR_DEF_OMEGA_MN = R"DEFTXT(
 
 ∞ 的基本列：Limit[n] 展开为 [[], [[1, n]]]：第一列为空列，第二列为单个条目 (value=1, sep=n)。
 
-展开（参数 index=m，FS 用较短展开、FS_alter 用较长展开）：对极限表达式，以末列最右上条目为起点：
+展开（参数 index=m）：对极限表达式，以末列最右上条目为起点：
 (1) 计算最右上条目的父位置 BRij（坏根列 BRij.i 与坏根列内位置 BRij.j），宽度 width = 末列列标 − BRij.i。
 (2) 处理末项分隔符：若 sep = 0，删去末项；否则令新分隔符为 sep−1，比较 verticalIncrease(坏根列中 BRij.j 上一项处的竖向, sep−1) 与末列倒数第二项处的竖向：若前者小于等于后者则删去末项，否则把末项分隔符改为 sep−1。
 (3) 把坏根列从 BRij.j 起的所有条目拼接到末列末尾。
 (4) 计算岩浆检查表 magma_checks_list：对坏根列右侧每一列的每个条目，沿父链上溯直到列标不大于 BRij.i；若最终落在坏根列（列标恰为 BRij.i）、位置不超过 BRij.j，且该位置上一项的竖向与该条目左侧竖向相同，则记录该坏根列内位置，否则记 −1。
 (5) 对 n = 1..m 逐次把坏根列右侧 width 列复制到列标加 width·n 的新位置：对每个条目，若岩浆检查值为 sm ≥ 0，则按引用区间 [ref(sm−1)+1, ref(sm)] 展开为多个条目（值均为 value + width·n）；否则复制单个条目（值为 value + width·n，若 value 不大于坏根列标则保持 value）。
-(6) 较短展开（FS）在复制完成后删去末列。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_OMEGA_Y_MEDIUM = R"DEFTXT(
@@ -842,7 +840,7 @@ compute_new_height(h, expr, r)：末项为 (v, p)；先 find_lower_height_pos �
 
 递归机制：descend_height_to_value 与 find_maximal_entry_below 与 Sω+1DBMS 相同；find_lower_height_pos 的差异在于高阶位置分支：p 为高阶位置时，若 num>0 返回高阶位置 num−1，若 num=0 返回数字位置 r；数字位置分支与 Sω+1 相同（先取最大条目，末项位置为高阶时失败，v1=p1.num 时返回 v1，否则递归）。
 
-展开骨架：right 为末列下标，末列末项为 (r, h)；new_h 并入中项 (r, new_h) 与第 r 列；复制循环 w=1..m，i=r+1..right，偏移量 (right−r)·w；FS 删去末列，FS_alter 保留末列。
+展开骨架：right 为末列下标，末列末项为 (r, h)；new_h 并入中项 (r, new_h) 与第 r 列；复制循环 w=1..m，i=r+1..right，偏移量 (right−r)·w；展开保留末列。
 
 记号极限：Limit[n] 高阶位置的 num 随列递增；实现只给出基本列与展开，其上确界序数以原始 TS 定义为准。
 )DEFTXT";
@@ -864,7 +862,7 @@ Sω2MN（TS id "S-omega2-MN"，逻辑移植自 notation-explorer 的 src/notatio
 
 ∞ 的基本列：Limit[n] 展开为空列后接单条目 (value=1, sep={n, 1})，即 Limit[1] = ()(;,1)，Limit[2] = ()(;,,1)，余类推。解析 "Limit"、"limit"、"LIMIT" 均得到 ∞ 标志。
 
-展开（参数 m≥1；FS 采用较短展开 shorter=true，FS_alter 采用较长展开 shorter=false）：本记号不做 fill_ghost；对极限表达式连续 m 次应用 extend；较短展开在最后删去末列，较长展开再做一次 subtract_1。
+展开（参数 m≥1）：本记号不做 fill_ghost；对极限表达式连续 m 次应用 extend；随后再做一次 subtract_1。
 
 extend（一次反射式扩展）：设 right 为末列列标、top 为末列最右上条目下标；计算竖向表 V0；求末列最右上条目的父位置 p=(Ri, Rj)；magma_indices 得岩浆检查表 MI0；stretch_data_list 得拉伸数据表 SD0；先调用 subtract_1(m0, V0, SD0[Rj]) 得到中间山形 m，重算末列竖向，取 MI0 的前 right 列部分继续计算 magma_indices 得 MI；offset = right−Ri；随后对列 Ri+1 到 right 依次调用 copy_column，把源列复制到列标加 offset 的新位置，拉伸竖向上限取 V0[right][top]。
 
@@ -898,7 +896,7 @@ S1DBMS 是 hypcos 的 notation-explorer 中 SDBMS 家族（category-sdbms）的�
 
 ∞ 的基本列：Limit[n]（n 为正整数）展开为 ()(1^1)(2^2)…(n^n)：第一列为空列，其后第 i 列为单个条目 (value=i, height=i)，i 从 0 到 n−1。解析 "Limit" 得到 ∞ 标志。
 
-展开骨架（参数 m≥1；FS 用较短展开 shorter=true，FS_alter 用较长展开 shorter=false）：设 right 为末列下标，末列末项为 (r, h)。先按本记号的 compute_new_height 求出新行高 new_h；末列删去末项得到新列前缀，先把条目 (r, new_h) 按合并规则并入，再把第 r 列按合并规则并入；保留第 0 到 right−1 列与新列。随后复制循环 w=1..m：对每个 i=r+1..right，把当前第 i 列按偏移量 (right−r)·w 复制追加；复制规则为 value ≥ r 时 value 加 offset，height ≥ r 时 height 加 offset，否则不变。较短展开（FS）在复制完成后删去末列，较长展开（FS_alter）保留末列。
+展开骨架（参数 m≥1）：设 right 为末列下标，末列末项为 (r, h)。先按本记号的 compute_new_height 求出新行高 new_h；末列删去末项得到新列前缀，先把条目 (r, new_h) 按合并规则并入，再把第 r 列按合并规则并入；保留第 0 到 right−1 列与新列。随后复制循环 w=1..m：对每个 i=r+1..right，把当前第 i 列按偏移量 (right−r)·w 复制追加；复制规则为 value ≥ r 时 value 加 offset，height ≥ r 时 height 加 offset，否则不变。展开在复制完成后保留末列。
 
 合并规则 merge_column(col1, col2)：先取 col1，再拼接 col2 中行高严格大于 height(col1) 的条目；height(col) 取末项行高，空列取 −1。条目比较先比 value 再比 height；列与表达式均为字典序（较长者大）。
 
@@ -926,7 +924,7 @@ compute_new_height(h, expr, r)（S2 特有）：设 v=h.h0、h1=h.h1，取第 v 
 (1) 若整列都大于 h（hj 不存在）：当 col_rh 的 h1（height1）小于 h1 时返回 Height=(r, h1−1)；否则返回 col_rh 末项行高，col_rh 为空时返回未定义（不插入中项）。
 (2) 否则：新值 new_value = col_rh[hj].value，新行高 = (new_value, h1)；若 hj>0 且 col_rh[hj−1] 的行高严格大于新行高，则改用该行高；返回之。
 
-展开骨架：right 为末列下标，末列末项为 (r, h)；用 compute_new_height 求出 new_h；末列删去末项后，若 new_h 有定义先并入中项 (r, new_h)，再并入第 r 列；复制循环 w=1..m，i=r+1..right，偏移量 (right−r)·w，按上述复制规则复制；FS（shorter=true）复制后删去末列，FS_alter（shorter=false）保留末列。
+展开骨架：right 为末列下标，末列末项为 (r, h)；用 compute_new_height 求出 new_h；末列删去末项后，若 new_h 有定义先并入中项 (r, new_h)，再并入第 r 列；复制循环 w=1..m，i=r+1..right，偏移量 (right−r)·w，按上述复制规则复制；展开复制后保留末列。
 
 记号极限：Limit[n]=(0)(1^(n,1))，实现只给出基本列与展开，其上确界序数以原始 TS 定义为准。
 )DEFTXT";
@@ -944,7 +942,7 @@ SAω2MN（TS id "SA-omega2-MN"，逻辑移植自 notation-explorer 的 src/notat
 
 ∞ 的基本列：Limit[n] 展开为空列后接单条目 (value=1, sep={n, 1}, mark=false)，显示与 Sω2MN 相同：Limit[1] = ()(;,1)，Limit[2] = ()(;,,1)，余类推。解析 "Limit"、"limit"、"LIMIT" 均得到 ∞ 标志。
 
-展开（参数 m≥1；FS 较短展开 shorter=true，FS_alter 较长展开 shorter=false）：不做 fill_ghost；连续 m 次应用 extend；较短展开删去末列，较长展开再做一次 subtract_1。extend 的总体流程与 Sω2MN 相同：先求末列最右上条目的父位置 p=(Ri,Rj)，计算岩浆检查表 MI0 与拉伸数据表 SD0，subtract_1 后重算竖向与检查表，再把坏根列右侧各列按 offset = right−Ri 复制到新位置。
+展开（参数 m≥1）：不做 fill_ghost；连续 m 次应用 extend；随后再做一次 subtract_1。extend 的总体流程与 Sω2MN 相同：先求末列最右上条目的父位置 p=(Ri,Rj)，计算岩浆检查表 MI0 与拉伸数据表 SD0，subtract_1 后重算竖向与检查表，再把坏根列右侧各列按 offset = right−Ri 复制到新位置。
 
 magma_indices 与 Sω2MN 相同：坏根列右侧每个条目沿父链上溯，pi < Ri 中断，pi == Ri 记录 min(pj,Rj)，否则转记父条目检查值。
 
@@ -977,7 +975,7 @@ strong e0MN 是 e0MN 的强版本（TS 源：src/notations/MN/strong_e0MN.ts，�
 (2) down 的省略判据：strong 版要求 ordFS(x_n, l−1) 等于末列倒数第二项的行高才省略（相等判定）；标准版是小于等于。
 (3) shortExpansion 的省略判据：strong 版同样用相等判定，标准版用小于等于。
 
-其余展开流程（rfl / down / processRflCol / FS / FS_alter 的较短与较长分支）与 e0MN 相同，此处不再重复：FS 先对表达式反复应用 rfl 共 m 次后删去末列；FS_alter 应用 rfl 共 m 次后再应用一次并把列数截回。
+其余展开流程（rfl / down / processRflCol）与 e0MN 相同，此处不再重复：对表达式反复应用 rfl 共 m 次后再应用一次，并把列数截回。
 
 记号极限：∞ 的基本列与 e0MN 相同（共用的 infinity_fs），故极限同为 ε0；"strong" 体现在展开省略与移位的判据更激进。
 )DEFTXT";
@@ -997,7 +995,7 @@ TωMN（TS 源：src/notations/MN/T_omega_MN.ts，家族 category-mn，credit hy
 
 ∞ 的基本列：infinity_fs(n) 递归定义：n ≤ 0 时为单个空列；n > 0 时为 ()(1: infinity_fs(n−1))，即第一列为空列，第二列为单个条目 value=1、分隔符为 infinity_fs(n−1)。解析 "Limit" 直接得到 ∞ 标志，展开时按上述递归基本列给出。
 
-展开（参数 m≥1；FS 采用较短展开 shorter=true，FS_alter 采用较长展开 shorter=false；输入为极限表达式）：设末列列标为 rightmost，末项位置为 topmost，末项分隔符为 sep；先计算各列竖向 V0，求末项的父位置 BRij，宽度 width = rightmost − BRij.i。
+展开（参数 m≥1；输入为极限表达式）：设末列列标为 rightmost，末项位置为 topmost，末项分隔符为 sep；先计算各列竖向 V0，求末项的父位置 BRij，宽度 width = rightmost − BRij.i。
 
 情形一：sep 是极限表达式。取 v_low = BRij.j − 1 处坏根列的竖向（越界取空），v_high = topmost − 1 处末列的竖向（越界取空）；threshold(A, shorter, low, high) 从 n=0 起递增，返回使 vertical_increase(low, expand(A, n, shorter)) 不小于 vertical_increase(high, expand(A, n, shorter)) 成立的最小 n。把末项分隔符替换为 expand(sep, threshold + m, shorter)，随后直接返回表达式。
 
@@ -1007,7 +1005,7 @@ TωMN（TS 源：src/notations/MN/T_omega_MN.ts，家族 category-mn，credit hy
 (3) 把坏根列从 BRij.j 起的条目拼接到末列末尾；BRij.j 越界时不拼接。
 (4) 重新计算竖向 V，并计算岩浆检查表 magma_checks_list：对坏根列右侧每一列的每个条目，沿父链上溯直到列标不大于 BRij.i（上溯中条目位置越界时先回退位置）；若最终落在坏根列（wi = BRij.i）、位置 wj ≤ BRij.j，且该位置上一项的竖向 v_work 与该条目左侧竖向 v_src 相同，则该检查值记为 wj，否则记为 −1。
 (5) 对 n=1,2,…,m：先用 get_references(A, top_verticals) 把末列竖向表与 top_verticals 双指针匹配，得到每个坏根位置对应的引用区间；再把坏根列右侧 width 列复制到列标加 width·n 的新位置。岩浆检查 sm ≥ 0 的条目按区间 [ref(sm−1)+1, ref(sm)] 展开为多个条目：区间末项沿用原条目分隔符，其余各项取目标坏根列块对应条目的分隔符，value 均为 value + width·n；检查值为 −1 的条目复制为单个条目，value > BRij.i 时取 value + width·n，否则保持原 value，分隔符原样保留。列数不足 target_end = BRij.i + width·n + width + 1 时先扩容。
-(6) 较短展开（FS）在复制完成后删去末列；较长展开（FS_alter）保留末列。
+(6) 展开在复制完成后保留末列。
 
 记号极限：TωMN 的极限由递归嵌套的分隔符基本列承载，分隔符自身为极限时进入递归展开；记号最终上确界以原始 TS 定义为准。
 )DEFTXT";
@@ -1111,7 +1109,7 @@ compute_new_height(h, expr, r)：取 h 末槽 (anchor, position)。position 非�
 
 极限高度切口 limit_approximation：末槽为 (anchor, alpha)；lower（末列删末项后的行高，可为未定义）若满足下界，取 beta = lower 对应槽 position，校验前缀一致与 beta < alpha；差 = beta 为空 ? alpha : matrix_tail(beta, alpha)，近似 = height_fs(差, m, 同变体)，返回 prefix + [(anchor, beta 为空 ? 近似 : matrix_add(beta, 近似))]；近似为空时报“零极限近似”。
 
-展开骨架：right 为末列下标，末列末项为 (r, h)。极限高度路径：末列替换为 (r, limit_approximation(...))，返回前部+[末列替换]，不复制、不执行 shorter 删除。后继路径：并入中项与第 r 列后，复制循环 w=1..m，i=r+1..right，偏移量 (right−r)·w，父值与各槽锚值均按 value≥r 加 offset；FS（shorter=true）复制后删去末列，FS_alter（shorter=false）保留末列。
+展开骨架：right 为末列下标，末列末项为 (r, h)。极限高度路径：末列替换为 (r, limit_approximation(...))，返回前部+[末列替换]，不复制、不执行 shorter 删除。后继路径：并入中项与第 r 列后，复制循环 w=1..m，i=r+1..right，偏移量 (right−r)·w，父值与各槽锚值均按 value≥r 加 offset；展开复制后保留末列。
 
 资源上限：单次物化长度超过 100000 视为超限，返回错误提示串而非继续展开。
 )DEFTXT";
@@ -1131,7 +1129,7 @@ TS2DBMS 是 SDBMS 家族的“超限二元行高”成员（Transfinite S2DBMS�
 
 compute_new_height(h, expr, r)：设 v=h.anchor、alpha=h.level，取第 v 列，从首项起找第一个 compare_height(h, 该行) ≤ 0 的下标。整列大于 h 时：若 height1(第 v 列) 小于 alpha，则 alpha 是极限时返回 limit 切口（{limit, alpha}），否则返回后继行高 (r, alpha 前驱)；否则返回第 v 列末项行高（可为未定义）。否则新行高为 (col[j].parent, alpha)，并视前项修正。
 
-展开骨架：right 为末列下标，末列末项为 (r, h)。limit 切口路径：以 height1(替换列) 的 CNF 为基底，差=tail(base, cnf(alpha))，近似=height_fs(差, m, 同变体)，新行高=cnf(base + cnf(近似))，返回前部+[末列替换]，不合并根列、不复制、不执行 shorter 删除。后继路径：并入中项与第 r 列后，复制循环 w=1..m，i=r+1..right，偏移量 (right−r)·w，父值与锚值均按 value≥r 加 offset；FS（shorter=true）复制后删去末列，FS_alter（shorter=false）保留末列。展开按 m 次取基本列；超出物化长度上限（100000）时返回资源上限提示。
+展开骨架：right 为末列下标，末列末项为 (r, h)。limit 切口路径：以 height1(替换列) 的 CNF 为基底，差=tail(base, cnf(alpha))，近似=height_fs(差, m, 同变体)，新行高=cnf(base + cnf(近似))，返回前部+[末列替换]，不合并根列、不复制、不执行 shorter 删除。后继路径：并入中项与第 r 列后，复制循环 w=1..m，i=r+1..right，偏移量 (right−r)·w，父值与锚值均按 value≥r 加 offset；展开复制后保留末列。展开按 m 次取基本列；超出物化长度上限（100000）时返回资源上限提示。
 
 资源上限：单次物化长度超过 100000 视为超限，返回错误提示串而非继续展开。
 )DEFTXT";

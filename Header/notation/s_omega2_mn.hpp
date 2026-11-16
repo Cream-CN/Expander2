@@ -308,7 +308,7 @@ inline Sep S(const Column& c, int j, const Sep& bound) {
 struct StretchData {
     Sep threshold;
     Sep stretch_to;
-    bool force;
+    bool force = false;
 };
 
 inline StretchData stretch_data_top(const Mountain& m, const std::vector<std::vector<Vertical>>& V) {
@@ -320,7 +320,7 @@ inline StretchData stretch_data_top(const Mountain& m, const std::vector<std::ve
     const Sep& top_right_sep = m[static_cast<std::size_t>(right)][static_cast<std::size_t>(top)].second;
 
     if (sep_dimension(top_right_sep) > 0) {
-        const Sep threshold = S(m[static_cast<std::size_t>(Ri)], Rj - 1, top_right_sep);
+        Sep threshold = S(m[static_cast<std::size_t>(Ri)], Rj - 1, top_right_sep);
         Sep stretch_to = S(m[static_cast<std::size_t>(right)], top - 1, top_right_sep);
         bool force = false;
         if (sep_compare(stretch_to, threshold) <= 0) {
@@ -331,7 +331,7 @@ inline StretchData stretch_data_top(const Mountain& m, const std::vector<std::ve
     } else {
         Sep threshold(top_right_sep.begin(), top_right_sep.end());
         if (!threshold.empty()) --threshold[0];
-        const Sep stretch_to = threshold;
+        Sep stretch_to = threshold;
         bool force = false;
         if (!sep_is_one(top_right_sep)) {
             const Vertical& v_parent = Rj == 0 ? Vertical{} : V[static_cast<std::size_t>(Ri)][static_cast<std::size_t>(Rj) - 1];
@@ -492,9 +492,6 @@ struct SOmega2MNNotation {
     static constexpr const char* kName = "Sω2MN";
 
     [[nodiscard]] static std::string expand_text(std::string_view text, int term) {
-        return expand_text_impl(text, term, /*longer=*/false);
-    }
-    [[nodiscard]] static std::string expand_text_alter(std::string_view text, int term) {
         return expand_text_impl(text, term, /*longer=*/true);
     }
     [[nodiscard]] static std::string suffix() { return {}; }

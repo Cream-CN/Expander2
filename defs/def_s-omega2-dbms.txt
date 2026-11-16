@@ -18,6 +18,6 @@ compute_new_height(h, expr, r)：末项为 (v, p)；先 find_lower_height_pos �
 
 递归机制：descend_height_to_value 与 find_maximal_entry_below 与 Sω+1DBMS 相同；find_lower_height_pos 的差异在于高阶位置分支：p 为高阶位置时，若 num>0 返回高阶位置 num−1，若 num=0 返回数字位置 r；数字位置分支与 Sω+1 相同（先取最大条目，末项位置为高阶时失败，v1=p1.num 时返回 v1，否则递归）。
 
-展开骨架：right 为末列下标，末列末项为 (r, h)；new_h 并入中项 (r, new_h) 与第 r 列；复制循环 w=1..m，i=r+1..right，偏移量 (right−r)·w；FS 删去末列，FS_alter 保留末列。
+展开骨架：right 为末列下标，末列末项为 (r, h)；new_h 并入中项 (r, new_h) 与第 r 列；复制循环 w=1..m，i=r+1..right，偏移量 (right−r)·w；展开保留末列。
 
 记号极限：Limit[n] 高阶位置的 num 随列递增；实现只给出基本列与展开，其上确界序数以原始 TS 定义为准。

@@ -278,7 +278,7 @@ inline std::optional<StretchData> stretch_data_top(const Mountain& m,
     const Sep& top_right_sep = m[static_cast<std::size_t>(right)][static_cast<std::size_t>(top)].sep;
     if (!top_right_sep.empty() && top_right_sep[0] != 0) return std::nullopt;
 
-    const Sep threshold = S(m[static_cast<std::size_t>(Ri)], Rj - 1);
+    Sep threshold = S(m[static_cast<std::size_t>(Ri)], Rj - 1);
     Sep stretch_to = S(m[static_cast<std::size_t>(right)], top - 1);
     bool force = false;
     if (sep_compare(stretch_to, threshold) <= 0) {
@@ -461,9 +461,6 @@ struct SAOmega2MNNotation {
     static constexpr const char* kName = "SAω2MN";
 
     [[nodiscard]] static std::string expand_text(std::string_view text, int term) {
-        return expand_text_impl(text, term, /*longer=*/false);
-    }
-    [[nodiscard]] static std::string expand_text_alter(std::string_view text, int term) {
         return expand_text_impl(text, term, /*longer=*/true);
     }
     [[nodiscard]] static std::string suffix() { return {}; }

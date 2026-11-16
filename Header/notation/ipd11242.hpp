@@ -56,7 +56,9 @@ public:
     int depth = 0;
     int slots = 0;
 
-    Core() { nodes.push_back(Node{0, 0, {}}); }
+    // 默认构造只做一次占位 push_back；分配失败属于不可恢复的 OOM，
+    // 按惯例直接 noexcept + 终止，而不是把 bad_alloc 抛给调用方。
+    Core() noexcept { nodes.push_back(Node{ 0, 0, {} }); }
 
     void tick() {
         if (++work > kMaxWork) throw std::runtime_error("计算预算不足");

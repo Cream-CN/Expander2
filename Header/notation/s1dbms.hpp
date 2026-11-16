@@ -24,9 +24,6 @@ struct S1DBMSNotation {
     static constexpr const char* kName = "S1DBMS";
 
     [[nodiscard]] static std::string expand_text(std::string_view text, int term) {
-        return expand_text_impl(text, term, /*longer=*/false);
-    }
-    [[nodiscard]] static std::string expand_text_alter(std::string_view text, int term) {
         return expand_text_impl(text, term, /*longer=*/true);
     }
     [[nodiscard]] static std::string suffix() { return {}; }

@@ -19,12 +19,7 @@ struct StrongE0MnExpr {
 struct StrongE0MNNotation {
     static constexpr const char* kName = "strong e0MN";
 
-    // FS：较短展开。
     [[nodiscard]] static std::string expand_text(std::string_view text, int term) {
-        return expand_text_impl(text, term, /*longer=*/false);
-    }
-    // FS_alter：较长展开。
-    [[nodiscard]] static std::string expand_text_alter(std::string_view text, int term) {
         return expand_text_impl(text, term, /*longer=*/true);
     }
     [[nodiscard]] static std::string suffix() { return {}; }

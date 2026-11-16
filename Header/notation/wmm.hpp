@@ -24,7 +24,6 @@ namespace omegay::notation {
     struct WMMNotation {
         static constexpr const char* kName = "wMM";
         [[nodiscard]] static std::string expand_text(std::string_view, int);
-        [[nodiscard]] static std::string expand_text_alter(std::string_view, int);
         [[nodiscard]] static std::string suffix() { return {}; }
     };
 
@@ -384,11 +383,6 @@ namespace omegay::notation {
 
     [[nodiscard]] inline std::string
         WMMNotation::expand_text(std::string_view text, int term) {
-        return wmm_detail::run(text, term, true);
-    }
-
-    [[nodiscard]] inline std::string
-        WMMNotation::expand_text_alter(std::string_view text, int term) {
         return wmm_detail::run(text, term, false);
     }
 

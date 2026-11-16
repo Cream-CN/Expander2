@@ -132,6 +132,9 @@ namespace omegay::notation {
             }
             Ctx(const Ctx&) = delete;
             Ctx& operator=(const Ctx&) = delete;
+            // 析构函数持有 Anc* 缓存的所有权，拷贝/移动都不应存在（c.21）。
+            Ctx(Ctx&&) = delete;
+            Ctx& operator=(Ctx&&) = delete;
 
             int get_b_parent(int col, int b) {
                 if (b < 1 || b > rows || col < 0 || col >= cols) return -1;
@@ -210,8 +213,8 @@ namespace omegay::notation {
 
         struct XY {
             FMat X, Y;
-            int u, j;
-            bool u_missing;
+            int u = 0, j = 0;
+            bool u_missing = false;
         };
 
         struct Prep {

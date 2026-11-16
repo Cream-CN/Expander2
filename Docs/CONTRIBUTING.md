@@ -136,41 +136,38 @@ struct XxxNotation {
 - **异常**：`expand` 不应抛出异常。若记号内部逻辑可能失败，应返回空 vector 或保持输入不变。
 - **性能**：对微型项目不设硬性要求，但应避免 `O(n²)` 以上的无谓拷贝。
 
-##### 3.2 FS / FSalter 语义
+##### 3.2 展开语义：每个记号只有一种展开
 
-UI 层的"移除末项 / 保留末项"按钮，对向量记号属于调用方对展开结果的后处理：
+记号不再区分“移除末项（FS）”与“保留末项（FS_alter）”两种展开，**每个记号只对外提供一种展开**，结果直接就是记号自身的定义展开（原先 `FS_alter` 那一支），不做任何通用后处理截断：
 
 ```cpp
-// Expander.cpp 中：
-std::vector<int> result = notation::EmptyNotation::expand(seq, term);
-if (LOWORD(wParam) == IDM_FS && result.size() > 1)
-    result.pop_back();
+// registry.hpp 中：
+ExpandResult INotation::expand(std::string_view text, int term, int param) const;
 ```
 
 **约定：**
 
-- 当 `result.size() <= 1` 时，FS 操作不执行移除（避免产生空序列歧义）。
-- 此策略在 UI 层实现，记号模块不应感知 FS/FSalter 概念。
+- 序列型记号的展开结果即 `expand_seq(seq, term)` 的返回值，**不再** `pop_back()` 移除末项。
+- 文本型 / 参数化型记号的展开结果即 `expand_text` / `expand_text_n` 的返回值。
+- 原先 UI 层的“移除末项”通用截断（BMS 删末列 / UPMS 删末列 / MrSS pop_back）已删除，记号模块与壳层都不再实现它。
 
-##### 3.3 文本接口记号（expand_text / expand_text_alter）
+##### 3.3 文本接口记号（expand_text）
 
-部分记号的表达式不是整数序列（例如 DEN1 / blp / iblp 的文本表达式），无法使用 `NotationEntry::expand` 的向量签名。这类记号改走 `NotationEntry` 的两个可选文本槽：
+部分记号的表达式不是整数序列（例如 DEN1 / blp / iblp 的文本表达式），无法使用向量签名。这类记号走 `NotationEntry` 的文本槽：
 
 ```cpp
-std::string(*expand_text)(std::string_view, int);        // FS（较短）展开
-std::string(*expand_text_alter)(std::string_view, int);  // FS_alter（较长）展开
+std::string(*expand_text)(std::string_view, int);   // 唯一展开
 ```
 
 **约定：**
 
-- `expand_text` 与 `expand_text_alter` 均为纯函数、不抛异常。
-- `expand_text_alter` 为空（nullptr）时，记号退化为 3.2 的通用策略：`expand_text` 提供"较长"结果，`IDM_FS` 由 UI 按记号类型对结果做截断（BMS 删列 / UPMS 删列 / MrSS pop_back）。
-- `expand_text_alter` 非空时，FS 与 FS_alter 均由记号自身实现，UI 直接使用 `expand_text` / `expand_text_alter` 的结果，不做通用截断（DEN1 / blp / iblp）。
+- `expand_text` 为纯函数、不抛异常。
+- 记号若有“较短 / 较长”两支算法，**只保留较长（保留末项）那一支**，较短支已删除。
 - 解析失败时文本接口返回错误提示字符串（不以异常报告），例如 `"解析失败，请确认你没有使用全角括号，逗号"`。
 
 ##### 3.4 参数化文本记号（expand_text_n / param_*）
 
-Minus1_Y_nSS 系列是"参数为 n 的工厂"记号（n = 父标号分量个数），不走编译期枚举，而是在运行时由 UI 输入 n。此类记号在 `NotationEntry` 上走扩展槽：
+Minus1_Y_nSS 系列是“参数为 n 的工厂”记号（n = 父标号分量个数），不走编译期枚举，而是在运行时由 UI 输入 n。此类记号在 `NotationEntry` 上走扩展槽：
 
 ```cpp
 std::string(*expand_text_n)(std::string_view, int term, int n);
@@ -183,9 +180,9 @@ const wchar_t* param_label;
 - `param_min=0` 的族（基础族、T 族、Abs/Rel）`n` 从 0 起（1SS 起）；
 - `param_min=1` 的族（BT v1/v2/v3、BTL）`n` 从 1 起（2SS 起）；
 - 上限统一 25；`param_default` 为输入框默认值。
-- 选中此类记号时，UI 显示参数输入框；`IDM_FS` / `IDM_FSALTER` 分支读取并校验 `n ∈ [param_min, param_max]` 后调用 `expand_text_n`。
+- 选中此类记号时，UI 显示参数输入框；“展开”按钮读取并校验 `n ∈ [param_min, param_max]` 后调用 `expand_text_n`。
 - `expand_text_n` 与 `expand_text` 同为纯函数、不抛异常；解析失败或内部异常统一返回 `bmlike::kParseError`（提示字符串），不以异常报告。
-- 有 FS_short 的族（BT v3）额外提供 `expand_text_n_alter`，经 `NotationEntry::expand_text_n_alter` 槽接入 FS_alter 按钮，由记号自身实现两种展开，UI 不做通用截断。
+- 记号只有 `expand_text_n` 一个入口；原先 BT v3 的 `expand_text_n_alter`（FS_short）已并入 `expand_text_n`。
 - `"Limit"` 表示极限；展开结果按各族显示规则渲染。
 
 ### UI 层与记号层的边界
@@ -197,7 +194,6 @@ const wchar_t* param_label;
 │ - 校验 term >= 1、seq 非空               │
 │ - 调用 utf8/wstring 转换                 │
 │ - 调用 notation::Xxx::expand             │
-│ - 后处理 FS/FSalter                      │
 │ - 显示 MessageBox                       │
 └──────────────┬──────────────────────────┘
                │ 只通过下列接口通信
@@ -211,7 +207,7 @@ const wchar_t* param_label;
 
 **硬性规则：**
 
-- UI 层不得直接操作 `std::vector<int>` 的数学含义（例如自行实现"移除末项"以外的记号逻辑）。
+- UI 层不得直接操作 `std::vector<int>` 的数学含义（例如自行实现记号以外的展开逻辑）。
 - 记号层不得包含 `<windows.h>` 或任何 UI 相关头文件。
 - 新增记号时，只需在 `Expander.cpp` 的 `WM_COMMAND` 分支中增加调用，不应改动 `common`。
 
@@ -291,10 +287,10 @@ const wchar_t* param_label;
 - `bm1ynss.hpp` — Abs_B / Rel_B_Minus1_Y_nSS（IDR 20106 / 20107，参数化，共享模板 `BranchNotation<bool kRel>`）
 - `bt1ynss.hpp` — BT*(n+1)SS v1（IDR 20108，参数化，start=1）
 - `bt2ynss.hpp` — strong BT*(n+1)SS v2（IDR 20109，参数化，start=1）
-- `bt3ynss.hpp` — weak BT*(n+1)SS v3（IDR 20110，参数化，start=1；同时提供 `expand_text_n` / `expand_text_n_alter`）
+- `bt3ynss.hpp` — weak BT*(n+1)SS v3（IDR 20110，参数化，start=1）
 - `btlynss.hpp` — BTL(n+1)SS（IDR 20111，参数化，start=1）
 
-`Expander.cpp` —— 唯一调用点（`IDM_FS` / `IDM_FSALTER` 分支，经 `notationTable()` 分派）
+`Expander.cpp` —— 唯一调用点（“展开”按钮 `IDM_EXPAND`，经 `notationTable()` 分派）
 
 ---
 

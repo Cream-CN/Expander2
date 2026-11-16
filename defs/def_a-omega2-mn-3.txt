@@ -8,7 +8,7 @@ Aω2MN3 是 hypcos_mn 在 notation-explorer 中提出的 Aw2MN 版本3 记号（
 
 ∞ 的基本列：Limit[n] = [[], [[1, sep_n]]]，其中 sep_n = [[], [[1, [[]]]]] 再接 n 个空列，显示为 ()(; 后接 n 个逗号再接 1；对 ∞ 展开时直接返回 infinity_fs(term)。
 
-展开（参数 m≥1，FS 较短展开 shorter=true，FS_alter 较长展开 shorter=false）：先对极限表达式反复调用 extend 共 m 次，较短展开随后删去末列，较长展开再调用一次 extend（is_small=true，不新增列）。extend 中依次完成：计算各列竖向 V0；由末列最右上条目经 Parent 求得坏根位置 BRij=(br, bj) 与宽度 width；记录坏根列前 bj 项及末列最右上项的分隔符 top_separators 与竖向 top_verticals；做岩浆检查；调用 subtract1 版本3；用 get_references 匹配末列竖向与 top_verticals；计算拉伸阈值与拉伸量；按 stretched 规则处理条目分隔符（本记号非弱版，无高位豁免）；最后按岩浆检查结果把坏根列右侧 width 列复制到列标加 width 的新位置（is_small 时只处理 dx=0）。
+展开（参数 m≥1）：先对极限表达式反复调用 extend 共 m 次，随后再调用一次 extend（is_small=true，不新增列）。extend 中依次完成：计算各列竖向 V0；由末列最右上条目经 Parent 求得坏根位置 BRij=(br, bj) 与宽度 width；记录坏根列前 bj 项及末列最右上项的分隔符 top_separators 与竖向 top_verticals；做岩浆检查；调用 subtract1 版本3；用 get_references 匹配末列竖向与 top_verticals；计算拉伸阈值与拉伸量；按 stretched 规则处理条目分隔符（本记号非弱版，无高位豁免）；最后按岩浆检查结果把坏根列右侧 width 列复制到列标加 width 的新位置（is_small 时只处理 dx=0）。
 
 subtract1 版本3（V3）：先删去末列最右上条目；alpha = 坏根列第 bj−1 项的竖向（bj=0 时为空竖向）；working_vertical = 末列最右上条目前一项的竖向（无前一项时为空竖向）。copy_entries_loop：若 alpha ≤ working_vertical 直接返回；否则在坏根列竖向表中定位 working_vertical 下方位置，把该位置之后、bj 之前的条目依次复制到末列，value 取被删条目的 value，working_vertical 随复制逐条 vertical_increase。
 

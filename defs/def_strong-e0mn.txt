@@ -7,6 +7,6 @@ strong e0MN 是 e0MN 的强版本（TS 源：src/notations/MN/strong_e0MN.ts，�
 (2) down 的省略判据：strong 版要求 ordFS(x_n, l−1) 等于末列倒数第二项的行高才省略（相等判定）；标准版是小于等于。
 (3) shortExpansion 的省略判据：strong 版同样用相等判定，标准版用小于等于。
 
-其余展开流程（rfl / down / processRflCol / FS / FS_alter 的较短与较长分支）与 e0MN 相同，此处不再重复：FS 先对表达式反复应用 rfl 共 m 次后删去末列；FS_alter 应用 rfl 共 m 次后再应用一次并把列数截回。
+其余展开流程（rfl / down / processRflCol）与 e0MN 相同，此处不再重复：对表达式反复应用 rfl 共 m 次后再应用一次，并把列数截回。
 
 记号极限：∞ 的基本列与 e0MN 相同（共用的 infinity_fs），故极限同为 ε0；"strong" 体现在展开省略与移位的判据更激进。

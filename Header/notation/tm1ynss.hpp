@@ -122,7 +122,7 @@ inline NodePtr infinity_fs(int index, int n)
 }
 
 // 父标号表用扁平 Node 表示：每列 arr 存父列下标，step 列存一个下标。
-struct PCol { std::vector<int> arr; int step; };
+struct PCol { std::vector<int> arr; int step = -1; };
 struct PNode { std::vector<PCol> cols; };
 
 inline PNode parents(const NodePtr& e, int n)

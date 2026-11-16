@@ -4,7 +4,7 @@
 //
 // 逻辑移植自 ne-rewritten/src/notations/BM-like/BM.ts，仅保留展开（Expand）
 // 所需的核心部分：父项链 parents、规范化 / 标准化、列字典序比较、极限判定、
-// 极限基本列、BM 文本解析 / 序列化以及 FS / FS_alter 公共分派。
+// 极限基本列、BM 文本解析 / 序列化以及文本接口公共分派。
 // 山脉图（mountain diagram）、0Y 等价表示、三角矩阵转换器（BM_converter）、
 // display 变体与记忆化缓存等 UI 无关内容一律不带入。
 //
@@ -233,8 +233,8 @@ namespace omegay::notation::bmlike {
         return result;
     }
 
-    // BM.ts expand（FS / FS_alter 共用的核心）。输入须为标准化矩形；
-    // shorter=true 为 FS（少一段），false 为 FS_alter（末段仅一列）。
+    // BM.ts expand（两支算法共用的核心）。输入须为标准化矩形；
+    // shorter=true 为较短支（少一段），false 为较长支（末段仅一列）。
     // 调用方负责极限基本列与后继删列的外层分派，本函数只处理极限表达式。
     [[nodiscard]] inline Matrix bm4_expand(const Matrix& m, int index,
                                            bool shorter) {
@@ -283,7 +283,7 @@ namespace omegay::notation::bmlike {
     }
 
     // ------------------------------------------------------------------
-    // FS / FS_alter 公共分派（对应 notation_utils.ts 的
+    // 文本接口公共分派（对应 notation_utils.ts 的
     // sequence_FS_variants / Y_FS_variants，去掉纯 UI 用的记忆化缓存）
     // ------------------------------------------------------------------
 
@@ -413,8 +413,8 @@ namespace omegay::notation::bmlike {
         return matrix_to_bm_string(e.m);
     }
 
-    // 供各记号 Notation::expand_text / expand_text_alter 直接复用的封装：
-    // 解析 → fs_expand → 序列化；shorter 区分 FS / FS_alter。
+    // 供各记号 Notation::expand_text 直接复用的封装：
+    // 解析 → fs_expand → 序列化；shorter 区分较短 / 较长两支。
     template <class CoreExpand>
     [[nodiscard]] std::string expand_text_with(
         std::string_view text, int term, bool shorter, CoreExpand&& core) {

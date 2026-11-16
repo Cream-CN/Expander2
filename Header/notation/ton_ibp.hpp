@@ -83,10 +83,6 @@ struct TonIbpNotation {
                                          /*ibp_style_limit=*/true, std_fn, cache, nullptr);
     }
 
-    [[nodiscard]] static std::string expand_text_alter(std::string_view text, int term) {
-        return expand_text(text, term);
-    }
-
     [[nodiscard]] static std::string suffix() { return {}; }
 
     [[nodiscard]] static std::string parse(std::string_view text) {

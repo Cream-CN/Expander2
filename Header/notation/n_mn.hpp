@@ -21,12 +21,7 @@ struct NMnNotation {
     // 具体显示名为 N 后接 "MN"（如 1MN、2MN…）。
     static constexpr const char* kName = "nMN";
 
-    // FS：较短展开。
     [[nodiscard]] static std::string expand_text(std::string_view text, int term) {
-        return expand_text_impl(text, term, /*longer=*/false);
-    }
-    // FS_alter：较长展开。
-    [[nodiscard]] static std::string expand_text_alter(std::string_view text, int term) {
         return expand_text_impl(text, term, /*longer=*/true);
     }
     [[nodiscard]] static std::string suffix() { return {}; }
@@ -46,8 +41,8 @@ struct NMnNotation {
 
 private:
     // TS MN_FS_variants(expand, is_infinity, NT_infinity_FS(n), is_limit,
-    // to_data_key).FS / .FS_alter：FS 用 expand(shorter=true)，FS_alter 用
-    // expand(shorter=false)。纯函数语义，省略 display 键缓存。
+    // to_data_key) 的两支：较短支用 expand(shorter=true)，较长支用
+    // expand(shorter=false)；对外只走较长支。纯函数语义，省略 display 键缓存。
     static std::string expand_text_impl(std::string_view text, int term, bool longer) {
         if (term < 1) term = 1;
         const auto expr = parse(text);

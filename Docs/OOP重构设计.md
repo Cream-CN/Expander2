@@ -5,6 +5,12 @@
 > `CliEntry` 表、命令行为、展开结果保持完全不变。
 >
 > 日期：2026-11-02　状态：实施中
+>
+> **2026-11-15 后记（本文档为历史记录）**：双展开已被清理——`ExpandMode`、
+> `expand_text_alter` / `expand_text_n_alter` 槽、`truncate_fs()` 策略虚函数、
+> GUI 的 `IDM_FS` / `IDM_FSALTER` 双分支、CLI 的 `fsalter` 命令均已删除。
+> 现在每个记号只有一种展开（记号自身的“保留末项”展开），
+> 权威说明见 `Docs/CONTRIBUTING.md` 第 3.2–3.4 节；下列代码片段保留重构当时的样子。
 
 ## 1. 现状与问题
 

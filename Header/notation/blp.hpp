@@ -5,7 +5,7 @@
 // 表达式是“标记行”序列：每行 (step, 条目[])，条目带标记（display 中以 '*' 表示）。
 // 记号极限以 expr.infinity 表示，display 为 "Limit"。
 //
-// 对外提供文本接口（expand_text / expand_text_alter，分别对应 FS / FS_alter），
+// 对外只提供文本接口 expand_text（唯一展开），
 // 纯函数、不抛异常。
 #pragma once
 
@@ -22,7 +22,6 @@ struct BlpNotation {
     static constexpr const char* kName = "blp";
 
     [[nodiscard]] static std::string expand_text(std::string_view text, int term);
-    [[nodiscard]] static std::string expand_text_alter(std::string_view text, int term);
     [[nodiscard]] static std::string suffix() { return {}; }
 
     [[nodiscard]] static std::optional<denshare::DenExpr> parse(std::string_view text);
@@ -323,7 +322,7 @@ using Already = std::vector<std::optional<std::vector<int>>>;
     return expr;
 }
 
-// expand：核心展开。shorter=false 对应 FS（较短），true 对应 FS_alter（较长）。
+// expand：核心展开。shorter=true 为较短支，false 为较长支（对外只走 false 这一支）。
 [[nodiscard]] inline DenExpr expand(const DenExpr& raw, int index, bool shorter) {
     if (raw.rows.empty()) return raw;
     const DenRow& active = raw.rows.back();
@@ -407,7 +406,7 @@ using Already = std::vector<std::optional<std::vector<int>>>;
     return expr;
 }
 
-// FS / FS_alter 的公共骨架。
+// 文本接口的公共骨架。
 [[nodiscard]] inline std::string expand_text_impl(std::string_view text, int term, bool shorter) {
     if (term < 1) term = 1;
     auto parsed = parse(text);
@@ -434,10 +433,6 @@ using Already = std::vector<std::optional<std::vector<int>>>;
 // ---------------------------------------------------------------------
 
 [[nodiscard]] inline std::string BlpNotation::expand_text(std::string_view text, int term) {
-    return blp_detail::expand_text_impl(text, term, /*shorter=*/true);
-}
-
-[[nodiscard]] inline std::string BlpNotation::expand_text_alter(std::string_view text, int term) {
     return blp_detail::expand_text_impl(text, term, /*shorter=*/false);
 }
 
