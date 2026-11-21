@@ -1,6 +1,8 @@
 
 #pragma once
 
+#include "notation_base.hpp"
+
 #include <optional>
 #include <string>
 #include <string_view>
@@ -21,22 +23,17 @@ using S2DbmsColumn = std::vector<S2DbmsEntry>;
 using S2DbmsExpr = std::vector<S2DbmsColumn>;
 
 struct S2DbmsParsed {
-    bool infinity = false;
     S2DbmsExpr expr;
 };
 
-struct S2DBMSNotation {
+struct S2DBMSNotation : NotationBase {
     static constexpr const char* kName = "S2DBMS";
 
     [[nodiscard]] static std::string expand_text(std::string_view text, int term) {
         return expand_text_impl(text, term, /*longer=*/true);
     }
-    [[nodiscard]] static std::string suffix() { return {}; }
 
     [[nodiscard]] static std::optional<S2DbmsParsed> parse(std::string_view s) {
-        if (s == "Limit" || s == "limit" || s == "LIMIT") {
-            return S2DbmsParsed{ true, {} };
-        }
         std::size_t i = 0;
         auto error = [&]() { return std::optional<S2DbmsParsed>{}; };
         auto skip_spaces = [&]() {
@@ -134,11 +131,10 @@ struct S2DBMSNotation {
         }
         skip_spaces();
         if (i != s.size()) return std::nullopt;
-        return S2DbmsParsed{ false, std::move(result) };
+        return S2DbmsParsed{ std::move(result) };
     }
 
     [[nodiscard]] static std::string to_string(const S2DbmsParsed& p) {
-        if (p.infinity) return "Limit";
         return display(p.expr);
     }
 
@@ -231,12 +227,6 @@ private:
         return out;
     }
 
-    [[nodiscard]] static Expr infinity_fs(int index) {
-        Expr result;
-        result.emplace_back();
-        result.push_back(Column{ Entry{ 0, Height{ 0, index } } });
-        return result;
-    }
 
     [[nodiscard]] static std::optional<Height> compute_new_height(const Height& h,
                                                                   const Expr& expr, int r) {
@@ -307,7 +297,6 @@ private:
         if (!parsed) {
             return "解析失败，请确认你没有使用全角括号，逗号，分号";
         }
-        if (parsed->infinity) return display(infinity_fs(term));
         const Expr& e = parsed->expr;
         if (e.empty()) return {};
         // 值域校验：value 与行高 h0 作为列索引使用，越界时 TS 在 expand 中抛错

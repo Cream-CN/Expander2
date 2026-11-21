@@ -11,6 +11,8 @@
 // vertical_increase/vertical_diff/from_height 供 BTBM-weak 复用。
 #pragma once
 
+#include "notation_base.hpp"
+
 #include <algorithm>
 #include <cstdint>
 #include <exception>
@@ -37,7 +39,6 @@ struct Entry
 using Column = std::vector<Entry>;
 struct Expr
 {
-    bool inf = false;  // INFINITY 哨兵
     std::vector<Column> cols;
 };
 
@@ -59,8 +60,6 @@ inline std::shared_ptr<Expr> empty_height()
 {
     return std::make_shared<Expr>();
 }
-inline Expr make_inf() { Expr e; e.inf = true; return e; }
-inline bool is_infinity(const Expr& e) { return e.inf; }
 
 inline int number_cmp(int a, int b) { return a == b ? 0 : (a < b ? -1 : 1); }
 inline int boolean_cmp(bool a, bool b)
@@ -69,37 +68,6 @@ inline int boolean_cmp(bool a, bool b)
 }
 
 // ---- 极限基本列 ----
-inline Expr infinity_fs(int index)
-{
-    if (index == 0)
-    {
-        Expr e;
-        e.cols.push_back(Column{});
-        return e;
-    }
-    Column col;
-    {
-        Entry en;
-        en.value = index - 1;
-        en.height = empty_height();
-        col.push_back(std::move(en));
-    }
-    for (int i = index - 1; i > 0; --i)
-    {
-        Column next;
-        Entry en;
-        en.value = i - 1;
-        auto inner = std::make_shared<Expr>();
-        inner->cols.push_back(col);
-        en.height = inner;
-        next.push_back(std::move(en));
-        col = std::move(next);
-    }
-    Expr e;
-    e.cols.push_back(Column{});
-    e.cols.push_back(std::move(col));
-    return e;
-}
 
 // ---- to_height / from_height ----
 inline HExpr to_height(const Expr& e, int r);
@@ -340,8 +308,7 @@ inline int root_appending_start(const Column& col_root, int r,
 
 inline bool is_limit(const Expr& e)
 {
-    return is_infinity(e) ||
-           (!e.cols.empty() && !e.cols.back().empty());
+    return !e.cols.empty() && !e.cols.back().empty();
 }
 
 // 供 weak 使用的竖直序列运算。
@@ -367,7 +334,6 @@ inline Vertical vertical_diff(const Vertical& v1, const Vertical& v2)
 // ---- 核心 FS（内部，参数 index 直接使用）----
 inline Expr fs_core(const Expr& e, int index)
 {
-    if (is_infinity(e)) return infinity_fs(index);
     if (e.cols.empty()) return e;
     const int t_layer = tail_layer(e);
     if (t_layer < 0)
@@ -459,7 +425,6 @@ inline Expr fs_core(const Expr& e, int index)
 // 导出记号暴露的 FS（非极限强制 index=0）。
 inline Expr fs(const Expr& e, int index)
 {
-    if (is_infinity(e)) return infinity_fs(index);
     if (!is_limit(e)) return fs_core(e, 0);
     return fs_core(e, index);
 }
@@ -473,7 +438,6 @@ inline int entry_cmp(const Entry& a, const Entry& b)
 }
 inline int compare(const Expr& a, const Expr& b)
 {
-    if (a.inf || b.inf) return boolean_cmp(a.inf, b.inf);
     const size_t n = (std::min)(a.cols.size(), b.cols.size());
     for (size_t i = 0; i < n; ++i)
     {
@@ -513,7 +477,6 @@ inline std::string display_column(const Column& c)
 }
 inline std::string display(const Expr& e)
 {
-    if (is_infinity(e)) return "Limit";
     std::string r;
     for (const Column& c : e.cols) r += display_column(c);
     return r;
@@ -532,13 +495,6 @@ public:
     Expr parse()
     {
         skip_spaces();
-        if (i_ + 5 <= s_.size() && s_.substr(i_, 5) == "Limit")
-        {
-            i_ += 5;
-            skip_spaces();
-            if (i_ != s_.size()) throw ParseError{};
-            return make_inf();
-        }
         Expr result = parse_expr();
         skip_spaces();
         if (i_ != s_.size()) throw ParseError{};
@@ -634,9 +590,7 @@ private:
 }  // namespace btbm_detail
 
 // BTBM 记号接口：仅 FS。
-struct BTBMNotation
-{
-    static std::string suffix() { return std::string{}; }
+struct BTBMNotation : NotationBase {
     static std::string expand_text(std::string_view text, int term)
     {
         using namespace btbm_detail;

@@ -106,30 +106,22 @@ inline void refresh_totest(const tonshare::TonNode* a, const tonshare::TonNode* 
     });
 }
 
+// 策略：main 风格（Ω<n>）、MC 极限项、mark = mark_mc。
+struct TonMcPolicy {
+    static constexpr bool kMainStyle = true;
+    static constexpr bool kHasMark = true;
+    static constexpr tonshare::MarkFn mark_fn() { return &tonshare::mark_mc; }
+
+    [[nodiscard]] static bool is_standard(const tonshare::TonNode* a, tonshare::TonValue sys,
+                                          std::map<std::string, bool>& memo) {
+        return standard_q_mc(sys, a, memo);
+    }
+};
+
 } // namespace ton_mc_detail
 
-struct TonMcNotation {
+struct TonMcNotation : tonshare::TonNotationBase<ton_mc_detail::TonMcPolicy> {
     static constexpr const char* kName = "TON_MC";
-
-    [[nodiscard]] static std::string expand_text(std::string_view text, int term) {
-        static std::map<std::string, bool> memo;
-        static tonshare::TonFsCache cache;
-        const tonshare::StdFn std_fn = [](const tonshare::TonNode* a,
-                                          tonshare::TonValue sys) -> bool {
-            return ton_mc_detail::standard_q_mc(sys, a, memo);
-        };
-        return tonshare::ton_expand_text(text, term, /*main_style=*/true,
-                                         /*ibp_style_limit=*/false, std_fn, cache,
-                                         tonshare::mark_mc);
-    }
-
-    [[nodiscard]] static std::string suffix() { return {}; }
-
-    [[nodiscard]] static std::string parse(std::string_view text) {
-        tonshare::TonArena arena;
-        const tonshare::TonNode* t = tonshare::parse_impl(arena, text, true);
-        return t ? tonshare::display_main(t) : "解析失败";
-    }
 };
 
 } // namespace omegay::notation

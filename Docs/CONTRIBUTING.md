@@ -183,7 +183,7 @@ const wchar_t* param_label;
 - 选中此类记号时，UI 显示参数输入框；“展开”按钮读取并校验 `n ∈ [param_min, param_max]` 后调用 `expand_text_n`。
 - `expand_text_n` 与 `expand_text` 同为纯函数、不抛异常；解析失败或内部异常统一返回 `bmlike::kParseError`（提示字符串），不以异常报告。
 - 记号只有 `expand_text_n` 一个入口；原先 BT v3 的 `expand_text_n_alter`（FS_short）已并入 `expand_text_n`。
-- `"Limit"` 表示极限；展开结果按各族显示规则渲染。
+- 顶层 `"Limit"` / `∞` 输入已按用户要求整体拆除：不再解析、不显示；展开结果按各族显示规则渲染。
 
 ### UI 层与记号层的边界
 
@@ -220,6 +220,32 @@ const wchar_t* param_label;
 | 修改 expand 语义 | 需在 CONTRIBUTING.md 或 CHANGELOG 中注明 |
 | 删除任何 `[[nodiscard]]` | 不允许，除非你发现它的返回值被丢弃了 |
 | 新增/修改定义文本 | 只编辑 `defs/*.txt`，并重新运行 `.\build.ps1 -Mode gen` |
+
+### 记号公共基类（NotationBase）
+
+`Header/notation/notation_base.hpp` 定义了记号实现的公共基类 `NotationBase`。
+注册中心（`registry.hpp` 的适配器）按**静态多态**消费 `T::expand_text / T::suffix / …`，
+因此记号之间共享的东西只能放在**基类**里，不能改成虚函数。
+
+- 一律继承：`struct XxxNotation : NotationBase { static constexpr const char* kName = "…"; }`。
+- 由基类提供的样板：`suffix()`（统一返回空串）与 `clamp_term(term, min_term)`（项数归一）。
+  **不要**再在记号里手写 `static std::string suffix() { return {}; }`。
+- 例外：确有非空后缀的记号（目前只有 `EmptyNotation`）在自己的结构体里重新定义
+  `suffix()` 遮蔽基类版本即可。
+- 基类**不参与**文本语义解析：顶层 `"Limit"` / `∞` 解析已整体拆除，
+  各记号只处理普通表达式；表达式内部的极限/后继判定仍留在各族 detail 层。
+
+同构的记号族进一步用**策略模板**收敛骨架（细节逻辑仍留在各族的 detail 命名空间）：
+
+| 模板 | 覆盖的记号 | 策略开关 |
+| --- | --- | --- |
+| `tonshare::TonNotationBase<Policy>` | TON / TON_I / TON_DoR / TON_DRC / TON_DRP / TON_DRPC / TON_IBP / TON_MC / TON_MPC | `is_standard` / `kMainStyle` / `kMarkFn` |
+| `aw2mn_share::Aw2MnFamilyNotation<kWeak, kSubtract>` | Aω2MN2 / Aω2MN3 / wAω2MN2 / wAω2MN3 | 弱版开关、`subtract1` 版本 |
+| `mnup2::Up2DbmsFamilyNotation<kV1Flag, kV1c>` | UP2DBMS v1 / v1B+ / v1C | 减法变体开关 |
+| `mnup2::Up2MnFamilyNotation<kPlus>` | UP2MN v1B / v1B+ | `plus` 开关 |
+| `mnordshare::E0MnFamilyNotation<kStrong>` | e0MN / strong e0MN | `strong` 开关 |
+
+新增记号时：继承 `NotationBase`；若与上表某族同构，优先复用对应模板而不是复制整段包装器。
 
 ## 记号定义文本（Definition Text）
 

@@ -2,7 +2,7 @@ TωMN
 
 TωMN（TS 源：src/notations/MN/T_omega_MN.ts，家族 category-mn，credit hypcos_mn；C++ 实现见 Header/notation/t_omega_mn.hpp）与 ωMN 同属 MN 家族的坏根复制机制。与 ωMN 的关键差异是：条目的分隔符本身就是一个递归的表达式 Expr；当末项分隔符为极限表达式时，要先递归展开该分隔符，threshold 取使 low、high 两个竖向在该基本列下汇合的最小指标。
 
-表达式结构：表达式（Mountain）是若干列 Column 的序列；每列是若干条目 Entry=(value, sep) 的序列；value 是整数，sep（分隔符）递归地也是一个 Expr。空表达式表示 0；另外用 ∞ 标志表示记号极限，显示为 "Limit"。比较规则：条目先比较 value，相等再比较分隔符的 mountain_compare；列按条目字典序比较，长度长者在后；表达式按列字典序比较，长度长者在后。
+表达式结构：表达式（Mountain）是若干列 Column 的序列；每列是若干条目 Entry=(value, sep) 的序列；value 是整数，sep（分隔符）递归地也是一个 Expr。空表达式表示 0；顶层 ∞（Limit）输入已按用户要求拆除。比较规则：条目先比较 value，相等再比较分隔符的 mountain_compare；列按条目字典序比较，长度长者在后；表达式按列字典序比较，长度长者在后。
 
 显示规则：若分隔符的所有列皆空（纯逗号分隔符），则显示为与列数相同个数的逗号（simple 模式下单个逗号省略）；否则显示分隔符自身的 mountain_display（simple 模式外加方括号）。条目显示为分隔符显示后接 value（simple 模式下 value 为两位数以上时加括号）；非 simple 模式下列整体用括号括起。
 
@@ -10,7 +10,7 @@ TωMN（TS 源：src/notations/MN/T_omega_MN.ts，家族 category-mn，credit hy
 
 极限与后继：is_limit 为表达式非空且末列非空；末列为空的表达式是后继表达式，后继展开就是删去末列，空表达式展开结果仍为空。is_one 指分隔符恰为一列且该列为空，即单个纯逗号分隔符。
 
-∞ 的基本列：infinity_fs(n) 递归定义：n ≤ 0 时为单个空列；n > 0 时为 ()(1: infinity_fs(n−1))，即第一列为空列，第二列为单个条目 value=1、分隔符为 infinity_fs(n−1)。解析 "Limit" 直接得到 ∞ 标志，展开时按上述递归基本列给出。
+∞ 的基本列：已按用户要求拆除（本记号不再解析 Limit / ∞ 输入，也不提供其显示与基本列）。
 
 展开（参数 m≥1；输入为极限表达式）：设末列列标为 rightmost，末项位置为 topmost，末项分隔符为 sep；先计算各列竖向 V0，求末项的父位置 BRij，宽度 width = rightmost − BRij.i。
 

@@ -7,6 +7,8 @@
 // 因此这里直接复用 tbm_detail 的全部原语，只重写 ascension_threshold 与 FS 包装。
 #pragma once
 
+#include "notation_base.hpp"
+
 #include <algorithm>
 #include <cstdint>
 #include <functional>
@@ -359,16 +361,13 @@ inline Expr tu_expand(const Expr& m, int index)
 }
 inline Expr tupms_fs(const Expr& m, int index)
 {
-    if (is_infinity(m)) return infinity_fs(index);
     if (m.cols.empty()) return m;
     return tu_expand(m, index);
 }
 }  // namespace tupms_detail
 
 // TUPMS 记号接口：仅 FS。
-struct TUPMSNotation
-{
-    static std::string suffix() { return std::string{}; }
+struct TUPMSNotation : NotationBase {
     static std::string expand_text(std::string_view text, int term)
     {
         using namespace tbm_detail;

@@ -4,13 +4,21 @@
 #define OMEGAY_NOTATION_BMS_FAMILY_HPP
 
 #include <algorithm>
+
+#include "notation_base.hpp"
 #include <cstdint>
 #include <cstring>
+
+#include "notation_base.hpp"
 #include <string>
 #include <string_view>
+
+#include "notation_base.hpp"
 #include <vector>
 
 #include "Header/common/Matrix.hpp"
+
+#include "notation_base.hpp"
 
 namespace omegay::notation {
     namespace detail {
@@ -459,7 +467,7 @@ namespace omegay::notation {
     // =========================================================================
     // BMSFamilyNotation：detail 已在前方定义，可正常引用
     // =========================================================================
-    struct BMSFamilyNotation {
+    struct BMSFamilyNotation : NotationBase {
         enum class Version : int {
             V1 = 100,
             V2 = 200,
@@ -474,7 +482,6 @@ namespace omegay::notation {
         };
 
         static constexpr const char* kName = "BMS Family";
-        static std::string suffix() { return {}; }
 
         static common::Matrix expand(const common::Matrix& m, int term,
             Version ver = Version::V4) {

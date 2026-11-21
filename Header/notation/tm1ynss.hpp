@@ -7,6 +7,8 @@
 // 显示时嵌套子树用“纯空列数量”的数字或 ω 简写。舍弃 BOCF 等价显示。
 #pragma once
 
+#include "notation_base.hpp"
+
 #include <algorithm>
 #include <memory>
 #include <optional>
@@ -28,14 +30,12 @@ struct Column
 };
 struct Node
 {
-    bool inf = false;
     std::vector<Column> cols;
 };
 
 using NodePtr = std::shared_ptr<Node>;
 
 inline NodePtr make_node() { return std::make_shared<Node>(); }
-inline bool is_infinity(const NodePtr& e) { return e && e->inf; }
 
 inline NodePtr empty_column(int n)
 {
@@ -81,8 +81,6 @@ inline int column_compare(const Column& a, const Column& b)
 }
 inline int compare_node(const NodePtr& a, const NodePtr& b)
 {
-    const bool ai = is_infinity(a), bi = is_infinity(b);
-    if (ai || bi) return number_cmp(ai ? 1 : 0, bi ? 1 : 0);
     const size_t m = (std::min)(a->cols.size(), b->cols.size());
     for (size_t i = 0; i < m; ++i)
         if (const int c = column_compare(a->cols[i], b->cols[i]); c != 0) return c;
@@ -98,28 +96,11 @@ inline int index_of_last_nonneg(const std::vector<int>& v)
 
 inline bool is_limit(const NodePtr& e, int n)
 {
-    if (is_infinity(e)) return true;
     if (e->cols.empty()) return false;
     const Column& last = e->cols.back();
     return n == 0 ? !last.step->cols.empty() : (!last.arr.empty() && last.arr[0] > 0);
 }
 
-inline NodePtr infinity_fs(int index, int n)
-{
-    auto e = std::make_shared<Node>();
-    Column c0;
-    c0.arr.assign(n, 0);
-    c0.step = make_node();
-    e->cols.push_back(std::move(c0));
-    if (index > 0)
-    {
-        Column c1;
-        c1.arr.assign(n, 1);
-        c1.step = infinity_fs(index - 1, n);
-        e->cols.push_back(std::move(c1));
-    }
-    return e;
-}
 
 // 父标号表用扁平 Node 表示：每列 arr 存父列下标，step 列存一个下标。
 struct PCol { std::vector<int> arr; int step = -1; };
@@ -128,7 +109,6 @@ struct PNode { std::vector<PCol> cols; };
 inline PNode parents(const NodePtr& e, int n)
 {
     PNode P;
-    if (is_infinity(e)) return P;
     P.cols.resize(e->cols.size());
     for (int i = 0; i < (int)e->cols.size(); ++i)
     {
@@ -215,7 +195,6 @@ inline NodePtr pop_last(const NodePtr& e)
 
 NodePtr fs(const NodePtr& e, int index, int n)
 {
-    if (is_infinity(e)) return infinity_fs(index, n);
     if (e->cols.empty()) return e;
     const int right = (int)e->cols.size() - 1;
     if (is_limit(e->cols[right].step, n))
@@ -258,7 +237,6 @@ NodePtr fs(const NodePtr& e, int index, int n)
 // LNZ 外壳。
 inline NodePtr lnz(const NodePtr& e, int index, int n)
 {
-    if (is_infinity(e)) return infinity_fs(index, n);
     if (!is_limit(e, n)) return fs(e, 0, n);
     return fs(e, index, n);
 }
@@ -291,7 +269,6 @@ inline std::string column_display(const Column& c)
 }
 inline std::string render(const NodePtr& e, bool top_level)
 {
-    if (is_infinity(e)) return "Limit";
     if (!top_level)
     {
         bool allZero = true;
@@ -325,13 +302,6 @@ struct Parser
     NodePtr parse_expr(bool top_level)
     {
         sp();
-        if (i_ + 5 <= s_.size() && s_.substr(i_, 5) == "Limit")
-        {
-            i_ += 5;
-            auto e = std::make_shared<Node>();
-            e->inf = true;
-            return e;
-        }
         if (!top_level)
         {
             // 裸数字 = 该数量个空列；ω/w = [空列, 一列]。
@@ -430,9 +400,7 @@ struct Parser
 };
 }  // namespace tm1_detail
 
-struct TM1YnssNotation
-{
-    static std::string suffix() { return std::string{}; }
+struct TM1YnssNotation : NotationBase {
     static constexpr int kParamMin = 0;
     static constexpr int kParamMax = 25;
     static std::string expand_text_n(std::string_view text, int term, int n)

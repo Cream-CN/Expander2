@@ -1,4 +1,6 @@
 #pragma once
+
+#include "notation_base.hpp"
 // ============================================================
 // 记号: "空记号" (Passthrough / Empty Notation)
 // ============================================================
@@ -7,7 +9,7 @@
 
 namespace omegay::notation {
 
-struct EmptyNotation {
+struct EmptyNotation : NotationBase {
     static constexpr const char* kName        = "空记号 (Passthrough)";
     static constexpr const char* kDescription = "";
     [[nodiscard]] static std::vector<int> expand(

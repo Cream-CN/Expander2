@@ -7,6 +7,8 @@
 // 较长 / 较短两支算法由 shorter 参数区分（对应 sequence_FS_variants）。
 #pragma once
 
+#include "notation_base.hpp"
+
 #include <algorithm>
 #include <cstddef>
 #include <string>
@@ -17,10 +19,9 @@
 
 namespace omegay::notation {
 
-    struct BHMNotation {
+    struct BHMNotation : NotationBase {
         static constexpr const char* kName = "BHM";
         [[nodiscard]] static std::string expand_text(std::string_view, int);
-        [[nodiscard]] static std::string suffix() { return {}; }
     };
 
     namespace bhm_detail {
@@ -191,7 +192,7 @@ namespace omegay::notation {
 
     // nBM-BHM：N 为 BM_BHM(N) 的行数参数（顶行小于 N 时走 BM4 展开）。
     template <int N>
-    struct BM_BHMNotation {
+    struct BM_BHMNotation : NotationBase {
         static constexpr int kRows = N;
 
         [[nodiscard]] static std::string
@@ -203,7 +204,6 @@ namespace omegay::notation {
                 });
         }
 
-        [[nodiscard]] static std::string suffix() { return {}; }
     };
 
 }  // namespace omegay::notation

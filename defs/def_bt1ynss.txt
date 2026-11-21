@@ -13,4 +13,4 @@ BT*(n+1)SS v1（超限星负一 Y 序列系统，Bubby3's Transfinite* -1Y-nSS v
 2. 若末子表达式的末列是“本列首分量加一”的单行列（special column），
    走 FS_special 分支直接复制末子表达式的末列。
 
-极限记为 Limit。
+记号极限：顶层 ∞（Limit）输入已拆除；表达式内部的极限/后继判定保留。

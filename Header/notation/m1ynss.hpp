@@ -6,6 +6,8 @@
 // 显示时把 arr 与 step 依次列出并去掉尾随 0，再用圆括号包成一列；空列即 ()。
 #pragma once
 
+#include "notation_base.hpp"
+
 #include <algorithm>
 #include <memory>
 #include <optional>
@@ -26,11 +28,9 @@ struct Column
 };
 struct Expr
 {
-    bool inf = false;
     std::vector<Column> cols;
 };
 
-inline bool is_infinity(const Expr& e) { return e.inf; }
 
 inline int number_cmp(int a, int b) { return a < b ? -1 : (a > b ? 1 : 0); }
 inline int lex_num(const std::vector<int>& a, const std::vector<int>& b)
@@ -62,7 +62,6 @@ inline int index_of_last_nonneg(const std::vector<int>& v)
 // 父标号表：与 Expr 同形，但每个位置存放的是“父列下标”。
 inline Expr parents(const Expr& e, int n)
 {
-    if (is_infinity(e)) return Expr{};
     Expr P;
     P.cols.resize(e.cols.size());
     for (int i = 0; i < (int)e.cols.size(); ++i)
@@ -143,23 +142,9 @@ inline Column ascend(const Column& ei, const std::vector<int>& delta,
     return out;
 }
 
-inline Expr infinity_fs(int index, int n)
-{
-    Expr e;
-    Column c0;
-    c0.arr.assign(n, 0);
-    c0.step = 0;
-    Column c1;
-    c1.arr.assign(n, 1);
-    c1.step = index;
-    e.cols.push_back(std::move(c0));
-    e.cols.push_back(std::move(c1));
-    return e;
-}
 
 inline Expr fs(Expr e, int index, int n)
 {
-    if (is_infinity(e)) return infinity_fs(index, n);
     if (e.cols.empty()) return e;
     const Expr P = parents(e, n);
     const auto rb = root(P, n);
@@ -207,7 +192,6 @@ inline std::string column_display(const Column& c)
 }
 inline std::string display(const Expr& e)
 {
-    if (is_infinity(e)) return "Limit";
     std::string s;
     for (const Column& c : e.cols) s += column_display(c);
     return s;
@@ -262,14 +246,6 @@ struct Parser
     Expr parse(int n)
     {
         sp();
-        if (i_ + 5 <= s_.size() && s_.substr(i_, 5) == "Limit")
-        {
-            i_ += 5;
-            sp();
-            if (i_ != s_.size()) err();
-            Expr e; e.inf = true;
-            return e;
-        }
         Expr e;
         sp();
         while (i_ < s_.size())
@@ -285,9 +261,7 @@ struct Parser
 }  // namespace m1ynss_detail
 
 // Minus1_Y_nSS 记号接口：参数 n 经 UI 输入（0 <= n <= 25）。
-struct M1YnssNotation
-{
-    static std::string suffix() { return std::string{}; }
+struct M1YnssNotation : NotationBase {
     static constexpr int kParamMin = 0;
     static constexpr int kParamMax = 25;
     static std::string expand_text_n(std::string_view text, int term, int n)

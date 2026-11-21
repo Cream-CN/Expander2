@@ -8,6 +8,8 @@
 // higher/mark 复制时回填 tail_top；undefined → 删末列。
 #pragma once
 
+#include "notation_base.hpp"
+
 #include <algorithm>
 #include <cstddef>
 #include <deque>
@@ -27,27 +29,10 @@ namespace btl_detail
 struct NodeC;
 using NodePtr = std::shared_ptr<NodeC>;
 struct ColumnC { std::vector<int> lower; int mark = 0; std::vector<NodePtr> higher; };
-struct NodeC { bool inf = false; std::vector<ColumnC> cols; };
+struct NodeC { std::vector<ColumnC> cols; };
 
 inline NodePtr btl_make_node() { return std::make_shared<NodeC>(); }
-inline NodePtr btl_infinity() { auto e = btl_make_node(); e->inf = true; return e; }
-inline bool btl_is_infinity(const NodePtr& e) { return e->inf; }
 
-inline NodePtr btl_infinity_fs(int index, int n)
-{
-    NodePtr chain = btl_make_node();
-    for (int i = index; i > 0; --i)
-    {
-        auto wrapped = btl_make_node();
-        ColumnC c; c.lower.assign(n, i); c.mark = i; c.higher.push_back(chain);
-        wrapped->cols.push_back(std::move(c));
-        chain = wrapped;
-    }
-    auto full = btl_make_node();
-    full->cols.push_back(ColumnC{ std::vector<int>(n, 0), 0, {} });
-    for (const ColumnC& cc : chain->cols) full->cols.push_back(cc);
-    return full;
-}
 inline bool btl_is_zero_column(const ColumnC& c)
 {
     for (int x : c.lower) if (x != 0) return false;
@@ -96,14 +81,12 @@ inline std::string btl_column_display(const ColumnC& c)
 }
 inline std::string btl_display(const NodePtr& e)
 {
-    if (btl_is_infinity(e)) return "Limit";
     std::string s;
     for (const ColumnC& c : e->cols) s += btl_column_display(c);
     return s;
 }
 inline bool btl_is_limit(const NodePtr& e)
 {
-    if (btl_is_infinity(e)) return true;
     if (e->cols.empty()) return false;
     return !btl_is_zero_column(e->cols.back());
 }
@@ -399,14 +382,12 @@ ANodePtr btl_thresholds(const NodePtr& e, const PNodePtr& P,
 inline NodePtr btl_clone_slice_from_raw(const NodeC* e, int from)
 {
     auto out = btl_make_node();
-    out->inf = e->inf;
     for (size_t i = from; i < e->cols.size(); ++i) out->cols.push_back(e->cols[i]);
     return out;
 }
 inline NodePtr btl_pop_last(const NodePtr& e)
 {
     auto out = btl_make_node();
-    out->inf = e->inf;
     for (size_t i = 0; i + 1 < e->cols.size(); ++i) out->cols.push_back(e->cols[i]);
     return out;
 }
@@ -483,7 +464,6 @@ NodePtr btl_fs_star(const NodePtr& e, int tail_layer, int index)
 
 NodePtr btl_fs(const NodePtr& e, int index, int n)
 {
-    if (btl_is_infinity(e)) return btl_infinity_fs(index, n);
     if (e->cols.empty()) return e;
     if (!btl_is_limit(e)) return btl_pop_last(e);
 
@@ -559,7 +539,6 @@ NodePtr btl_fs(const NodePtr& e, int index, int n)
 
 inline NodePtr btl_lnz(const NodePtr& e, int index, int n)
 {
-    if (btl_is_infinity(e)) return btl_infinity_fs(index, n);
     if (!btl_is_limit(e)) return btl_fs(e, 0, n);
     return btl_fs(e, index, n);
 }
@@ -658,13 +637,6 @@ struct Parser
     {
         n_ = n;
         sp();
-        if (i_ + 5 <= s_.size() && s_.substr(i_, 5) == "Limit")
-        {
-            i_ += 5;
-            sp();
-            if (i_ != s_.size()) err();
-            return btl_infinity();
-        }
         NodePtr out = parse_expr();
         sp();
         if (i_ != s_.size()) err();
@@ -672,9 +644,7 @@ struct Parser
     }
 };
 
-struct BTlNotation
-{
-    static std::string suffix() { return std::string{}; }
+struct BTlNotation : NotationBase {
     static constexpr int kParamMin = 1;
     static constexpr int kParamMax = 25;
     static std::string expand_text_n(std::string_view text, int term, int n)

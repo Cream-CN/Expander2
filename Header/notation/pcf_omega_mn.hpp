@@ -1,6 +1,8 @@
 
 #pragma once
 
+#include "notation_base.hpp"
+
 #include <cstddef>
 #include <optional>
 #include <string>
@@ -457,30 +459,20 @@ inline std::optional<Expr> from_display(std::string_view str) {
     return result;
 }
 
-inline Expr infinity_fs(int index) {
-    Vertical v(static_cast<std::size_t>(index), 0);
-    v.push_back(1);
-    Expr e;
-    e.push_back(Column{});
-    e.push_back(Column{ Entry{ 0, std::move(v) } });
-    return e;
-}
 
 } // namespace pcf_omega_mn_detail
 
-// Expr：非 ∞ 时持有 Expr；∞（显示 "Limit"）用标志表示。
+// Expr：解析结果（顶层 ∞ / "Limit" 已拆除）。
 struct PcfOmegaMnExpr {
-    bool infinity = false;
     pcf_omega_mn_detail::Expr expr;
 };
 
-struct PcfOmegaMNNotation {
+struct PcfOmegaMNNotation : NotationBase {
     static constexpr const char* kName = "PCF's ωMN";
 
     [[nodiscard]] static std::string expand_text(std::string_view text, int term) {
         return expand_text_impl(text, term, /*longer=*/true);
     }
-    [[nodiscard]] static std::string suffix() { return {}; }
 
     // 供测试 / 调试使用的解析与格式化。
     [[nodiscard]] static std::optional<PcfOmegaMnExpr> parse(std::string_view text) {
@@ -489,27 +481,20 @@ struct PcfOmegaMNNotation {
         while (b < e && (s0[b] == ' ' || s0[b] == '\t')) ++b;
         while (e > b && (s0[e - 1] == ' ' || s0[e - 1] == '\t')) --e;
         const std::string_view raw = std::string_view(s0).substr(b, e - b);
-        if (raw == "Limit" || raw == "limit" || raw == "LIMIT") {
-            return PcfOmegaMnExpr{ true, {} };
-        }
         if (raw.empty() || raw == "0" || raw == "∅") {
-            return PcfOmegaMnExpr{ false, {} };
+            return PcfOmegaMnExpr{};
         }
         auto m = pcf_omega_mn_detail::from_display(raw);
         if (!m) return std::nullopt;
-        return PcfOmegaMnExpr{ false, std::move(*m) };
+        return PcfOmegaMnExpr{ std::move(*m) };
     }
 
     [[nodiscard]] static std::string to_string(const PcfOmegaMnExpr& e) {
-        if (e.infinity) return "Limit";
         return pcf_omega_mn_detail::display(e.expr, false);
     }
 
-    // 非 ∞ 表达式的比较（供测试用）。
     [[nodiscard]] static int compare(const PcfOmegaMnExpr& a, const PcfOmegaMnExpr& b) {
-        if (a.infinity || b.infinity) {
-            return a.infinity == b.infinity ? 0 : (a.infinity ? 1 : -1);
-        }
+
         return pcf_omega_mn_detail::compare(a.expr, b.expr);
     }
 
@@ -519,9 +504,6 @@ private:
         const auto parsed = parse(text);
         if (!parsed) {
             return "解析失败，请确认你没有使用全角括号，逗号，分号";
-        }
-        if (parsed->infinity) {
-            return pcf_omega_mn_detail::display(pcf_omega_mn_detail::infinity_fs(term), false);
         }
         const pcf_omega_mn_detail::Expr& e = parsed->expr;
         if (e.empty()) return {};

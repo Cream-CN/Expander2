@@ -1,5 +1,7 @@
 #pragma once
 
+#include "notation_base.hpp"
+
 #include <algorithm>
 #include <climits>
 #include <cstddef>
@@ -14,12 +16,11 @@
 
 namespace omegay::notation {
 
-    struct UPMSNotation {
+    struct UPMSNotation : NotationBase {
         static constexpr const char* kName = "UPMS";
         [[nodiscard]] static omegay::common::Matrix
             expand(const omegay::common::Matrix& m, int term);
 
-        [[nodiscard]] static std::string suffix() { return {}; }
     };
     namespace detail {
 

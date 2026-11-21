@@ -118,10 +118,6 @@ inline std::string to_data_key(const Mountain& m) {
 inline std::optional<Mountain> from_display(std::string_view s) {
     std::size_t i = 0;
     auto error = [&]() { return std::optional<Mountain>{}; };
-    if (s == "Limit") {
-        // 由调用方（FS 包装器）识别 ∞；此处不返回哨兵值，直接视为非法。
-        return error();
-    }
 
     auto skip_spaces = [&]() {
         while (i < s.size() && s[i] == ' ') ++i;
@@ -265,13 +261,6 @@ inline std::optional<Mountain> from_display_simple(std::string_view s) {
     };
 
     skip_spaces();
-    if (i + 5 <= s.size() && s.substr(i, 5) == "Limit") {
-        i += 5;
-        skip_spaces();
-        if (i != s.size()) return error();
-        // ∞ 由调用方识别。
-        return error();
-    }
     auto result = parse_expr();
     if (!result) return std::nullopt;
     skip_spaces();
@@ -507,18 +496,8 @@ inline Mountain extend(const Mountain& m0) {
     return m;
 }
 
-// TS NT_infinity_FS(n)(index)：∞ 的第 index 个基本列。
-inline Mountain nt_infinity_fs(int n, int index) {
-    Mountain m;
-    m.push_back(Column{});
-    Column col;
-    col.reserve(static_cast<std::size_t>(index < 0 ? 0 : index));
-    for (int k = 0; k < index; ++k) col.push_back(Entry{ 1, n - 1 });
-    m.push_back(std::move(col));
-    return m;
-}
 
-// TS expand(m, index, shorter)。前置条件：m 非 ∞（FS 包装器已处理）。
+// TS expand(m, index, shorter)。
 inline Mountain expand(const Mountain& m, int index, bool shorter) {
     if (m.empty()) return m;
     if (m.back().empty()) return Mountain(m.begin(), m.end() - 1);

@@ -11,6 +11,8 @@
 //   Vertical = Expr[]     由若干列段组成的“竖直序列”
 #pragma once
 
+#include "notation_base.hpp"
+
 #include <algorithm>
 #include <cstdint>
 #include <exception>
@@ -41,7 +43,6 @@ struct Expr
 };
 using Vertical = std::vector<Expr>;
 
-constexpr int kInfinity = (1 << 30);
 
 inline const std::shared_ptr<Expr>& one_expr()
 {
@@ -106,11 +107,7 @@ inline bool is_one(const Expr& e)
 {
     return e.cols.size() == 1 && e.cols[0].empty();
 }
-inline bool is_infinity(const Expr& a)
-{
-    return !a.cols.empty() && !a.cols[0].empty() &&
-           a.cols[0][0].value == kInfinity;
-}
+
 
 // ---- vertical（竖直序列）运算 ----
 inline int index_after(const std::vector<Vertical>& V, const Vertical& pos)
@@ -411,25 +408,13 @@ inline Expr expand(const Expr& m, int index)
     if (is_one(last_height)) return expand_successor(m, index);
     return expand_limit(m, index);
 }
-inline Expr infinity_fs(int index)
-{
-    if (index == 0) return Expr{ {Column{} } };
-    Expr e;
-    e.cols.push_back(Column{});
-    Column c;
-    c.push_back(Entry{ 1, std::make_shared<Expr>(infinity_fs(index - 1)) });
-    e.cols.push_back(std::move(c));
-    return e;
-}
 inline bool is_limit(const Expr& m)
 {
-    if (is_infinity(m)) return true;
     if (m.cols.empty()) return false;
     return !m.cols.back().empty();
 }
 inline Expr tbm_fs(const Expr& expr, int index)
 {
-    if (is_infinity(expr)) return infinity_fs(index);
     if (!is_limit(expr)) return expand(expr, 0);
     return expand(expr, index);
 }
@@ -463,7 +448,6 @@ inline std::string column_display(const Column& c)
 }
 inline std::string display(const Expr& m)
 {
-    if (is_infinity(m)) return "Limit";
     std::string r;
     for (const Column& c : m.cols) r += column_display(c);
     return r;
@@ -482,17 +466,6 @@ public:
     Expr parse()
     {
         skip_spaces();
-        if (i_ + 5 <= s_.size() && s_.substr(i_, 5) == "Limit")
-        {
-            i_ += 5;
-            skip_spaces();
-            if (i_ != s_.size()) throw ParseError{};
-            Expr inf;
-            Column c;
-            c.push_back(Entry{ kInfinity, std::make_shared<Expr>() });
-            inf.cols.push_back(std::move(c));
-            return inf;
-        }
         Expr result = parse_expr();
         skip_spaces();
         if (i_ != s_.size()) throw ParseError{};
@@ -586,9 +559,7 @@ private:
 }  // namespace tbm_detail
 
 // TBM 记号接口：仅 FS（FS_default_LNZ_variant 只注册 FS；非极限走 expand(_,0)）。
-struct TBMNotation
-{
-    static std::string suffix() { return std::string{}; }
+struct TBMNotation : NotationBase {
     static std::string expand_text(std::string_view text, int term)
     {
         using namespace tbm_detail;

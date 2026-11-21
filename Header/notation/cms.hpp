@@ -9,6 +9,8 @@
 // 内部逐列用变长列向量表示，以严格对应原版对动态增长矩阵 m2 的父项计算。
 #pragma once
 
+#include "notation_base.hpp"
+
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
@@ -21,10 +23,9 @@
 
 namespace omegay::notation {
 
-    struct CMSNotation {
+    struct CMSNotation : NotationBase {
         static constexpr const char* kName = "CMS";
         [[nodiscard]] static std::string expand_text(std::string_view, int);
-        [[nodiscard]] static std::string suffix() { return {}; }
     };
 
     namespace cms_detail {
@@ -249,8 +250,6 @@ namespace omegay::notation {
         CMSNotation::expand_text(std::string_view text, int term) {
         const auto e = bmlike::parse(text);
         if (!e) return bmlike::kParseError;
-        if (e->infinity)
-            return bmlike::matrix_to_bm_string(bmlike::infinity_fs(term));
         if (e->m.cols() == 0) return {};
         const auto cols = cms_detail::expand(e->m, term);
         return cms_detail::cols_to_string(cols);

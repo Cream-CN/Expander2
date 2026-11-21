@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "smnshare.hpp"
+#include "notation_base.hpp"
 
 namespace omegay::notation::mnup2 {
 
@@ -176,7 +177,7 @@ inline std::string display(const Expr& e) {
 }
 
 inline std::optional<Expr> from_display(std::string_view s) {
-    if (s == "Limit" || s == "limit" || s == "LIMIT") return std::nullopt;  // ∞ 由包装器处理
+
     auto m = smnshare::from_display(s);
     if (!m) return std::nullopt;
     Expr e;
@@ -340,21 +341,6 @@ inline std::vector<int> up2mn_compute_up_2mn(
     return result;
 }
 
-inline Expr up2mn_infinity_fs(int index, bool plus) {
-    Expr result;
-    result.emplace_back();
-    for (int i = 1; i <= index; ++i) {
-        Column col;
-        if (plus) {
-            col.push_back(Entry{ i - 1, 1 });
-        } else {
-            for (int j = 0; j < i - 1; ++j) col.push_back(Entry{ i - 1, 0 });
-            col.push_back(Entry{ 0, 1 });
-        }
-        result.push_back(std::move(col));
-    }
-    return result;
-}
 
 inline Column up2mn_copy_column(const Column& col, Position rp, int offset, int y_offset, bool up) {
     const int Ri = rp.i, Rj = rp.j;
@@ -425,17 +411,6 @@ inline Expr up2mn_expand(const Expr& expr, int index, bool shorter, bool plus) {
 //   - copy_column：v1 的 value==Ri 分支含 j<=Rj 判据；v1b-plus/v1c 无。
 // ---------------------------------------------------------------------
 
-inline Expr up2dbms_infinity_fs(int index) {
-    Expr result;
-    result.emplace_back();
-    for (int i = 1; i <= index; ++i) {
-        Column col;
-        for (int j = 0; j < i; ++j) col.push_back(Entry{ i - 1, 0 });
-        col.push_back(Entry{ i - 1, 1 });
-        result.push_back(std::move(col));
-    }
-    return result;
-}
 
 // v1 的 compute_up_1mn：直接 fill(true, Ri)。
 inline std::vector<int> up2dbms_v1_compute_up_1mn(const Expr& expr, Position rp) {
@@ -583,5 +558,78 @@ inline Expr up2dbms_expand(const Expr& expr, int index, bool shorter, bool v1_fl
     if (shorter) result.pop_back();
     return result;
 }
+
+// ---------------------------------------------------------------------
+// UP2 家族的记号公共骨架
+//
+// UP2MN v1B / v1B+ 与 UP2DBMS v1 / v1B+ / v1C 这五个记号的 expand_text 原本
+// 是五份逐字重复的“包装器”：同一个解析结果结构 + 同一串
+//     term 归一 → 解析 → 空表达式/后继/展开 → 显示
+// 差异只有：
+//   · UP2MN  ：plus 开关（v1B / v1B+）；
+//   · UP2DBMS：v1_flag / v1c 两个减法变体开关。
+// 本族不支持顶层 ∞（"Limit"/"∞"）输入，只处理普通表达式。
+// ---------------------------------------------------------------------
+
+// 解析结果的载体。
+struct Up2Expr {
+    Expr expr;
+};
+
+// UP2DBMS 系列：v1 / v1B+ / v1C 只差两个减法开关。
+template <bool kV1Flag, bool kV1c>
+struct Up2DbmsFamilyNotation : NotationBase {
+    [[nodiscard]] static std::string expand_text(std::string_view text, int term) {
+        if (term < 1) term = 1;
+        const auto parsed = parse(text);
+        if (!parsed) {
+            return "解析失败，请确认你没有使用全角括号，逗号，分号";
+        }
+        const Expr& e = parsed->expr;
+        if (e.empty()) return {};
+        if (!expr_valid(e)) {
+            return "解析失败，请确认你没有使用全角括号，逗号，分号";
+        }
+        if (e.back().empty()) return display(Expr(e.begin(), e.end() - 1));
+        return display(up2dbms_expand(e, term, /*shorter=*/false, kV1Flag, kV1c));
+    }
+
+    // 供测试 / 调试使用：解析与格式化（"Limit" / "∞" 视为非法输入）。
+    [[nodiscard]] static std::optional<Up2Expr> parse(std::string_view text) {
+        auto e = from_display(text);
+        if (!e) return std::nullopt;
+        return Up2Expr{ std::move(*e) };
+    }
+
+    [[nodiscard]] static std::string to_string(const Up2Expr& e) {
+        return display(e.expr);
+    }
+};
+
+// UP2MN 系列：v1B / v1B+ 只差 plus 开关（不校验值域，与 v1A 一致）。
+template <bool kPlus>
+struct Up2MnFamilyNotation : NotationBase {
+    [[nodiscard]] static std::string expand_text(std::string_view text, int term) {
+        if (term < 1) term = 1;
+        const auto parsed = parse(text);
+        if (!parsed) {
+            return "解析失败，请确认你没有使用全角括号，逗号，分号";
+        }
+        const Expr& e = parsed->expr;
+        if (e.empty()) return {};
+        if (e.back().empty()) return display(Expr(e.begin(), e.end() - 1));
+        return display(up2mn_expand(e, term, /*shorter=*/false, kPlus));
+    }
+
+    [[nodiscard]] static std::optional<Up2Expr> parse(std::string_view text) {
+        auto e = from_display(text);
+        if (!e) return std::nullopt;
+        return Up2Expr{ std::move(*e) };
+    }
+
+    [[nodiscard]] static std::string to_string(const Up2Expr& e) {
+        return display(e.expr);
+    }
+};
 
 }  // namespace omegay::notation::mnup2

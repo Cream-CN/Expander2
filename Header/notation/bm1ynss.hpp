@@ -13,6 +13,8 @@
 // 父数组（shared_ptr 与活栈共享同一对象，fill_top 回填第 n 个父时活栈同步可见）。
 #pragma once
 
+#include "notation_base.hpp"
+
 #include <algorithm>
 #include <deque>
 #include <memory>
@@ -63,25 +65,8 @@ inline int br_last_nonneg(const std::vector<int>& v)
 
 inline bool br_is_limit(const NodePtr& e)
 {
-    if (is_infinity(e)) return true;
     if (e->cols.empty()) return false;
     return !is_zero_column(e->cols.back());
-}
-inline NodePtr br_infinity_fs(int index, int n)
-{
-    NodePtr chain = make_node();
-    for (int i = index; i > 0; --i)
-    {
-        auto wrapped = std::make_shared<Node>();
-        Column c; c.arr.assign(n, i); c.step = chain;
-        wrapped->cols.push_back(std::move(c));
-        chain = wrapped;
-    }
-    auto full = std::make_shared<Node>();
-    Column z; z.arr.assign(n, 0); z.step = make_node();
-    full->cols.push_back(std::move(z));
-    for (const Column& cc : chain->cols) full->cols.push_back(cc);
-    return full;
 }
 
 // 下层父（j=0..n-1），两族共用。活动栈 push / 每层 for 后 resize（splice）与 TS 逐字一致。
@@ -400,7 +385,6 @@ std::vector<int> br_ascension_vector(const NodePtr& e, int r, int b, int tailLay
 NodePtr br_clone_slice_from_raw(const Node* e, int from)
 {
     auto out = std::make_shared<Node>();
-    out->inf = e->inf;
     for (size_t i = from; i < e->cols.size(); ++i)
         out->cols.push_back(Column{ e->cols[i].arr, e->cols[i].step });
     return out;
@@ -426,7 +410,6 @@ ANodePtr br_a_pop_last(const ANodePtr& A)
 NodePtr br_node_pop_last(const NodePtr& e)
 {
     auto out = std::make_shared<Node>();
-    out->inf = e->inf;
     for (size_t i = 0; i + 1 < e->cols.size(); ++i)
         out->cols.push_back(Column{ e->cols[i].arr, e->cols[i].step });
     return out;
@@ -464,7 +447,6 @@ NodePtr br_ascend_replace(const NodePtr& e, const NodePtr& tail,
 
 NodePtr br_fs(const NodePtr& e, int index, int n, bool rel)
 {
-    if (is_infinity(e)) return br_infinity_fs(index, n);
     if (e->cols.empty()) return e;
     if (!br_is_limit(e)) return br_node_pop_last(e);  // 后继：删去末列
 
@@ -526,7 +508,6 @@ NodePtr br_fs(const NodePtr& e, int index, int n, bool rel)
 
 inline NodePtr br_lnz(const NodePtr& e, int index, int n, bool rel)
 {
-    if (is_infinity(e)) return br_infinity_fs(index, n);
     if (!br_is_limit(e)) return br_fs(e, 0, n, rel);
     return br_fs(e, index, n, rel);
 }
@@ -558,7 +539,6 @@ inline std::string br_column_display(const Column& c)
 }
 inline std::string br_render(const NodePtr& e, bool top_level)
 {
-    if (is_infinity(e)) return "Limit";
     if (!top_level)
     {
         bool allZero = true;
@@ -573,9 +553,7 @@ inline std::string br_render(const NodePtr& e, bool top_level)
 }
 
 template <bool kRel>
-struct BranchNotation
-{
-    static std::string suffix() { return std::string{}; }
+struct BranchNotation : NotationBase {
     static constexpr int kParamMin = 0;
     static constexpr int kParamMax = 25;
     static std::string expand_text_n(std::string_view text, int term, int n)

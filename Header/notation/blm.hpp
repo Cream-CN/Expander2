@@ -11,6 +11,8 @@
 // 独立的新数组。这里用 shared_ptr<vector<int>> 表达“共享 / 独立”。
 #pragma once
 
+#include "notation_base.hpp"
+
 #include <algorithm>
 #include <cstddef>
 #include <memory>
@@ -22,10 +24,9 @@
 
 namespace omegay::notation {
 
-    struct BLMNotation {
+    struct BLMNotation : NotationBase {
         static constexpr const char* kName = "BLM";
         [[nodiscard]] static std::string expand_text(std::string_view, int);
-        [[nodiscard]] static std::string suffix() { return {}; }
     };
 
     namespace blm_detail {
@@ -222,8 +223,6 @@ namespace omegay::notation {
         BLMNotation::expand_text(std::string_view text, int term) {
         const auto e = bmlike::parse(text);
         if (!e) return bmlike::kParseError;
-        if (e->infinity)
-            return bmlike::matrix_to_bm_string(bmlike::infinity_fs(term));
         if (e->m.cols() == 0) return {};
         auto cols = blm_detail::expand(bmlike::standardize(e->m), term);
         blm_detail::normalize_cols(cols);

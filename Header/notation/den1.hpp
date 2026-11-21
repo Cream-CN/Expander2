@@ -1,6 +1,8 @@
 
 #pragma once
 
+#include "notation_base.hpp"
+
 #include "denshare.hpp"
 
 #include <optional>
@@ -10,11 +12,10 @@
 
 namespace omegay::notation {
 
-struct Den1Notation {
+struct Den1Notation : NotationBase {
     static constexpr const char* kName = "DEN1";
 
     [[nodiscard]] static std::string expand_text(std::string_view text, int term);
-    [[nodiscard]] static std::string suffix() { return {}; }
 
     // 供测试 / 调试使用的解析与格式化。
     [[nodiscard]] static std::optional<denshare::Den1Expr> parse(std::string_view text);
@@ -40,7 +41,7 @@ using denshare::TextParser;
 }
 
 [[nodiscard]] inline std::string to_string(const Den1Expr& expr) {
-    if (expr.infinity) return "Limit";
+
     std::string out;
     for (std::size_t i = 1; i < expr.rows.size(); ++i) {
         const Den1Row& row = expr.rows[i];
@@ -93,13 +94,6 @@ using denshare::TextParser;
 [[nodiscard]] inline std::optional<Den1Expr> parse(std::string_view s) {
     TextParser p(s);
     p.skip_spaces();
-    if (p.match("Limit")) {
-        p.skip_spaces();
-        if (!p.eof()) return std::nullopt;
-        Den1Expr e;
-        e.infinity = true;
-        return e;
-    }
 
     Den1Expr expr;
     expr.rows.emplace_back();   // 父标号列表，初始为空
@@ -143,7 +137,7 @@ using denshare::TextParser;
 // ---------------------------------------------------------------------
 
 [[nodiscard]] inline int compare(const Den1Expr& a, const Den1Expr& b) {
-    if (a.infinity || b.infinity) return denshare::bool_compare(a.infinity, b.infinity);
+
     std::vector<std::vector<int>> sa, sb;
     for (std::size_t i = 1; i < a.rows.size(); ++i) sa.push_back(to_short_row(a.rows[i]));
     for (std::size_t i = 1; i < b.rows.size(); ++i) sb.push_back(to_short_row(b.rows[i]));
@@ -155,7 +149,7 @@ using denshare::TextParser;
 // ---------------------------------------------------------------------
 
 [[nodiscard]] inline bool is_limit(const Den1Expr& expr) {
-    if (expr.infinity) return true;
+
     if (expr.rows.empty()) return false;
     const Den1Row& active = expr.rows.back();
     const std::size_t idx = 1 + static_cast<std::size_t>(active[0]);
@@ -393,40 +387,11 @@ using denshare::TextParser;
     return expr;
 }
 
-// ---------------------------------------------------------------------
-// 极限的 FS（TS 的 Limit）
-// ---------------------------------------------------------------------
 
-// LimitR(n)：极限的父标号行。
-[[nodiscard]] inline Den1Row limit_r(int n) {
-    Den1Row out;
-    if (n == 0) {
-        out = { 0, 0 };
-    } else {
-        out = { 0, 0, 0 };
-        for (int nn = 0; nn < n - 1; ++nn) out.push_back(3 + nn);
-    }
-    return out;
-}
 
-// Limit_row(n)：极限主体行。
-[[nodiscard]] inline Den1Row limit_row(int n) {
-    Den1Row raw;
-    for (int nn = 0; nn < 3 + n; ++nn) raw.push_back(nn);
-    raw.push_back(2);
-    std::reverse(raw.begin(), raw.end());
-    return raw;
-}
+
 
 // Limit(n)：记号极限的第 n 个基本列。
-[[nodiscard]] inline Den1Expr limit(int n) {
-    Den1Expr expr;
-    expr.rows.push_back(limit_r(n));
-    expr.rows.push_back({ 1, 1, 0 });
-    expr.rows.push_back({ 1, 2, 1, 0 });
-    for (int nn = 0; nn < n; ++nn) expr.rows.push_back(limit_row(1 + nn));
-    return expr;
-}
 
 // 文本接口的公共骨架。
 [[nodiscard]] inline std::string expand_text_impl(std::string_view text, int term, bool longer) {
@@ -435,9 +400,7 @@ using denshare::TextParser;
     if (!parsed) {
         return "解析失败，请确认你没有使用全角括号，逗号，分号";
     }
-    if (parsed->infinity) {
-        return to_string(limit(term));
-    }
+
     if (parsed->rows.size() <= 1) {
         Den1Expr e;
         e.rows.emplace_back();

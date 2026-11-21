@@ -1,6 +1,8 @@
 
 #pragma once
 
+#include "notation_base.hpp"
+
 #include <optional>
 #include <string>
 #include <string_view>
@@ -27,22 +29,17 @@ using SOmegaP1Column = std::vector<SOmegaP1Entry>;
 using SOmegaP1Expr = std::vector<SOmegaP1Column>;
 
 struct SOmegaP1Parsed {
-    bool infinity = false;
     SOmegaP1Expr expr;
 };
 
-struct SOmegaP1DBMSNotation {
+struct SOmegaP1DBMSNotation : NotationBase {
     static constexpr const char* kName = "S ω+1 DBMS";
 
     [[nodiscard]] static std::string expand_text(std::string_view text, int term) {
         return expand_text_impl(text, term, /*longer=*/true);
     }
-    [[nodiscard]] static std::string suffix() { return {}; }
 
     [[nodiscard]] static std::optional<SOmegaP1Parsed> parse(std::string_view s) {
-        if (s == "Limit" || s == "limit" || s == "LIMIT") {
-            return SOmegaP1Parsed{ true, {} };
-        }
         std::size_t i = 0;
         auto error = [&]() { return std::optional<SOmegaP1Parsed>{}; };
         auto skip_spaces = [&]() {
@@ -186,11 +183,10 @@ struct SOmegaP1DBMSNotation {
         }
         skip_spaces();
         if (i != s.size()) return std::nullopt;
-        return SOmegaP1Parsed{ false, std::move(result) };
+        return SOmegaP1Parsed{ std::move(result) };
     }
 
     [[nodiscard]] static std::string to_string(const SOmegaP1Parsed& p) {
-        if (p.infinity) return "Limit";
         return display(p.expr);
     }
 
@@ -342,16 +338,6 @@ private:
         return e->height;
     }
 
-    [[nodiscard]] static Expr infinity_fs(int index) {
-        Expr result;
-        result.emplace_back();
-        for (int i = 0; i < index; ++i) {
-            Height h;
-            h.push_back(HEntry{ i, HeightPos{ true, 0 } });
-            result.push_back(Column{ Entry{ i, std::move(h) } });
-        }
-        return result;
-    }
 
     [[nodiscard]] static Expr expand(const Expr& expr, int index, bool shorter) {
         if (expr.empty()) return expr;
@@ -393,7 +379,6 @@ private:
         if (!parsed) {
             return "解析失败，请确认你没有使用全角括号，逗号，分号";
         }
-        if (parsed->infinity) return display(infinity_fs(term));
         const Expr& e = parsed->expr;
         if (e.empty()) return {};
         // 值域校验：value 与行高 v/数字 p 分量作为列索引，须在 [0, size)

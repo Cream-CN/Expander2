@@ -12,7 +12,7 @@
 //   - 表达式 Expr 为若干“列”，列内为非负整数行值；越界单元格一律视为 0
 //     （对应 TS 的 m[p][j] ?? 0）。
 //   - 规范化（normalize）截去每列尾随的 0；空列高度为 0，显示为 "(0)"。
-//   - 记号极限单独用 Expr::infinity 表示（TS 中为 [[Infinity]]）。
+//   - 记号只表示普通矩阵（不再支持顶层 ∞ / Limit）。
 #pragma once
 
 #include <algorithm>
@@ -35,9 +35,8 @@ namespace omegay::notation::bmlike {
     inline constexpr const char* kParseError =
         "解析失败，请确认你没有使用全角括号，逗号";
 
-    // BM-like 表达式：要么是记号极限（Limit），要么是普通矩阵。
+    // BM-like 表达式：普通矩阵。
     struct Expr {
-        bool infinity = false;
         Matrix m;
     };
 
@@ -181,24 +180,6 @@ namespace omegay::notation::bmlike {
         return m.cols() > 0 && m.rows() > 0 && m(0, m.cols() - 1) > 0;
     }
 
-    // 极限的 FS 第 n 个基本列（BM.infinity_FS）：
-    // [[], [1,1,...,1]]（第 1 列 n+1 个 1；第 0 列为空列）。
-    [[nodiscard]] inline Matrix infinity_fs(int n) {
-        if (n < 0) n = 0;
-        Matrix m(n + 1, 2);
-        for (int r = 0; r <= n; ++r) m(r, 1) = 1;
-        return m;
-    }
-
-    // 三角 BMS 的极限基本列（BM.triangular_infinity_FS）：
-    // [[], [1], [2,1], [3,2,1], ..., [n,...,1]]。
-    [[nodiscard]] inline Matrix triangular_infinity_fs(int n) {
-        if (n < 0) n = 0;
-        Matrix m(n, n + 1);  // n=0 时为 0 行 1 列（即单独的空列）
-        for (int i = 1; i <= n; ++i)
-            for (int j = 0; j < i; ++j) m(j, i) = i - j;
-        return m;
-    }
 
     // 删除最后一列（后继型 / FS 截断的公共动作）。
     [[nodiscard]] inline Matrix drop_last_column(const Matrix& m) {
@@ -288,7 +269,7 @@ namespace omegay::notation::bmlike {
     // ------------------------------------------------------------------
 
     // sequence_FS_variants 语义：
-    //   极限       → 极限基本列 infinity_fs(term)
+    //   空矩阵     → 空矩阵（顶层 ∞ 已移除）
     //   空矩阵     → 空矩阵
     //   非极限     → 删除末列（后继型）
     //   极限表达式 → core(m, term, shorter)
@@ -296,7 +277,7 @@ namespace omegay::notation::bmlike {
     template <class CoreExpand>
     [[nodiscard]] Matrix fs_expand(const Expr& e, int term,
                                    bool shorter, CoreExpand&& core) {
-        if (e.infinity) return infinity_fs(term);
+
         const Matrix& m = e.m;
         if (m.cols() == 0) return m;
         if (!is_limit(m)) return drop_last_column(m);
@@ -308,7 +289,7 @@ namespace omegay::notation::bmlike {
     template <class CoreExpandLonger>
     [[nodiscard]] Matrix y_fs_expand(const Expr& e, int term,
                                      bool shorter, CoreExpandLonger&& core) {
-        if (e.infinity) return infinity_fs(term);
+
         const Matrix& m = e.m;
         if (m.cols() == 0) return m;
         if (!is_limit(m)) return drop_last_column(m);
@@ -335,13 +316,12 @@ namespace omegay::notation::bmlike {
     }  // namespace detail
 
     // 解析 BM 文本：列形如 "(v0,v1,...)"，允许列内 / 列间空格；空括号 "()"
-    // 为空列；"Limit" 为记号极限；"" 为空矩阵。非法输入返回 nullopt
+    // 为空列；"" 为空矩阵。非法输入（含 "Limit" / "∞"）返回 nullopt
     // （TS 抛异常，本项目按约定不抛异常）。结果经 normalize。
     [[nodiscard]] inline std::optional<Expr> parse(std::string_view text) {
         std::string_view s = text;
         detail::trim_spaces(s);
-        if (s == "Limit") return Expr{ true, Matrix{} };
-        if (s.empty()) return Expr{ false, Matrix{} };
+        if (s.empty()) return Expr{ Matrix{} };
 
         std::vector<std::vector<int>> raw_cols;
         std::size_t i = 0;
@@ -389,7 +369,7 @@ namespace omegay::notation::bmlike {
             const int h = std::min(rows, static_cast<int>(raw_cols[c].size()));
             for (int r = 0; r < h; ++r) m(r, c) = raw_cols[c][r];
         }
-        return Expr{ false, std::move(m) };
+        return Expr{ std::move(m) };
     }
 
     // 矩阵 → BM 文本。空列（规范化高度 0）显示为 "(0)"（BM.column_display）。
@@ -409,7 +389,7 @@ namespace omegay::notation::bmlike {
     }
 
     [[nodiscard]] inline std::string to_string(const Expr& e) {
-        if (e.infinity) return "Limit";
+
         return matrix_to_bm_string(e.m);
     }
 

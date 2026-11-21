@@ -40,15 +40,15 @@ constexpr std::string_view kDef_IDR_DEF_3MN = R"DEFTXT(
 
 3MN 是 n-MN 家族（TS 类别 category-n-mn，credit.n_mn）中模板参数 N=3 的实例，逻辑移植自 notation-explorer（hypcos）的 src/notations/MN/SMN/n_MN.ts（TS id "3-MN"）；C++ 实现为模板 NMnNotation<N>，见 Header/notation/n_mn.hpp，共享核心见 Header/notation/smnshare.hpp。表达式结构、竖向机制、极限与后继判定、fill_ghost/extend/subtract_1/copy_column 展开流程均与 1MN、2MN 完全相同（同一模板、同一份 smnshare 核心），本文件只列出口径与 N=3 的差异。
 
-表达式结构：Expr 是若干列 Column 的序列；每列是若干条目 Entry=(value, sep) 的序列；value 是从 1 起的列标引用（0 仅为幽灵条目哨兵），sep 是非负整数分隔符，显示为 sep+1 个逗号；空表达式表示 0；∞ 标志显示为 "Limit"。竖向由 vertical_increase 逐条目生成；父位置 pi = value−1，pi=−1 时 pj=0，否则在父列竖向表中二分查找第一个严格小于当前竖向的位置。
+表达式结构：Expr 是若干列 Column 的序列；每列是若干条目 Entry=(value, sep) 的序列；value 是从 1 起的列标引用（0 仅为幽灵条目哨兵），sep 是非负整数分隔符，显示为 sep+1 个逗号；空表达式表示 0；顶层 ∞（Limit）输入已按用户要求拆除。竖向由 vertical_increase 逐条目生成；父位置 pi = value−1，pi=−1 时 pj=0，否则在父列竖向表中二分查找第一个严格小于当前竖向的位置。
 
 极限与后继：末列为空的表达式是后继表达式，展开就是删去末列；其余非空表达式为极限表达式。
 
-∞ 的基本列：Limit[n] 展开为第一列空列、第二列含 n 个条目 (value=1, sep=N−1) 的表达式。本记号 N=3，分隔符为 2，每个条目显示为三个逗号加列标，即 Limit[1] = ()(,,,1)，Limit[2] = ()(,,,1,,,1)，余类推。解析 "Limit" 得到 ∞ 标志。
+∞ 的基本列：已按用户要求拆除（本记号不再解析 Limit / ∞ 输入，也不提供其显示与基本列）。
 
 展开（参数 m≥1）：先 fill_ghost 补幽灵行，连续 m 次 extend；随后再做一次 subtract_1；最后 clear_ghost 删去 value=0 的幽灵条目。extend 中先求末列最右上条目的父位置 (Ri,Rj) 与岩浆检查表，subtract_1 删去末项后按竖向比较决定是否追加 (Ri+1, new_sep) 条目，再把坏根列从 Rj 起的条目拼接到末列，随后把坏根列右侧各列按 offset = right−Ri 复制到新位置；copy_column 中按岩浆检查表做行提升复制分隔符，表外条目仅在 value ≥ Ri+1 时列标加 offset。
 
-记号极限：模板参数 N 在本移植中仅作用于 ∞ 基本列分隔符 N−1；记号对应的序数阶位以原始 TS 定义为准。
+记号极限：顶层 ∞（Limit）输入已拆除；模板参数 N 只影响内部展开细节，记号对应的序数阶位以原始 TS 定义为准。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_A_OMEGA2_MN_2 = R"DEFTXT(
@@ -58,13 +58,13 @@ Aω2MN2
 constexpr std::string_view kDef_IDR_DEF_A_OMEGA2_MN_3 = R"DEFTXT(
 Aω2MN3
 
-Aω2MN3 是 hypcos_mn 在 notation-explorer 中提出的 Aw2MN 版本3 记号（家族 category-hypcos-w2mn，TS 源：src/notations/MN/Aw2MN3.ts），C++ 移植见 Header/notation/aw2mn3.hpp，与版本2 Aω2MN2、wAω2MN2 及弱版 wAω2MN3 共享核心 Header/notation/aw2mn_share.hpp。表达式结构、合法性、极限与后继判定、∞ 基本列、extend 的总体流程与拉伸、复制机制均与 Aω2MN2 相同，区别仅在 subtract1 采用版本3 规则。
+Aω2MN3 是 hypcos_mn 在 notation-explorer 中提出的 Aw2MN 版本3 记号（家族 category-hypcos-w2mn，TS 源：src/notations/MN/Aw2MN3.ts），C++ 移植见 Header/notation/aw2mn3.hpp，与版本2 Aω2MN2、wAω2MN2 及弱版 wAω2MN3 共享核心 Header/notation/aw2mn_share.hpp。表达式结构、合法性、极限与后继判定、extend（顶层 ∞ 基本列已拆除） 的总体流程与拉伸、复制机制均与 Aω2MN2 相同，区别仅在 subtract1 采用版本3 规则。
 
-表达式结构（与 Aω2MN2 相同）：Expr = Column[]，Column = Entry[]，Entry=(value, sep, mark)：value 是从 1 起的列标引用，sep 是递归地也是 Expr 的分隔符，mark 是星号标志；竖向 Vertical = Sep[]。空表达式表示 0；∞ 用标志表示，显示为 "Limit"。展开前校验每个条目 1 ≤ value ≤ 列数，括号、逗号、分号不匹配则解析失败。
+表达式结构（与 Aω2MN2 相同）：Expr = Column[]，Column = Entry[]，Entry=(value, sep, mark)：value 是从 1 起的列标引用，sep 是递归地也是 Expr 的分隔符，mark 是星号标志；竖向 Vertical = Sep[]。空表达式表示 0；顶层 ∞（Limit）输入已按用户要求拆除。展开前校验每个条目 1 ≤ value ≤ 列数，括号、逗号、分号不匹配则解析失败。
 
 极限与后继：非空且末列非空为极限表达式；末列为空为后继表达式，删去末列即得前驱；空表达式展开为空。
 
-∞ 的基本列：Limit[n] = [[], [[1, sep_n]]]，其中 sep_n = [[], [[1, [[]]]]] 再接 n 个空列，显示为 ()(; 后接 n 个逗号再接 1；对 ∞ 展开时直接返回 infinity_fs(term)。
+∞ 的基本列：已按用户要求拆除（本记号不再解析 Limit / ∞ 输入，也不提供其显示与基本列）。
 
 展开（参数 m≥1）：先对极限表达式反复调用 extend 共 m 次，随后再调用一次 extend（is_small=true，不新增列）。extend 中依次完成：计算各列竖向 V0；由末列最右上条目经 Parent 求得坏根位置 BRij=(br, bj) 与宽度 width；记录坏根列前 bj 项及末列最右上项的分隔符 top_separators 与竖向 top_verticals；做岩浆检查；调用 subtract1 版本3；用 get_references 匹配末列竖向与 top_verticals；计算拉伸阈值与拉伸量；按 stretched 规则处理条目分隔符（本记号非弱版，无高位豁免）；最后按岩浆检查结果把坏根列右侧 width 列复制到列标加 width 的新位置（is_small 时只处理 dx=0）。
 
@@ -76,7 +76,7 @@ subtract1 版本3（V3）：先删去末列最右上条目；alpha = 坏根列�
 (3) 非极限分支的追加判据：truncated = 被删分隔符删去末列；版本3 在 vertical_increase(alpha, truncated) > working_vertical 时追加不带 mark 的条目 (value, truncated, mark=false)；版本2 的判据是 alpha == working_vertical。
 (4) 极限分支的 J 构造：BR_separator = S(A, br, bj−1)；J = 若 BR_separator ≥ 被删分隔符则为单空列，否则 BR_separator 后接一个空列。版本3 随后进入 while 循环：只要 vertical_increase(alpha, J) 与 vertical_increase(working_vertical, J) 不相等，就向 J 追加一个空列，直到两侧竖向相等，最后向末列追加带 mark 的条目 (value, J, mark=true)；版本2 不循环加长 J，只在 vertical_increase(alpha, J) > working_vertical 时追加，且复制循环按 alpha > working_vertical 的条件嵌套在该极限分支内。
 
-记号极限：∞ 基本列与 Aω2MN2 相同（共用 infinity_fs）；版本3 的规则差异集中在 one 提前返回、复制循环前置、非极限分支的追加判据以及极限分支 J 的循环加长。本记号达到的极限序数以原始 TS 定义为准。
+记号极限：顶层 ∞（Limit）输入已拆除。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_ABS_BM1YNSS = R"DEFTXT(
@@ -96,14 +96,14 @@ AbsB(n+1)SS（绝对分支 (-1)Y-(n+1)SS，Abs_B_Minus1_Y_nSS）
 区别是“第 n 个（步长 / 顶层）父”的求法：本族用绝对 step 子表达式的字典序
 比较候选列，并排除祖先链（forbidden_stack）。
 
-极限记为 Limit。第 n 个基本列同样是“空列 + 步长为更短基本列”的嵌套结构。
+顶层 ∞（Limit）输入已拆除。第 n 个基本列同样是“空列 + 步长为更短基本列”的嵌套结构。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_BBM = R"DEFTXT(
 BBM（Branching BMS，BBMS，分支巴斯丘矩阵）
 
 分层嵌套树形矩阵，语法与 BTBM 相同（数值 1 起、空列 (0)、高度用 ^ 接一个完整
-矩阵、极限写 Limit）。Limit 的第 n 个基本列同样是长度 n+1 的纯嵌套塔。
+基本列：顶层 ∞（Limit）输入已拆除。
 
 展开主流程（定位尾层、尾列下标 t、根 r 及根层，按 (t-r) 比例整体提升并追加
 新尾列）与 BTBM 一致，唯一区别是“特殊形状”的判定和处理：
@@ -121,7 +121,7 @@ constexpr std::string_view kDef_IDR_DEF_BHM = R"DEFTXT(
 BHM（Bashicu Hyper Matrix，Bashicu 高阶矩阵系统）
 
 输入格式：与 BMS 相同的矩阵文本，列为 (v0,v1,...)，省略尾随零，例如 (0)(1,1)(2,1)。
-记号极限输入 Limit，其第 n 个基本列为 (0)(1,1,...,1)。
+记号极限：顶层 ∞（Limit）输入已拆除。
 最后一列全为零时为后继型，删去最后一列。
 
 展开规则：取末列顶行 top，沿 top 行父链确定特殊根 special_root，
@@ -135,7 +135,7 @@ constexpr std::string_view kDef_IDR_DEF_BLM = R"DEFTXT(
 BLM（Bashicu Large Matrix，Bashicu 大矩阵系统）
 
 输入格式：与 BMS 相同的矩阵文本，列为 (v0,v1,...)，省略尾随零，例如 (0)(1,1)(2,2)(3,2)。
-记号极限输入 Limit，其第 n 个基本列为 (0)(1,1,...,1)。
+记号极限：顶层 ∞（Limit）输入已拆除。
 最后一列全为零时为后继型，删去最后一列。
 
 展开规则：BLM 的经典大函数式实现：自末列向上确定每一行的有效高度，
@@ -284,7 +284,7 @@ constexpr std::string_view kDef_IDR_DEF_BSM = R"DEFTXT(
 BSM（Bashicu Sudden Matrix，Bashicu 突变矩阵系统）
 
 输入格式：与 BMS 相同的矩阵文本，列为 (v0,v1,...)，省略尾随零，例如 (0)(1,1)(2,1)。
-记号极限输入 Limit，其第 n 个基本列为 (0)(1,1,...,1)（第 2 列含 n+1 个 1）。
+记号极限：顶层 ∞（Limit）输入已拆除。
 最后一列全为零时为后继型，删去最后一列。
 
 展开规则：取末列最后一个非零项所在行 LNZ，沿 LNZ 行父链确定特殊根与候选根，
@@ -309,7 +309,7 @@ BT*(n+1)SS v1（超限星负一 Y 序列系统，Bubby3's Transfinite* -1Y-nSS v
 2. 若末子表达式的末列是“本列首分量加一”的单行列（special column），
    走 FS_special 分支直接复制末子表达式的末列。
 
-极限记为 Limit。
+记号极限：顶层 ∞（Limit）输入已拆除；表达式内部的极限/后继判定保留。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_BT2YNSS = R"DEFTXT(
@@ -328,7 +328,7 @@ strong BT*(n+1)SS v2（超限星负一 Y 序列系统 strong 版，strong Bubby3
 （outer_stack）。若末子表达式的末列是“本列首分量加一”的单行列（special
 column），走 FS_special 分支直接复制末子表达式的末列。
 
-极限记为 Limit。
+记号极限：顶层 ∞（Limit）输入已拆除；表达式内部的极限/后继判定保留。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_BT3YNSS = R"DEFTXT(
@@ -351,7 +351,7 @@ weak BT*(n+1)SS v3（超限星负一 Y 序列系统 weak 版）
 直接重建、哪些递归提升。若最深层子表达式的末列是“本列首分量加一”的单行列
 （special），走 FS_special 分支直接复制。
 
-极限记为 Limit。
+记号极限：顶层 ∞（Limit）输入已拆除；表达式内部的极限/后继判定保留。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_BTBM = R"DEFTXT(
@@ -359,9 +359,9 @@ BTBM（Bubby3's Transfinite BMS，Bubby3 超限巴斯丘矩阵，又称 BTBMS）
 
 分层嵌套的树形矩阵。元素写成“数值”或“数值^高度”，高度本身又是一个完整的
 （可多层嵌套的）BTBM 矩阵；数值按 1 起显示（最小为 1），空列写成 (0)，列用
-圆括号、列内元素用逗号，极限写 Limit。末元素的高度嵌套即表达式的“下一层”。
+圆括号、列内元素用逗号，顶层 ∞（Limit）输入已拆除。末元素的高度嵌套即表达式的“下一层”。
 
-基本列：Limit 的第 n 个基本列是长度为 n+1 的纯嵌套塔：
+基本列：顶层 ∞（Limit）输入已拆除。
   n=0：(0)
   n=1：(0)(1)
   n=2：(0)(1^(2))
@@ -377,7 +377,7 @@ constexpr std::string_view kDef_IDR_DEF_BTBM_WEAK = R"DEFTXT(
 BTBM-weak（weak Bubby3's Transfinite BMS，弱版 Bubby3 超限巴斯丘矩阵）
 
 与标准 BTBM 同为分层嵌套树形矩阵，语法完全一致（数值 1 起、空列 (0)、高度用 ^
-接一个完整矩阵、极限写 Limit）。区别只在后继展开的“整体替换提升”规则：
+接一个完整矩阵、顶层 ∞（Limit）输入已拆除）。区别只在后继展开的“整体替换提升”规则：
 
 1. 维护一条“临界竖直序列（critical vertical）”，它由尾列去掉末项后逐层累积
    的高度组成。提升时对每一列，先用竖直比较判断是否越过该临界：尚未越过时按
@@ -411,14 +411,14 @@ star 型复制首尾，其余按标记/父提升路径用提升向量与阈值�
 （higher/mark 时回填尾标记与尾子表达式后再提升）。复制的列若子表达式为空
 则标记归 0。
 
-极限记为 Limit。
+记号极限：顶层 ∞（Limit）输入已拆除；表达式内部的极限/后继判定保留。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_CMS = R"DEFTXT(
 CMS（Crane Matrix System，Crane 矩阵系统）
 
 输入格式：与 BMS 相同的矩阵文本，列为 (v0,v1,...)，省略尾随零，例如 (0)(1,1)(2,1)。
-记号极限输入 Limit，其第 n 个基本列为 (0)(1,1,...,1)。
+记号极限：顶层 ∞（Limit）输入已拆除。
 最后一列全为零时为后继型，删去最后一列。
 
 展开规则：取末列最后一个非零行 LNZ 与坏根 BR（末列在 LNZ 行的父项），
@@ -435,7 +435,7 @@ constexpr std::string_view kDef_IDR_DEF_DSM = R"DEFTXT(
 DSM（Diagonal Sudden Matrix，对角突变矩阵系统）
 
 输入格式：与 BMS 相同的矩阵文本，列为 (v0,v1,...)，省略尾随零，例如 (0)(1,1)(2,1)。
-记号极限输入 Limit，其第 n 个基本列为三角矩阵 (0)(1)(2,1)(3,2,1)...。
+记号极限：顶层 ∞（Limit）输入已拆除。
 最后一列全为零时为后继型，删去最后一列。
 
 展开规则：自行计算严格父项矩阵（高层父项沿上一行父链寻找），沿前驱
@@ -450,13 +450,13 @@ e0MN
 
 e0 Mountain Notation（e0MN）是 test_alpha0 提出的基于"山"（Mountain）结构的记号，由 hypcos 的 notation-explorer 收录（TS 源：src/notations/MN/e0MN.ts），C++ 移植见 Header/notation/e0mn.hpp 与共享核心 Header/notation/mnordshare.hpp。它属于 ta0-MN 家族，与 strong e0MN 共享同一套核心实现。
 
-表达式结构：一个表达式 Expr 是若干列 Column 的序列；每列是若干条目 Entry=(a,x) 的序列；a 是左腿所指向的列标（从 1 起），x 是行高序数。行高序数 Ord 是若干项 Term=(exp,coeff) 的序列，exp 递归地也是 Ord（即指数），coeff 是正整数系数，空 Ord 表示 0。空表达式表示 0；另外用 ∞ 标志表示记号的极限，显示为 "Limit"。
+表达式结构：一个表达式 Expr 是若干列 Column 的序列；每列是若干条目 Entry=(a,x) 的序列；a 是左腿所指向的列标（从 1 起），x 是行高序数。行高序数 Ord 是若干项 Term=(exp,coeff) 的序列，exp 递归地也是 Ord（即指数），coeff 是正整数系数，空 Ord 表示 0。空表达式表示 0；顶层 ∞（Limit）输入已按用户要求拆除。
 
 合法性：第 i 列（列标从 1 起）中每个条目的左腿列标 a 必须满足 0 < a < i，行高 x 必须为正；同一列中的条目自上而下必须满足 a 严格递减、x 严格递增。
 
 极限与后继：非空且末列非空的表达式是极限表达式；末列为空的表达式是后继表达式，它的展开（前驱）就是删去末列。
 
-∞ 的基本列：Limit[n]（n 为正整数）展开为 ()(1:ω^^n)，即第一列为空列、第二列为单个条目 (a=1, x=ω^^n) 的表达式；ω^^n 表示 n 层 ω 的指数塔。解析 "Limit" 得到 ∞ 标志，解析 "Limit[n]" 直接得到上述基本列。
+∞ 的基本列：已按用户要求拆除（本记号不再解析 Limit / ∞ 输入，也不提供其显示与基本列）。
 
 展开（参数 m≥1）：对极限表达式反复应用反射 rfl 共 m 次，随后再应用一次 rfl，并把列数截回前一步的列数。
 
@@ -467,7 +467,7 @@ shiftOrdNumbers 的移位规则：仅当系数大于 cutoff 且系数不为 1 �
 
 行高序数的基本列 ordFS（e0 基本列）：取序数末项；若其指数为 0（即纯数字项），则系数减 1（系数为 1 时直接删去）；否则删去末项（若系数大于 1，先留下一项指数不变、系数减 1 的项），再对指数递归求 ordFS 得到 next_exp：若原指数是后继序数，则追加项 (next_exp, m)；否则追加项 (next_exp, 1)。
 
-记号极限：∞ 的第 n 个基本列 ()(1:ω^^n) 的塔高随 n 增长，sup_n ω^^n = ε0，故记号极限为 ε0（与记号名 e0MN 一致）。
+记号极限：顶层 ∞（Limit）输入已拆除。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_EMPTY = R"DEFTXT(
@@ -662,13 +662,13 @@ constexpr std::string_view kDef_IDR_DEF_OMEGA_MN = R"DEFTXT(
 
 ωMN（TS 源：src/notations/MN/Omega_MN.ts，家族 category-mn，原作者 hypcos_mn；C++ 实现见 Header/notation/omega_mn.hpp，竖向机制复用 Header/notation/smnshare.hpp）。ωMN 与 n-MN 系列共用 SMN 家族的表达式骨架，但展开算法不同：ωMN 使用"坏根复制"（get_references + magma_checks_list），而非 n-MN 的 fill_ghost/extend。
 
-表达式结构：表达式（Mountain）是若干列 Column 的序列；每列是若干条目 Entry=(value, sep) 的序列；value 是从 1 起的列标引用（决定父位置），sep 是分隔符（非负整数，显示为 sep+1 个逗号，如条目 (1,2) 显示为 ",,1"）。空表达式表示 0；另外用 ∞ 标志表示极限，显示为 "Limit"。
+表达式结构：表达式（Mountain）是若干列 Column 的序列；每列是若干条目 Entry=(value, sep) 的序列；value 是从 1 起的列标引用（决定父位置），sep 是分隔符（非负整数，显示为 sep+1 个逗号，如条目 (1,2) 显示为 ",,1"）。空表达式表示 0；顶层 ∞（Limit）输入已按用户要求拆除。
 
 竖向机制：一列中每个条目对应一个竖向（Vertical，分隔符序列）：按条目顺序做 verticalIncrease 得到，verticalIncrease(v, s) 从 v 末尾向前删除所有小于 s 的分隔符再追加 s。条目 (i,j) 的父位置为 (value−1, findIndexBelow(V[value−1], V[i][j]))，即在父列（列标 value）的竖向表中二分查找第一个小于该条目竖向的项位置。
 
 极限与后继：非空且末列非空的表达式是极限表达式；末列为空的表达式是后继表达式，它的展开就是删去末列。
 
-∞ 的基本列：Limit[n] 展开为 [[], [[1, n]]]：第一列为空列，第二列为单个条目 (value=1, sep=n)。
+∞ 的基本列：已按用户要求拆除（本记号不再解析 Limit / ∞ 输入，也不提供其显示与基本列）。
 
 展开（参数 index=m）：对极限表达式，以末列最右上条目为起点：
 (1) 计算最右上条目的父位置 BRij（坏根列 BRij.i 与坏根列内位置 BRij.j），宽度 width = 末列列标 − BRij.i。
@@ -824,13 +824,13 @@ Sω2DBMS
 
 Sω2DBMS 是 SDBMS 家族中位置可取 ω+n 高阶位置的版本，TS 源为 src/notations/MN/SDBMS/S_omega2_DBMS.ts（TS id s-omega2-dbms），C++ 移植见 Header/notation/s_omega2_dbms.hpp。与 Sω+1DBMS 的区别：位置除整数外是高阶位置 ω+n（而非单独的 ω），find_lower_height_pos 的高阶分支会逐级退阶；其余递归机制相同。
 
-表达式结构：Expr 是若干 Column 的序列；Column 是若干 Entry 的序列；Entry=(value, height)；Height 为 HEntry 序列，HEntry=(v, p)；HeightPos p 为数字位置（0 基）或高阶位置 (higher, num)。整条显示为 value+1^((v+1@p),…)：高阶位置显示 ω（num=0）或 ω+num，数字位置显示 p+1。空表达式表示 0；空列显示为 "(0)"；省略上标即空行高，列尾 value=−1 的条目被删去。另外用 ∞ 标志表示记号极限，显示为 "Limit"。
+表达式结构：Expr 是若干 Column 的序列；Column 是若干 Entry 的序列；Entry=(value, height)；Height 为 HEntry 序列，HEntry=(v, p)；HeightPos p 为数字位置（0 基）或高阶位置 (higher, num)。整条显示为 value+1^((v+1@p),…)：高阶位置显示 ω（num=0）或 ω+num，数字位置显示 p+1。空表达式表示 0；空列显示为 "(0)"；省略上标即空行高，列尾 value=−1 的条目被删去。顶层 ∞（Limit）输入已按用户要求拆除。
 
 合法性：value 落在 [0, 列数)；行高非空；v 落在 [0, 列数)；非高阶的数字 p 落在 [0, 列数)；越界输入返回解析失败提示。
 
 极限与后继：非空且末列非空为极限表达式；末列为空为后继表达式，前驱即删去末列。
 
-∞ 的基本列：Limit[n] 展开为 (0)(1^(1@ω))(2^(2@ω+1))…(n^(n@ω+n−1))：第一列为空列；其后第 i 列（i=0..n−1）为单个条目 value=i、行高单项 (v=i, 高阶位置 num=i)。
+∞ 的基本列：已按用户要求拆除（本记号不再解析 Limit / ∞ 输入，也不提供其显示与基本列）。
 
 比较规则：compare_hpos 中高阶位置大于数字位置；同为高阶比 num，同为数字比 num。compare_hentry 先比 v 再比 p；行高字典序前缀相同后较短者大。height(col) 为末项行高，空列未定义；合并规则同家族。复制规则：value、v ≥ r 时加 offset；高阶位置保持不变，数字 p ≥ r 时加 offset。
 
@@ -842,7 +842,7 @@ compute_new_height(h, expr, r)：末项为 (v, p)；先 find_lower_height_pos �
 
 展开骨架：right 为末列下标，末列末项为 (r, h)；new_h 并入中项 (r, new_h) 与第 r 列；复制循环 w=1..m，i=r+1..right，偏移量 (right−r)·w；展开保留末列。
 
-记号极限：Limit[n] 高阶位置的 num 随列递增；实现只给出基本列与展开，其上确界序数以原始 TS 定义为准。
+记号极限：顶层 ∞（Limit）输入已拆除。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_S_OMEGA2_MN = R"DEFTXT(
@@ -850,7 +850,7 @@ Sω2MN
 
 Sω2MN（TS id "S-omega2-MN"，逻辑移植自 notation-explorer 的 src/notations/MN/SMN/S_omega2_MN.ts，家族 category-smile-mn，credit.n_mn；C++ 实现见 Header/notation/s_omega2_mn.hpp）属于 Smile's MN（SMN）系列，与 SAω2MN、Sω^ωMN 共用同一套山形骨架，区别在于分隔符比较、拉伸数据与前驱分支的具体规则。
 
-表达式结构：一个表达式 Expr 是若干列 Column 的序列；每列是若干条目 Entry=(value, sep) 的序列；value 是从 1 起的列标引用（决定父位置），sep 是整数向量（解析时去掉尾部 0 归一）；竖向 Vertical 是 sep 的序列。空表达式表示 0；另外用 ∞ 标志表示极限，显示为 "Limit"。
+表达式结构：一个表达式 Expr 是若干列 Column 的序列；每列是若干条目 Entry=(value, sep) 的序列；value 是从 1 起的列标引用（决定父位置），sep 是整数向量（解析时去掉尾部 0 归一）；竖向 Vertical 是 sep 的序列。空表达式表示 0；顶层 ∞（Limit）输入已按用户要求拆除。
 
 显示：sep = (c0, c1) 时先显示 c1 个分号再显示 c0 个逗号；条目显示为分隔符加列标；每列包裹在一对括号中。解析接受带括号列与不带括号列，单独的 "0" 或紧跟分隔符、空格、括号的 "0" 表示空列；解析时若发现条目列标超出 0 到列数的范围，直接返回解析失败提示。
 
@@ -860,7 +860,7 @@ Sω2MN（TS id "S-omega2-MN"，逻辑移植自 notation-explorer 的 src/notatio
 
 极限与后继：空表达式表示 0；末列为空的表达式是后继表达式，展开就是删去末列；其余非空表达式为极限表达式。
 
-∞ 的基本列：Limit[n] 展开为空列后接单条目 (value=1, sep={n, 1})，即 Limit[1] = ()(;,1)，Limit[2] = ()(;,,1)，余类推。解析 "Limit"、"limit"、"LIMIT" 均得到 ∞ 标志。
+∞ 的基本列：已按用户要求拆除（本记号不再解析 Limit / ∞ 输入，也不提供其显示与基本列）。
 
 展开（参数 m≥1）：本记号不做 fill_ghost；对极限表达式连续 m 次应用 extend；随后再做一次 subtract_1。
 
@@ -888,13 +888,13 @@ S1DBMS
 
 S1DBMS 是 hypcos 的 notation-explorer 中 SDBMS 家族（category-sdbms）的最简成员，TS 源为 src/notations/MN/SDBMS/S1DBMS.ts，C++ 移植见 Header/notation/s1dbms.hpp；展开骨架与共享核心 Header/notation/sdbms_core.hpp 一致，区别仅在于行高是单个 0 基整数。
 
-表达式结构：表达式 Expr 是若干列 Column 的序列；每列是若干条目 Entry 的序列；条目由行值 value（0 基列标引用，显示为 value+1）与行高 height（0 基整数，显示为 height+1，整条写成 value+1^height+1）组成。空表达式表示 0；空列显示为 "(0)"；省略上标的条目作为哨兵（行高 -1），列尾若出现 value=-1 的条目会被删去。另外用 ∞ 标志表示记号极限，显示为 "Limit"。
+表达式结构：表达式 Expr 是若干列 Column 的序列；每列是若干条目 Entry 的序列；条目由行值 value（0 基列标引用，显示为 value+1）与行高 height（0 基整数，显示为 height+1，整条写成 value+1^height+1）组成。空表达式表示 0；空列显示为 "(0)"；省略上标的条目作为哨兵（行高 -1），列尾若出现 value=-1 的条目会被删去。顶层 ∞（Limit）输入已按用户要求拆除。
 
 合法性：解析后每个条目的 value 必须落在 [0, 列数) 内；末列非空时末项行高也必须落在 [0, 列数) 内；越界输入返回解析失败提示。
 
 极限与后继：非空且末列非空的表达式是极限表达式；末列为空的表达式是后继表达式，其前驱就是删去末列。
 
-∞ 的基本列：Limit[n]（n 为正整数）展开为 ()(1^1)(2^2)…(n^n)：第一列为空列，其后第 i 列为单个条目 (value=i, height=i)，i 从 0 到 n−1。解析 "Limit" 得到 ∞ 标志。
+∞ 的基本列：已按用户要求拆除（本记号不再解析 Limit / ∞ 输入，也不提供其显示与基本列）。
 
 展开骨架（参数 m≥1）：设 right 为末列下标，末列末项为 (r, h)。先按本记号的 compute_new_height 求出新行高 new_h；末列删去末项得到新列前缀，先把条目 (r, new_h) 按合并规则并入，再把第 r 列按合并规则并入；保留第 0 到 right−1 列与新列。随后复制循环 w=1..m：对每个 i=r+1..right，把当前第 i 列按偏移量 (right−r)·w 复制追加；复制规则为 value ≥ r 时 value 加 offset，height ≥ r 时 height 加 offset，否则不变。展开在复制完成后保留末列。
 
@@ -910,13 +910,13 @@ S2DBMS
 
 S2DBMS 是 SDBMS 家族的二元行高成员，TS 源为 src/notations/MN/SDBMS/S2DBMS.ts，C++ 移植见 Header/notation/s2dbms.hpp，展开骨架与共享核心 Header/notation/sdbms_core.hpp 一致，区别仅在行高为二元组及其比较、求新高规则。
 
-表达式结构：Expr 是若干 Column 的序列；Column 是若干 Entry 的序列；Entry=(value, height)，value 为 0 基列标引用（显示 value+1）；Height=(h0, h1) 两个 0 基整数，整条显示为 value+1^(h1, h0+1)，即上标先写 h1、后写 h0+1。空表达式表示 0；空列显示为 "(0)"；省略上标的条目用哨兵行高 (0, −1)，列尾 value=−1 的条目被删去。另外用 ∞ 标志表示记号极限，显示为 "Limit"。
+表达式结构：Expr 是若干 Column 的序列；Column 是若干 Entry 的序列；Entry=(value, height)，value 为 0 基列标引用（显示 value+1）；Height=(h0, h1) 两个 0 基整数，整条显示为 value+1^(h1, h0+1)，即上标先写 h1、后写 h0+1。空表达式表示 0；空列显示为 "(0)"；省略上标的条目用哨兵行高 (0, −1)，列尾 value=−1 的条目被删去。顶层 ∞（Limit）输入已按用户要求拆除。
 
 合法性：每个条目的 value 与 h0 都必须落在 [0, 列数) 内；h1 是层级数，不作列标校验；越界输入返回解析失败提示。
 
 极限与后继：非空且末列非空为极限表达式；末列为空为后继表达式，前驱即删去末列。
 
-∞ 的基本列：Limit[n] 展开为 (0)(1^(n,1))：第一列为空列，第二列为单个条目 value=0、Height=(h0=0, h1=n)。
+∞ 的基本列：已按用户要求拆除（本记号不再解析 Limit / ∞ 输入，也不提供其显示与基本列）。
 
 行高比较 compare_height：先比 h1，相同再比 h0（反字典序），数值大者大；height(col) 为末项行高，空列返回未定义。合并 merge_column：col1 非空时追加 col2 中行高严格大于 height(col1) 的条目；col1 为空时整列拼接 col2。复制规则：value ≥ r 时 value 加 offset；h0 ≥ r 时 h0 加 offset，h1 保持不变。
 
@@ -926,7 +926,7 @@ compute_new_height(h, expr, r)（S2 特有）：设 v=h.h0、h1=h.h1，取第 v 
 
 展开骨架：right 为末列下标，末列末项为 (r, h)；用 compute_new_height 求出 new_h；末列删去末项后，若 new_h 有定义先并入中项 (r, new_h)，再并入第 r 列；复制循环 w=1..m，i=r+1..right，偏移量 (right−r)·w，按上述复制规则复制；展开复制后保留末列。
 
-记号极限：Limit[n]=(0)(1^(n,1))，实现只给出基本列与展开，其上确界序数以原始 TS 定义为准。
+记号极限：顶层 ∞（Limit）输入已拆除。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_SA_OMEGA2_MN = R"DEFTXT(
@@ -934,13 +934,13 @@ SAω2MN
 
 SAω2MN（TS id "SA-omega2-MN"，逻辑移植自 notation-explorer 的 src/notations/MN/SMN/SA_omega2_MN.ts，家族 category-smile-mn，credit.n_mn；C++ 实现见 Header/notation/sa_omega2_mn.hpp）与 Sω2MN 同属 SMN 系列、山形骨架同构，主要区别在于条目带星号标记、S 函数与拉伸数据按标记和首元素归零判定，且前驱 subtract_1 分三条分支处理末项。
 
-表达式结构：Expr 是若干列 Column 的序列；每列是若干条目 Entry=(value, sep, mark) 的序列；value 是从 1 起的列标引用，sep 是整数向量（解析时去掉尾部 0 归一），mark 是布尔标记；竖向 Vertical 是 sep 的序列。空表达式表示 0；∞ 标志显示为 "Limit"。显示时 mark=true 的条目在列标前加 "*"；sep=(c0,c1) 先显示 c1 个分号再显示 c0 个逗号；每列包裹在一对括号中。解析只接受连续带括号的列，分隔符后可选一个 "*" 再写列标；展开前同样校验每个条目列标须落在 0 到列数范围内，非法输入返回解析失败提示。条目比较依次比较列标、sep（反字典序）、mark。
+表达式结构：Expr 是若干列 Column 的序列；每列是若干条目 Entry=(value, sep, mark) 的序列；value 是从 1 起的列标引用，sep 是整数向量（解析时去掉尾部 0 归一），mark 是布尔标记；竖向 Vertical 是 sep 的序列。空表达式表示 0；顶层 ∞（Limit）输入已按用户要求拆除。显示时 mark=true 的条目在列标前加 "*"；sep=(c0,c1) 先显示 c1 个分号再显示 c0 个逗号；每列包裹在一对括号中。解析只接受连续带括号的列，分隔符后可选一个 "*" 再写列标；展开前同样校验每个条目列标须落在 0 到列数范围内，非法输入返回解析失败提示。条目比较依次比较列标、sep（反字典序）、mark。
 
 比较规则：sep 按反字典序比较——长度不等时短者小，等长时从末元素向前逐位比较；竖向按字典序比较，元素相同则较长者大。竖向由 vertical_increase 逐条目生成；父位置 pi = value−1，pi=−1 时 pj=0，否则在父列竖向表中二分查找第一个严格小于当前竖向的位置。
 
 极限与后继：空表达式表示 0；末列为空的表达式是后继表达式，展开就是删去末列；其余非空表达式为极限表达式。
 
-∞ 的基本列：Limit[n] 展开为空列后接单条目 (value=1, sep={n, 1}, mark=false)，显示与 Sω2MN 相同：Limit[1] = ()(;,1)，Limit[2] = ()(;,,1)，余类推。解析 "Limit"、"limit"、"LIMIT" 均得到 ∞ 标志。
+∞ 的基本列：已按用户要求拆除（本记号不再解析 Limit / ∞ 输入，也不提供其显示与基本列）。
 
 展开（参数 m≥1）：不做 fill_ghost；连续 m 次应用 extend；随后再做一次 subtract_1。extend 的总体流程与 Sω2MN 相同：先求末列最右上条目的父位置 p=(Ri,Rj)，计算岩浆检查表 MI0 与拉伸数据表 SD0，subtract_1 后重算竖向与检查表，再把坏根列右侧各列按 offset = right−Ri 复制到新位置。
 
@@ -968,7 +968,7 @@ Second PPS4
 constexpr std::string_view kDef_IDR_DEF_STRONG_E0MN = R"DEFTXT(
 strong e0MN
 
-strong e0MN 是 e0MN 的强版本（TS 源：src/notations/MN/strong_e0MN.ts，家族 category-ta0-mn，原作者 test_alpha0），C++ 实现见 Header/notation/strong_e0mn.hpp，与 e0MN 共享核心 Header/notation/mnordshare.hpp。表达式结构、合法性、极限与后继判定、∞ 的基本列均与 e0MN 相同，区别仅在展开算法中的三处判定（以代码为准）。
+strong e0MN 是 e0MN 的强版本（TS 源：src/notations/MN/strong_e0MN.ts，家族 category-ta0-mn，原作者 test_alpha0），C++ 实现见 Header/notation/strong_e0mn.hpp，与 e0MN 共享核心 Header/notation/mnordshare.hpp。表达式结构、合法性、极限与后继判定均与 e0MN 相同（顶层 ∞ 输入已拆除），区别仅在展开算法中的三处判定（以代码为准）。
 
 与 e0MN 的三处差异：
 (1) shiftOrdNumbers 的移位判据：strong 版对指数项也递归移位，且判据为系数 ≥ cutoff（含省略的 1，例如 cutoff=1、d=2 时 ω = ω^1·1 变为 ω^3·3）；而 e0MN 标准版仅当系数 > cutoff 且系数 ≠ 1 时移位。
@@ -977,7 +977,7 @@ strong e0MN 是 e0MN 的强版本（TS 源：src/notations/MN/strong_e0MN.ts，�
 
 其余展开流程（rfl / down / processRflCol）与 e0MN 相同，此处不再重复：对表达式反复应用 rfl 共 m 次后再应用一次，并把列数截回。
 
-记号极限：∞ 的基本列与 e0MN 相同（共用的 infinity_fs），故极限同为 ε0；"strong" 体现在展开省略与移位的判据更激进。
+记号极限：顶层 ∞（Limit）输入已拆除。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_T_OMEGA_MN = R"DEFTXT(
@@ -985,7 +985,7 @@ TωMN
 
 TωMN（TS 源：src/notations/MN/T_omega_MN.ts，家族 category-mn，credit hypcos_mn；C++ 实现见 Header/notation/t_omega_mn.hpp）与 ωMN 同属 MN 家族的坏根复制机制。与 ωMN 的关键差异是：条目的分隔符本身就是一个递归的表达式 Expr；当末项分隔符为极限表达式时，要先递归展开该分隔符，threshold 取使 low、high 两个竖向在该基本列下汇合的最小指标。
 
-表达式结构：表达式（Mountain）是若干列 Column 的序列；每列是若干条目 Entry=(value, sep) 的序列；value 是整数，sep（分隔符）递归地也是一个 Expr。空表达式表示 0；另外用 ∞ 标志表示记号极限，显示为 "Limit"。比较规则：条目先比较 value，相等再比较分隔符的 mountain_compare；列按条目字典序比较，长度长者在后；表达式按列字典序比较，长度长者在后。
+表达式结构：表达式（Mountain）是若干列 Column 的序列；每列是若干条目 Entry=(value, sep) 的序列；value 是整数，sep（分隔符）递归地也是一个 Expr。空表达式表示 0；顶层 ∞（Limit）输入已按用户要求拆除。比较规则：条目先比较 value，相等再比较分隔符的 mountain_compare；列按条目字典序比较，长度长者在后；表达式按列字典序比较，长度长者在后。
 
 显示规则：若分隔符的所有列皆空（纯逗号分隔符），则显示为与列数相同个数的逗号（simple 模式下单个逗号省略）；否则显示分隔符自身的 mountain_display（simple 模式外加方括号）。条目显示为分隔符显示后接 value（simple 模式下 value 为两位数以上时加括号）；非 simple 模式下列整体用括号括起。
 
@@ -993,7 +993,7 @@ TωMN（TS 源：src/notations/MN/T_omega_MN.ts，家族 category-mn，credit hy
 
 极限与后继：is_limit 为表达式非空且末列非空；末列为空的表达式是后继表达式，后继展开就是删去末列，空表达式展开结果仍为空。is_one 指分隔符恰为一列且该列为空，即单个纯逗号分隔符。
 
-∞ 的基本列：infinity_fs(n) 递归定义：n ≤ 0 时为单个空列；n > 0 时为 ()(1: infinity_fs(n−1))，即第一列为空列，第二列为单个条目 value=1、分隔符为 infinity_fs(n−1)。解析 "Limit" 直接得到 ∞ 标志，展开时按上述递归基本列给出。
+∞ 的基本列：已按用户要求拆除（本记号不再解析 Limit / ∞ 输入，也不提供其显示与基本列）。
 
 展开（参数 m≥1；输入为极限表达式）：设末列列标为 rightmost，末项位置为 topmost，末项分隔符为 sep；先计算各列竖向 V0，求末项的父位置 BRij，宽度 width = rightmost − BRij.i。
 
@@ -1015,9 +1015,9 @@ TBM（Transfinite Bashicu matrix，超限巴斯丘矩阵，又称 TBMS）
 
 树形矩阵记号。与平面巴斯丘矩阵不同，每个元素写成“数值^高度”，其中高度本身
 又是一个（可嵌套的）TBM 矩阵；高度为 1 时省略上标，只写数值。列用圆括号，
-列内元素用逗号，例如 (0)(1,1^ω)(2)。空列写成 ()，ω 也可用 w 代替，极限写 Limit。
+列内元素用逗号，例如 (0)(1,1^ω)(2)。空列写成 ()，ω 也可用 w 代替，顶层 ∞（Limit）输入已拆除。
 
-基本列：Limit 的第 n 个基本列为
+基本列：顶层 ∞（Limit）输入已拆除。
   n=0：()
   n>0：()(1^<上一项>)
 即 ()、()(1)、()(1^ω)、()(1^()(1^ω))、……
@@ -1046,7 +1046,7 @@ T(n+1)SS（超限 -1Y-(n+1)SS，T_Minus1_Y_nSS）
 2. 若末列的 step 本身是极限表达式，则先递归展开该 step，再继续外层；
 3. 根用到 step 分量时，每份复制的根列 step 取原末列 step 删去最后一列。
 
-极限记为 Limit。第 n 个基本列同样是“空列 + 步长为更短基本列”的嵌套结构。
+顶层 ∞（Limit）输入已拆除。第 n 个基本列同样是“空列 + 步长为更短基本列”的嵌套结构。
 )DEFTXT";
 
 constexpr std::string_view kDef_IDR_DEF_TON_DR = R"DEFTXT(

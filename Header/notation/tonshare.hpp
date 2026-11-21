@@ -12,6 +12,8 @@
 #include <utility>
 #include <vector>
 
+#include "notation_base.hpp"
+
 namespace omegay::notation::tonshare {
 
 using TonValue = double;
@@ -54,7 +56,6 @@ private:
 };
 
 [[nodiscard]] inline bool is_leaf(const TonNode* t) { return t == nullptr || !t->is_node; }
-[[nodiscard]] inline bool is_inf(const TonNode* t) { return is_leaf(t) && t->v == kInf; }
 // 共享只读叶子：0 与 -1（TS 以裸数字出现；此处用指针表示，永不修改）。
 [[nodiscard]] inline const TonNode* zero_leaf() {
     static TonNode z{0, nullptr, nullptr, false};
@@ -86,12 +87,10 @@ inline void flatten(const TonNode* t, std::vector<TonValue>& out) {
 [[nodiscard]] inline std::size_t flatten_size(const TonNode* t) { return flatten_vec(t).size(); }
 
 [[nodiscard]] inline std::string fmt_val(TonValue v) {
-    if (v == kInf) return "Infinity";
     if (std::isfinite(v) && v == std::floor(v)) return std::to_string(static_cast<long long>(v));
     return std::to_string(v);
 }
 
-// 用作缓存键的扁平文本（如 "0,-1,-2" / "Infinity"）。
 [[nodiscard]] inline std::string flatten_key(const TonNode* t) {
     const std::vector<TonValue> f = flatten_vec(t);
     std::string out;
@@ -205,7 +204,6 @@ inline void flatten(const TonNode* t, std::vector<TonValue>& out) {
 [[nodiscard]] inline std::string display_noraise(const TonNode* t) {
     if (t == nullptr) return "0";
     if (!t->is_node) {
-        if (t->v == kInf) return "Limit";
         return t->v < 0 ? "0" : "Ω";
     }
     return display_noraise(t->l) + display_noraise(t->r) + "C";
@@ -214,7 +212,6 @@ inline void flatten(const TonNode* t, std::vector<TonValue>& out) {
 [[nodiscard]] inline std::string display_main(const TonNode* t) {
     if (t == nullptr) return "0";
     if (!t->is_node) {
-        if (t->v == kInf) return "Limit";
         if (t->v < 0) return "0";
         // 用 Ω<n>（角括号定界）消除“Ω0”+“0”叶子与多位数合并的歧义。
         return "Ω<" + fmt_val(t->v) + ">";
@@ -236,11 +233,6 @@ inline void flatten(const TonNode* t, std::vector<TonValue>& out) {
     std::vector<const TonNode*> stack;
     std::size_t i = 0;
     while (i < s.size()) {
-        if (s.compare(i, 5, "Limit") == 0) {
-            stack.push_back(arena.leaf(kInf));
-            i += 5;
-            continue;
-        }
         if (s[i] == '0') {
             stack.push_back(arena.leaf(-1));
             ++i;
@@ -313,6 +305,9 @@ inline void flatten(const TonNode* t, std::vector<TonValue>& out) {
 // 注意：TON 与 TON_MC/TON_MPC 的 mark 构造不同（前者单层循环、后者双层），
 // 分别以 mark_main / mark_mc 提供；mark_FS 三者一致。
 // ---------------------------------------------------------------------
+
+// raise 家族的 mark 函数签名（无 mark 的变体传 nullptr）。
+using MarkFn = TonNode* (*)(TonArena&, TonValue);
 
 [[nodiscard]] inline TonNode* mark_main(TonArena& arena, TonValue sys) {
     TonNode* res = arena.node(arena.node(arena.leaf(-1), arena.leaf(sys)), arena.leaf(sys));
@@ -618,20 +613,6 @@ struct TonFsCache {
     }
 };
 
-// ---------------------------------------------------------------------
-// 记号极限项（noraise 家族：输入 "Limit" 时替换成的展开起点）
-// ---------------------------------------------------------------------
-
-// ibp_style=true  -> [-1, [[0, [0, -1, -2], -2], 0, -2], -2]（TON_I / TON_IBP）
-// ibp_style=false -> [-1, 0, -2]（DoR 家族）
-[[nodiscard]] inline TonNode* make_limit(TonArena& arena, bool ibp_style) {
-    if (ibp_style) {
-        TonNode* inner2 = arena.node(arena.leaf(0), arena.leaf(-1));                    // [0,-1,-2]
-        TonNode* inner1 = arena.node(arena.node(arena.leaf(0), inner2), arena.leaf(0)); // [[0,[0,-1,-2],-2],0,-2]
-        return arena.node(arena.leaf(-1), inner1);
-    }
-    return arena.node(arena.leaf(-1), arena.leaf(0));
-}
 
 // ---------------------------------------------------------------------
 // 标准判定的真值缓存（对齐 TS StdTrue/DRStd/... 只缓存 true）
@@ -655,19 +636,13 @@ template <typename Fn>
 // ---------------------------------------------------------------------
 
 // raise 家族（TON / TON_MC / TON_MPC）：
-//   sys = max(扁平值)；sys == Infinity -> [n,n,-2] 包 n 层 [-1,...]；
+//   sys = max(扁平值)；sys >= 1 时 raise 后判定 mark；
 //   否则 raise 后若等于 mark(sys) 走 mark_FS；否则进入惰性生成器。
 [[nodiscard]] inline std::string ton_expand_main(TonFsCache& cache, const TonNode* t, int n,
                                                  const StdFn& std_fn,
                                                  TonNode* (*mark_fn)(TonArena&, TonValue)) {
     // TS: sys = typeof term === 'number' ? term : Math.max(0, ...flatten(term))
     const TonValue sys = (!t->is_node) ? t->v : max_value(t);
-    if (sys == kInf) {
-        TonArena a;
-        TonNode* res = a.node(a.leaf(static_cast<TonValue>(n)), a.leaf(static_cast<TonValue>(n)));
-        for (int i = 0; i < n; ++i) res = a.node(a.leaf(-1), res);
-        return display_main(res);
-    }
     TonArena arena;
     const TonNode* raised = raise(arena, t, sys);
     if (sys >= 1 && flatten_key(raised) == flatten_key(mark_fn(arena, sys))) {
@@ -676,27 +651,64 @@ template <typename Fn>
     return display_main(cache.fs(raised, sys, n, /*main_style=*/true, std_fn));
 }
 
-// noraise 家族：输入 "Limit" 时替换为记号极限项；sys 恒为 0。
+// noraise 家族：sys 恒为 0。
 [[nodiscard]] inline std::string ton_expand_noraise(TonFsCache& cache, const TonNode* t, int n,
-                                                    const StdFn& std_fn, bool ibp_style_limit) {
-    TonArena arena;
-    if (is_inf(t)) t = make_limit(arena, ibp_style_limit);
+                                                    const StdFn& std_fn) {
     return display_noraise(cache.fs(t, 0, n, /*main_style=*/false, std_fn));
 }
 
 // 解析 + 展开的公共入口（各记号头文件的 expand_text 骨架）。
 [[nodiscard]] inline std::string ton_expand_text(std::string_view text, int term, bool main_style,
-                                                 bool ibp_style_limit, const StdFn& std_fn,
-                                                 TonFsCache& cache,
+                                                 const StdFn& std_fn, TonFsCache& cache,
                                                  TonNode* (*mark_fn)(TonArena&, TonValue)) {
     if (term < 0) term = 0;
     TonArena arena;
     const TonNode* t = parse_impl(arena, text, main_style);
     if (t == nullptr) {
-        return "解析失败，请确认输入是 TON 文本（Limit / 0 / Ω / Ω<n> / C 后缀），且不是全角字符";
+        return "解析失败，请确认输入是 TON 文本（0 / Ω / Ω<n> / C 后缀），且不是全角字符";
     }
     if (main_style) return ton_expand_main(cache, t, term, std_fn, mark_fn);
-    return ton_expand_noraise(cache, t, term, std_fn, ibp_style_limit);
+    return ton_expand_noraise(cache, t, term, std_fn);
 }
+
+// ---------------------------------------------------------------------
+// 记号公共骨架（策略模板）
+//
+// 9 个 TON 变体的 expand_text 原本逐字重复（静态 memo + 静态 cache +
+// 同一个 lambda + 同一串 ton_expand_text 实参），差异只有三项，全部由
+// Policy 提供：
+//     · is_standard(a, sys, memo) —— 各变体的 StandardQ 语义；
+//     · kMainStyle              —— 文本风格（main = 带 Ω<n>，noraise = 裸 Ω）；
+//     · kHasMark                —— 是否有 raise 家族的 mark 函数；
+//     · mark_fn()               —— raise 家族的 mark 函数（无则返回 nullptr）。
+//
+// 顶层 Limit / ∞ 输入已整体拆除；极限项的构造、基本列、显示仍由上方
+// ton_expand_text / display_* 负责，本骨架只转发 policy 开关。
+// ---------------------------------------------------------------------
+template <class Policy>
+struct TonNotationBase : NotationBase {
+    [[nodiscard]] static std::string expand_text(std::string_view text, int term) {
+        static std::map<std::string, bool> memo;
+        static TonFsCache cache;
+        const StdFn std_fn = [](const TonNode* a, TonValue sys) -> bool {
+            return Policy::is_standard(a, sys, memo);
+        };
+        if constexpr (Policy::kHasMark) {
+            return ton_expand_text(text, term, Policy::kMainStyle,
+                                  std_fn, cache, Policy::mark_fn());
+        } else {
+            return ton_expand_text(text, term, Policy::kMainStyle,
+                                  std_fn, cache, nullptr);
+        }
+    }
+
+    // 测试辅助：文本 -> 术语（原样显示）。
+    [[nodiscard]] static std::string parse(std::string_view text) {
+        TonArena arena;
+        const TonNode* t = parse_impl(arena, text, Policy::kMainStyle);
+        if (t == nullptr) return "解析失败";
+        return Policy::kMainStyle ? display_main(t) : display_noraise(t);
+    }
+};
 
 } // namespace omegay::notation::tonshare

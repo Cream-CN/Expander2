@@ -10,6 +10,8 @@
 //  - 同时提供 FS（expand_text_n）与 FS_short（expand_text_n，lnz_m1 分支）。
 #pragma once
 
+#include "notation_base.hpp"
+
 #include <algorithm>
 #include <cstddef>
 #include <deque>
@@ -29,27 +31,10 @@ namespace bt3_detail
 struct NodeC;
 using NodePtr = std::shared_ptr<NodeC>;
 struct ColumnC { std::vector<int> lower; std::vector<NodePtr> higher; };
-struct NodeC { bool inf = false; std::vector<ColumnC> cols; };
+struct NodeC { std::vector<ColumnC> cols; };
 
 inline NodePtr bt3_make_node() { return std::make_shared<NodeC>(); }
-inline NodePtr bt3_infinity() { auto e = bt3_make_node(); e->inf = true; return e; }
-inline bool bt3_is_infinity(const NodePtr& e) { return e->inf; }
 
-inline NodePtr bt3_infinity_fs(int index, int n)
-{
-    NodePtr chain = bt3_make_node();
-    for (int i = index; i > 0; --i)
-    {
-        auto wrapped = bt3_make_node();
-        ColumnC c; c.lower.assign(n, i); c.higher.push_back(chain);
-        wrapped->cols.push_back(std::move(c));
-        chain = wrapped;
-    }
-    auto full = bt3_make_node();
-    full->cols.push_back(ColumnC{ std::vector<int>(n, 0), {} });
-    for (const ColumnC& cc : chain->cols) full->cols.push_back(cc);
-    return full;
-}
 inline bool bt3_is_zero_column(const ColumnC& c)
 {
     for (int x : c.lower) if (x != 0) return false;
@@ -101,14 +86,12 @@ inline std::string bt3_top_display(const NodePtr& e)
 }
 inline std::string bt3_display(const NodePtr& e)
 {
-    if (bt3_is_infinity(e)) return "Limit";
     std::string s;
     for (const ColumnC& c : e->cols) s += bt3_column_display(c);
     return s;
 }
 inline bool bt3_is_limit(const NodePtr& e)
 {
-    if (bt3_is_infinity(e)) return true;
     if (e->cols.empty()) return false;
     return !bt3_is_zero_column(e->cols.back());
 }
@@ -498,14 +481,12 @@ NodePtr bt3_fs_special(const NodePtr& e, int tail_layer, int index)
 inline NodePtr bt3_clone_slice_from_raw(const NodeC* e, int from)
 {
     auto out = bt3_make_node();
-    out->inf = e->inf;
     for (size_t i = from; i < e->cols.size(); ++i) out->cols.push_back(e->cols[i]);
     return out;
 }
 inline NodePtr bt3_pop_last(const NodePtr& e)
 {
     auto out = bt3_make_node();
-    out->inf = e->inf;
     for (size_t i = 0; i + 1 < e->cols.size(); ++i) out->cols.push_back(e->cols[i]);
     return out;
 }
@@ -572,7 +553,6 @@ NodePtr bt3_ascend_replace(const NodePtr& e, const NodePtr& tail,
 
 NodePtr bt3_expand(const NodePtr& e, int index, int n, bool lnz_m1)
 {
-    if (bt3_is_infinity(e)) return bt3_infinity_fs(index, n);
     if (e->cols.empty()) return e;
     if (!bt3_is_limit(e)) return bt3_pop_last(e);
 
@@ -675,7 +655,6 @@ NodePtr bt3_expand(const NodePtr& e, int index, int n, bool lnz_m1)
 
 inline NodePtr bt3_lnz(bool short_, const NodePtr& e, int index, int n)
 {
-    if (bt3_is_infinity(e)) return bt3_infinity_fs(index, n);
     if (!bt3_is_limit(e)) return bt3_expand(e, 0, n, short_);
     return bt3_expand(e, index, n, short_);
 }
@@ -758,13 +737,6 @@ struct Parser
     {
         n_ = n;
         sp();
-        if (i_ + 5 <= s_.size() && s_.substr(i_, 5) == "Limit")
-        {
-            i_ += 5;
-            sp();
-            if (i_ != s_.size()) err();
-            return bt3_infinity();
-        }
         NodePtr out = parse_expr();
         sp();
         if (i_ != s_.size()) err();
@@ -772,9 +744,7 @@ struct Parser
     }
 };
 
-struct BT3Notation
-{
-    static std::string suffix() { return std::string{}; }
+struct BT3Notation : NotationBase {
     static constexpr int kParamMin = 1;
     static constexpr int kParamMax = 25;
     static std::string expand_text_n(std::string_view text, int term, int n)

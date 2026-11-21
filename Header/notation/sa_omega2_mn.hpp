@@ -1,6 +1,8 @@
 
 #pragma once
 
+#include "notation_base.hpp"
+
 #include <cstddef>
 #include <optional>
 #include <string>
@@ -91,7 +93,6 @@ inline std::string mountain_display(const Mountain& m) {
 // ---- 解析（TS from_display：仅接受连续 '(' 列；非法输入返回 nullopt）----
 
 inline std::optional<Mountain> from_display(std::string_view s) {
-    if (s == "Limit") return std::nullopt;
     std::size_t i = 0;
 
     auto normalize_sep = [](Sep& sep) {
@@ -431,13 +432,6 @@ inline Mountain extend(const Mountain& m0) {
     return m;
 }
 
-// TS infinity_FS(index) = [[], [[1, [index, 1], false]]]。
-inline Mountain infinity_fs(int index) {
-    Mountain m;
-    m.push_back(Column{});
-    m.push_back(Column{ Entry{ 1, Sep{ index, 1 }, false } });
-    return m;
-}
 
 inline Mountain expand(const Mountain& m, int index, bool shorter) {
     if (m.empty()) return m;
@@ -451,29 +445,25 @@ inline Mountain expand(const Mountain& m, int index, bool shorter) {
 
 } // namespace sa_omega2_mn_detail
 
-// Expr：非 ∞ 时持有 Mountain；∞（显示 "Limit"）用标志表示。
+// Expr：解析结果（顶层 ∞ / "Limit" 已拆除）。
 struct SAOmega2MnExpr {
-    bool infinity = false;
     sa_omega2_mn_detail::Mountain mountain;
 };
 
-struct SAOmega2MNNotation {
+struct SAOmega2MNNotation : NotationBase {
     static constexpr const char* kName = "SAω2MN";
 
     [[nodiscard]] static std::string expand_text(std::string_view text, int term) {
         return expand_text_impl(text, term, /*longer=*/true);
     }
-    [[nodiscard]] static std::string suffix() { return {}; }
 
     [[nodiscard]] static std::optional<SAOmega2MnExpr> parse(std::string_view text) {
-        if (text == "Limit" || text == "limit" || text == "LIMIT") return SAOmega2MnExpr{ true, {} };
         auto m = sa_omega2_mn_detail::from_display(text);
         if (!m) return std::nullopt;
-        return SAOmega2MnExpr{ false, std::move(*m) };
+        return SAOmega2MnExpr{ std::move(*m) };
     }
 
     [[nodiscard]] static std::string to_string(const SAOmega2MnExpr& e) {
-        if (e.infinity) return "Limit";
         return sa_omega2_mn_detail::mountain_display(e.mountain);
     }
 
@@ -483,10 +473,6 @@ private:
         const auto expr = parse(text);
         if (!expr) {
             return "解析失败，请确认你没有使用全角括号，逗号，分号";
-        }
-        if (expr->infinity) {
-            const auto m = sa_omega2_mn_detail::infinity_fs(term);
-            return sa_omega2_mn_detail::mountain_display(m);
         }
         using namespace sa_omega2_mn_detail;
         const Mountain& m = expr->mountain;

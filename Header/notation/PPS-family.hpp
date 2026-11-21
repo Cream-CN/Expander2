@@ -1,5 +1,7 @@
 #pragma once
 
+#include "notation_base.hpp"
+
 #include <vector>
 #include <string>
 #include <cstddef>
@@ -350,58 +352,51 @@ namespace omegay::notation {
         }
 
     } // namespace pps_detail
-    struct PPSNotation {
+    struct PPSNotation : NotationBase {
         static constexpr const char* kName = "PPS";
         static std::vector<int> expand(const std::vector<int>& seq, int term) {
             return pps_detail::expand_pps1(seq, term);
         }
-        static std::string suffix() { return ""; }
     };
-    struct PPS4Notation {
+    struct PPS4Notation : NotationBase {
         static constexpr const char* kName = "PPS4";
         static std::vector<int> expand(const std::vector<int>& seq, int term) {
             return pps_detail::expand_pps4_variant(
                 seq, term, pps_detail::PPS4Variant::PPS4);
         }
-        static std::string suffix() { return ""; }
     };
-    struct WPPS4Notation {
+    struct WPPS4Notation : NotationBase {
         static constexpr const char* kName = "Weak PPS4";
         static std::vector<int> expand(const std::vector<int>& seq, int term) {
             return pps_detail::expand_pps4_variant(
                 seq, term, pps_detail::PPS4Variant::WPPS4);
         }
-        static std::string suffix() { return ""; }
     };
-    struct TPPS4Notation {
+    struct TPPS4Notation : NotationBase {
         static constexpr const char* kName = "Third PPS4";
         static std::vector<int> expand(const std::vector<int>& seq, int term) {
             return pps_detail::expand_pps4_variant(
                 seq, term, pps_detail::PPS4Variant::TPPS4);
         }
-        static std::string suffix() { return ""; }
     };
-    struct EWPPS4Notation {
+    struct EWPPS4Notation : NotationBase {
         static constexpr const char* kName = "Extremely Weak PPS4";
         static std::vector<int> expand(const std::vector<int>& seq, int term) {
             return pps_detail::expand_pps4_variant(
                 seq, term, pps_detail::PPS4Variant::EWPPS4);
         }
-        static std::string suffix() { return ""; }
     };
-    struct SecondPPS4Notation {
+    struct SecondPPS4Notation : NotationBase {
         static constexpr const char* kName = "Second PPS4";
         static std::vector<int> expand(const std::vector<int>& seq, int term) {
             return pps_detail::expand_second_pps4(seq, term);
         }
-        static std::string suffix() { return ""; }
     };
-    struct PPS2Notation {
+    struct PPS2Notation : NotationBase {
         static constexpr const char* kName = "2-pps4";
         static std::vector<int> expand(const std::vector<int>& seq, int term) {
             return pps_detail::expand_2_pps4(seq, term);
         }
-        static std::string suffix() { return ""; }
     };
 
 } // namespace omegay::notation

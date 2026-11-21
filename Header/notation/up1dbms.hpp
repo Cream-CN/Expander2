@@ -1,6 +1,8 @@
 
 #pragma once
 
+#include "notation_base.hpp"
+
 #include <array>
 #include <optional>
 #include <string>
@@ -17,22 +19,17 @@ using Up1DbmsColumn = std::vector<Up1DbmsEntry>;
 using Up1DbmsExpr = std::vector<Up1DbmsColumn>;
 
 struct Up1DbmsParsed {
-    bool infinity = false;
     Up1DbmsExpr expr;
 };
 
-struct UP1DBMSNotation {
+struct UP1DBMSNotation : NotationBase {
     static constexpr const char* kName = "UP1DBMS";
 
     [[nodiscard]] static std::string expand_text(std::string_view text, int term) {
         return expand_text_impl(text, term, /*longer=*/true);
     }
-    [[nodiscard]] static std::string suffix() { return {}; }
 
     [[nodiscard]] static std::optional<Up1DbmsParsed> parse(std::string_view s) {
-        if (s == "Limit" || s == "limit" || s == "LIMIT") {
-            return Up1DbmsParsed{ true, {} };
-        }
         std::size_t i = 0;
         auto error = [&]() { return std::optional<Up1DbmsParsed>{}; };
         auto skip_spaces = [&]() {
@@ -107,11 +104,10 @@ struct UP1DBMSNotation {
         }
         skip_spaces();
         if (i != s.size()) return std::nullopt;
-        return Up1DbmsParsed{ false, std::move(result) };
+        return Up1DbmsParsed{ std::move(result) };
     }
 
     [[nodiscard]] static std::string to_string(const Up1DbmsParsed& p) {
-        if (p.infinity) return "Limit";
         return display(p.expr);
     }
 
@@ -306,12 +302,6 @@ private:
         return result;
     }
 
-    [[nodiscard]] static Expr infinity_fs(int index) {
-        Expr result;
-        result.emplace_back();
-        for (int i = 0; i < index; ++i) result.push_back(Column{ Entry{ i, i } });
-        return result;
-    }
 
     [[nodiscard]] static Expr expand(const Expr& expr, int index, bool shorter) {
         if (expr.empty()) return expr;
@@ -354,7 +344,6 @@ private:
         if (!parsed) {
             return "解析失败，请确认你没有使用全角括号，逗号，分号";
         }
-        if (parsed->infinity) return display(infinity_fs(term));
         const Expr& e = parsed->expr;
         if (e.empty()) return {};
         // 值域校验：value 与顶层 height 作为列索引使用，越界时 TS 在 expand 中抛错。

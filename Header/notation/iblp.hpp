@@ -1,6 +1,8 @@
 // Header/notation/iblp.hpp
 #pragma once
 
+#include "notation_base.hpp"
+
 #include "denshare.hpp"
 
 #include <optional>
@@ -10,11 +12,10 @@
 
 namespace omegay::notation {
 
-struct IblpNotation {
+struct IblpNotation : NotationBase {
     static constexpr const char* kName = "iblp";
 
     [[nodiscard]] static std::string expand_text(std::string_view text, int term);
-    [[nodiscard]] static std::string suffix() { return {}; }
 
     [[nodiscard]] static std::optional<denshare::Den3Expr> parse(std::string_view text);
     [[nodiscard]] static std::string to_string(const denshare::Den3Expr& expr);
@@ -45,7 +46,7 @@ using denshare::TextParser;
 }
 
 [[nodiscard]] inline std::string to_string(const Den3Expr& expr) {
-    if (expr.infinity) return "Limit";
+
     std::string out;
     for (const Den3Row& row : expr.rows) {
         out += '(';
@@ -65,13 +66,6 @@ using denshare::TextParser;
 [[nodiscard]] inline std::optional<Den3Expr> parse(std::string_view s) {
     TextParser p(s);
     p.skip_spaces();
-    if (p.match("Limit")) {
-        p.skip_spaces();
-        if (!p.eof()) return std::nullopt;
-        Den3Expr e;
-        e.infinity = true;
-        return e;
-    }
 
     Den3Expr expr;
     while (!p.eof()) {
@@ -109,7 +103,7 @@ using denshare::TextParser;
 // ---------------------------------------------------------------------
 
 [[nodiscard]] inline int compare(const Den3Expr& a, const Den3Expr& b) {
-    if (a.infinity || b.infinity) return denshare::bool_compare(a.infinity, b.infinity);
+
     std::vector<std::vector<int>> sa, sb;
     for (const Den3Row& row : a.rows) sa.push_back(to_short_row(row));
     for (const Den3Row& row : b.rows) sb.push_back(to_short_row(row));
@@ -117,7 +111,7 @@ using denshare::TextParser;
 }
 
 [[nodiscard]] inline bool is_limit(const Den3Expr& expr) {
-    if (expr.infinity) return true;
+
     if (expr.rows.empty()) return false;
     const Den3Row& active = expr.rows.back();
     const std::size_t idx = 1 + static_cast<std::size_t>(active[0].value);
@@ -408,23 +402,8 @@ using Rec = std::vector<std::optional<std::vector<int>>>;
     return expr;
 }
 
-// ---------------------------------------------------------------------
-// 极限的 FS（TS 的 Limit）
-// ---------------------------------------------------------------------
 
-// DEN3 的 Limit_row 与 DEN1 同构：末尾追加 2 再整体反转；
-// 反转后位置 0 恰好是 step=2。
-[[nodiscard]] inline Den3Row limit_row(int n) {
-    return denshare::limit_row_entries(n);
-}
 
-[[nodiscard]] inline Den3Expr limit(int n) {
-    Den3Expr expr;
-    expr.rows.push_back({ {1, false}, {1, false}, {0, false} });
-    expr.rows.push_back({ {1, false}, {2, false}, {1, false}, {0, false} });
-    for (int i = 0; i < n; ++i) expr.rows.push_back(limit_row(1 + i));
-    return expr;
-}
 
 // 文本接口的公共骨架。与 DEN2 不同，DEN3 的 FS 不做 is_limit 预判，
 // 直接交给 expand（expand 内部会处理非极限情形）。
@@ -434,9 +413,7 @@ using Rec = std::vector<std::optional<std::vector<int>>>;
     if (!parsed) {
         return "解析失败，请确认你没有使用全角括号，逗号";
     }
-    if (parsed->infinity) {
-        return to_string(limit(term));
-    }
+
     if (parsed->rows.empty()) {
         Den3Expr e;
         return to_string(e);

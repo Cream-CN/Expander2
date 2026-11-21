@@ -13,6 +13,8 @@
 //   合法极限反复提升，直到落入可投影形态再交 bmsFS。
 #pragma once
 
+#include "notation_base.hpp"
+
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
@@ -829,17 +831,6 @@ namespace omegay::notation {
             return lpms_fs(lpms_single(M), n);
         }
 
-        [[nodiscard]] inline FMat lpms_infinity_fs(int n) {
-            FMat r;
-            r.push_back(zero_col(n));
-            r.push_back(ones_col(n));
-            return r;
-        }
-        [[nodiscard]] inline FMat lptss_infinity_fs(int n) {
-            FMat r;
-            for (int i = 0; i <= n; ++i) r.push_back(Col{ i, i, i });
-            return r;
-        }
 
         [[nodiscard]] inline std::string fmat_to_string(const FMat& a) {
             std::string out;
@@ -871,11 +862,6 @@ namespace omegay::notation {
         [[nodiscard]] inline std::string run(std::string_view text, int term) {
             const auto e = bmlike::parse(text);
             if (!e) return bmlike::kParseError;
-            if (e->infinity) {
-                const FMat b = IsLptss ? lptss_infinity_fs(term)
-                                       : lpms_infinity_fs(term);
-                return fmat_to_string(b);
-            }
             if (e->m.cols() == 0) return {};
             const FMat in = from_matrix(e->m);
             // 分派：非极限（含非法）删末列。
@@ -887,22 +873,20 @@ namespace omegay::notation {
 
     }  // namespace lpms_detail
 
-    struct LPMSNotation {
+    struct LPMSNotation : NotationBase {
         static constexpr const char* kName = "LPMS";
         [[nodiscard]] static std::string
             expand_text(std::string_view text, int term) {
             return lpms_detail::run<false>(text, term);
         }
-        [[nodiscard]] static std::string suffix() { return {}; }
     };
 
-    struct LPTSSNotation {
+    struct LPTSSNotation : NotationBase {
         static constexpr const char* kName = "LPTSS";
         [[nodiscard]] static std::string
             expand_text(std::string_view text, int term) {
             return lpms_detail::run<true>(text, term);
         }
-        [[nodiscard]] static std::string suffix() { return {}; }
     };
 
 }  // namespace omegay::notation

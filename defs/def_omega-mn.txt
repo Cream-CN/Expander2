@@ -2,13 +2,13 @@
 
 ωMN（TS 源：src/notations/MN/Omega_MN.ts，家族 category-mn，原作者 hypcos_mn；C++ 实现见 Header/notation/omega_mn.hpp，竖向机制复用 Header/notation/smnshare.hpp）。ωMN 与 n-MN 系列共用 SMN 家族的表达式骨架，但展开算法不同：ωMN 使用"坏根复制"（get_references + magma_checks_list），而非 n-MN 的 fill_ghost/extend。
 
-表达式结构：表达式（Mountain）是若干列 Column 的序列；每列是若干条目 Entry=(value, sep) 的序列；value 是从 1 起的列标引用（决定父位置），sep 是分隔符（非负整数，显示为 sep+1 个逗号，如条目 (1,2) 显示为 ",,1"）。空表达式表示 0；另外用 ∞ 标志表示极限，显示为 "Limit"。
+表达式结构：表达式（Mountain）是若干列 Column 的序列；每列是若干条目 Entry=(value, sep) 的序列；value 是从 1 起的列标引用（决定父位置），sep 是分隔符（非负整数，显示为 sep+1 个逗号，如条目 (1,2) 显示为 ",,1"）。空表达式表示 0；顶层 ∞（Limit）输入已按用户要求拆除。
 
 竖向机制：一列中每个条目对应一个竖向（Vertical，分隔符序列）：按条目顺序做 verticalIncrease 得到，verticalIncrease(v, s) 从 v 末尾向前删除所有小于 s 的分隔符再追加 s。条目 (i,j) 的父位置为 (value−1, findIndexBelow(V[value−1], V[i][j]))，即在父列（列标 value）的竖向表中二分查找第一个小于该条目竖向的项位置。
 
 极限与后继：非空且末列非空的表达式是极限表达式；末列为空的表达式是后继表达式，它的展开就是删去末列。
 
-∞ 的基本列：Limit[n] 展开为 [[], [[1, n]]]：第一列为空列，第二列为单个条目 (value=1, sep=n)。
+∞ 的基本列：已按用户要求拆除（本记号不再解析 Limit / ∞ 输入，也不提供其显示与基本列）。
 
 展开（参数 index=m）：对极限表达式，以末列最右上条目为起点：
 (1) 计算最右上条目的父位置 BRij（坏根列 BRij.i 与坏根列内位置 BRij.j），宽度 width = 末列列标 − BRij.i。

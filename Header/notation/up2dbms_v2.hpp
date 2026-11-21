@@ -1,6 +1,8 @@
 
 #pragma once
 
+#include "notation_base.hpp"
+
 #include <cstddef>
 #include <optional>
 #include <string>
@@ -80,7 +82,6 @@ inline std::string display(const Expr& e) {
 }
 
 struct Parsed {
-    bool infinity = false;
     Expr expr;
 };
 
@@ -185,21 +186,11 @@ inline std::optional<Parsed> parse(std::string_view s) {
     };
 
     skip_spaces();
-    if (i + 5 <= s.size() && s.substr(i, 5) == "Limit") {
-        i += 5;
-        skip_spaces();
-        if (i != s.size()) return error();
-        return Parsed{ true, {} };
-    }
-    if (s.substr(i) == "limit" || s.substr(i) == "LIMIT") {
-        if (s.size() - i != 5) return error();
-        return Parsed{ true, {} };
-    }
     auto result = parse_expr();
     if (!result) return error();
     skip_spaces();
     if (i != s.size()) return error();
-    return Parsed{ false, std::move(*result) };
+    return Parsed{ std::move(*result) };
 }
 
 // ---- 核心辅助 ----
@@ -464,34 +455,21 @@ inline Expr expand(const Expr& expr, int index, bool shorter) {
     return result;
 }
 
-// TS infinity_FS(index) = [[], [ [i, [i, i+1]] for i in 0..index-1 ]]
-inline Expr infinity_fs(int index) {
-    Expr result;
-    result.emplace_back();
-    for (int i = 0; i < index; ++i) {
-        Column col;
-        col.push_back(Entry{ i, Height{ i, i + 1 } });
-        result.push_back(std::move(col));
-    }
-    return result;
-}
 
 } // namespace up2dbms_v2_detail
 
-struct Up2DbmsV2Notation {
+struct Up2DbmsV2Notation : NotationBase {
     static constexpr const char* kName = "UP2DBMS v2";
 
     [[nodiscard]] static std::string expand_text(std::string_view text, int term) {
         return expand_text_impl(text, term, /*longer=*/true);
     }
-    [[nodiscard]] static std::string suffix() { return {}; }
 
     [[nodiscard]] static std::optional<up2dbms_v2_detail::Parsed> parse(std::string_view text) {
         return up2dbms_v2_detail::parse(text);
     }
 
     [[nodiscard]] static std::string to_string(const up2dbms_v2_detail::Parsed& p) {
-        if (p.infinity) return "Limit";
         return up2dbms_v2_detail::display(p.expr);
     }
 
@@ -501,9 +479,6 @@ private:
         const auto parsed = up2dbms_v2_detail::parse(text);
         if (!parsed) {
             return "解析失败，请确认你没有使用全角括号，逗号，分号";
-        }
-        if (parsed->infinity) {
-            return up2dbms_v2_detail::display(up2dbms_v2_detail::infinity_fs(term));
         }
         const up2dbms_v2_detail::Expr& e = parsed->expr;
         if (e.empty()) return {};

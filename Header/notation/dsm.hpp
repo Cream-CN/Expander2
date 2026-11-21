@@ -10,6 +10,8 @@
 // (0)(1)(2,1)...(n,...,1)；较长支不删列，较短支在核心展开后再多删一列。
 #pragma once
 
+#include "notation_base.hpp"
+
 #include <algorithm>
 #include <cstddef>
 #include <optional>
@@ -22,10 +24,9 @@
 
 namespace omegay::notation {
 
-    struct DSMNotation {
+    struct DSMNotation : NotationBase {
         static constexpr const char* kName = "DSM";
         [[nodiscard]] static std::string expand_text(std::string_view, int);
-        [[nodiscard]] static std::string suffix() { return {}; }
     };
 
     namespace dsm_detail {
@@ -477,9 +478,6 @@ namespace omegay::notation {
             run(std::string_view text, int term, bool shorter) {
             const auto e = bmlike::parse(text);
             if (!e) return bmlike::kParseError;
-            if (e->infinity)
-                return bmlike::matrix_to_bm_string(
-                    bmlike::triangular_infinity_fs(term));
             if (e->m.cols() == 0) return {};
             if (!bmlike::is_limit(e->m))
                 return bmlike::matrix_to_bm_string(

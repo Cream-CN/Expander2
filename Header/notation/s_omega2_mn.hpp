@@ -1,6 +1,8 @@
 
 #pragma once
 
+#include "notation_base.hpp"
+
 #include <cstddef>
 #include <optional>
 #include <string>
@@ -10,7 +12,6 @@
 namespace omegay::notation {
 
 struct SOmega2MnExpr {
-    bool infinity = false;
     std::vector<std::vector<std::pair<int, std::vector<int>>>> mountain;  // Mountain
 };
 
@@ -92,7 +93,6 @@ inline std::string mountain_display(const Mountain& m) {
 // ---- 解析（TS from_display；非法输入返回 nullopt）----
 
 inline std::optional<Mountain> from_display(std::string_view s) {
-    if (s == "Limit") return std::nullopt;  // ∞ 由 parse() 识别
     std::size_t i = 0;
 
     auto normalize_sep = [](Sep& s) {
@@ -467,15 +467,8 @@ inline Mountain extend(const Mountain& m0) {
     return m;
 }
 
-// TS infinity_FS(index) = [[], [[1, [index, 1]]]]。
-inline Mountain infinity_fs(int index) {
-    Mountain m;
-    m.push_back(Column{});
-    m.push_back(Column{ Entry{ 1, Sep{ index, 1 } } });
-    return m;
-}
 
-// TS expand(m, index, shorter)。前置条件：非 ∞（FS 包装器已处理 ∞）。
+// TS expand(m, index, shorter)。
 inline Mountain expand(const Mountain& m, int index, bool shorter) {
     if (m.empty()) return m;
     if (m.back().empty()) return Mountain(m.begin(), m.end() - 1);
@@ -488,23 +481,20 @@ inline Mountain expand(const Mountain& m, int index, bool shorter) {
 
 } // namespace s_omega2_mn_detail
 
-struct SOmega2MNNotation {
+struct SOmega2MNNotation : NotationBase {
     static constexpr const char* kName = "Sω2MN";
 
     [[nodiscard]] static std::string expand_text(std::string_view text, int term) {
         return expand_text_impl(text, term, /*longer=*/true);
     }
-    [[nodiscard]] static std::string suffix() { return {}; }
 
     [[nodiscard]] static std::optional<SOmega2MnExpr> parse(std::string_view text) {
-        if (text == "Limit" || text == "limit" || text == "LIMIT") return SOmega2MnExpr{ true, {} };
         auto m = s_omega2_mn_detail::from_display(text);
         if (!m) return std::nullopt;
-        return SOmega2MnExpr{ false, std::move(*m) };
+        return SOmega2MnExpr{ std::move(*m) };
     }
 
     [[nodiscard]] static std::string to_string(const SOmega2MnExpr& e) {
-        if (e.infinity) return "Limit";
         return s_omega2_mn_detail::mountain_display(e.mountain);
     }
 
@@ -514,10 +504,6 @@ private:
         const auto expr = parse(text);
         if (!expr) {
             return "解析失败，请确认你没有使用全角括号，逗号，分号";
-        }
-        if (expr->infinity) {
-            const auto m = s_omega2_mn_detail::infinity_fs(term);
-            return s_omega2_mn_detail::mountain_display(m);
         }
         using namespace s_omega2_mn_detail;
         const Mountain& m = expr->mountain;

@@ -42,19 +42,16 @@ using Den3Row = std::vector<DenEntry>;
 
 // DEN1 表达式。约定 rows[0] 是“父标号列表”，显示在 ';' 之后。
 struct Den1Expr {
-    bool infinity = false;      // 记号极限（display 为 "Limit"）
     std::vector<Den1Row> rows;
 };
 
 // DEN2 表达式。
 struct DenExpr {
-    bool infinity = false;
     std::vector<DenRow> rows;
 };
 
 // DEN3 表达式。
 struct Den3Expr {
-    bool infinity = false;
     std::vector<Den3Row> rows;
 };
 
@@ -272,16 +269,5 @@ inline void append_slice_except_tail(
 // 极限行的公共构造（DEN2 / DEN3 共用）
 // =====================================================================
 
-// Limit_row(n) 的条目列表（含标记规则 3 <= nn < 2+n，末尾追加 2 后反转）。
-[[nodiscard]] inline std::vector<DenEntry> limit_row_entries(int n) {
-    std::vector<DenEntry> out;
-    out.reserve(static_cast<std::size_t>(3 + n) + 1);
-    for (int nn = 0; nn < 3 + n; ++nn) {
-        out.push_back({ nn, 3 <= nn && nn < 2 + n });
-    }
-    out.push_back({ 2, false });
-    std::reverse(out.begin(), out.end());
-    return out;
-}
 
 } // namespace omegay::notation::denshare

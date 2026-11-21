@@ -3,11 +3,13 @@
 //
 // 逻辑移植自 notation-explorer（hypcos）的 src/notations/DEN/DEN2.ts。
 // 表达式是“标记行”序列：每行 (step, 条目[])，条目带标记（display 中以 '*' 表示）。
-// 记号极限以 expr.infinity 表示，display 为 "Limit"。
+// 表达式只表示普通 DEN2 矩阵（不再支持顶层 ∞ / Limit）。
 //
 // 对外只提供文本接口 expand_text（唯一展开），
 // 纯函数、不抛异常。
 #pragma once
+
+#include "notation_base.hpp"
 
 #include "denshare.hpp"
 
@@ -18,11 +20,10 @@
 
 namespace omegay::notation {
 
-struct BlpNotation {
+struct BlpNotation : NotationBase {
     static constexpr const char* kName = "blp";
 
     [[nodiscard]] static std::string expand_text(std::string_view text, int term);
-    [[nodiscard]] static std::string suffix() { return {}; }
 
     [[nodiscard]] static std::optional<denshare::DenExpr> parse(std::string_view text);
     [[nodiscard]] static std::string to_string(const denshare::DenExpr& expr);
@@ -51,7 +52,7 @@ using denshare::TextParser;
 }
 
 [[nodiscard]] inline std::string to_string(const DenExpr& expr) {
-    if (expr.infinity) return "Limit";
+
     std::string out;
     for (const DenRow& row : expr.rows) {
         out += '(';
@@ -71,13 +72,6 @@ using denshare::TextParser;
 [[nodiscard]] inline std::optional<DenExpr> parse(std::string_view s) {
     TextParser p(s);
     p.skip_spaces();
-    if (p.match("Limit")) {
-        p.skip_spaces();
-        if (!p.eof()) return std::nullopt;
-        DenExpr e;
-        e.infinity = true;
-        return e;
-    }
 
     DenExpr expr;
     while (!p.eof()) {
@@ -114,7 +108,7 @@ using denshare::TextParser;
 // ---------------------------------------------------------------------
 
 [[nodiscard]] inline int compare(const DenExpr& a, const DenExpr& b) {
-    if (a.infinity || b.infinity) return denshare::bool_compare(a.infinity, b.infinity);
+
     std::vector<std::vector<int>> sa, sb;
     for (const DenRow& row : a.rows) sa.push_back(to_short_row(row));
     for (const DenRow& row : b.rows) sb.push_back(to_short_row(row));
@@ -122,7 +116,7 @@ using denshare::TextParser;
 }
 
 [[nodiscard]] inline bool is_limit(const DenExpr& expr) {
-    if (expr.infinity) return true;
+
     if (expr.rows.empty()) return false;
     const DenRow& active = expr.rows.back();
     if (static_cast<std::size_t>(active.step) >= active.entries.size() ||
@@ -383,28 +377,8 @@ using Already = std::vector<std::optional<std::vector<int>>>;
     return expr;
 }
 
-// ---------------------------------------------------------------------
-// 极限的 FS（TS 的 infinity_FS）
-// ---------------------------------------------------------------------
 
-// 注意：DEN2 的 Limit_row 与 DEN3 不同，末尾没有追加的 2（步骤值在 reversed 之外）。
-[[nodiscard]] inline DenRow limit_row(int n) {
-    DenRow row;
-    row.step = 2;
-    row.entries.reserve(static_cast<std::size_t>(3 + n));
-    for (int nn = 2 + n; nn >= 0; --nn) {
-        row.entries.push_back({ nn, 3 <= nn && nn < 2 + n });
-    }
-    return row;
-}
 
-[[nodiscard]] inline DenExpr infinity_fs(int n) {
-    DenExpr expr;
-    expr.rows.push_back({ 1, { {1, false}, {0, false} } });
-    expr.rows.push_back({ 1, { {2, false}, {1, false}, {0, false} } });
-    for (int i = 0; i < n; ++i) expr.rows.push_back(limit_row(1 + i));
-    return expr;
-}
 
 // 文本接口的公共骨架。
 [[nodiscard]] inline std::string expand_text_impl(std::string_view text, int term, bool shorter) {
@@ -413,9 +387,7 @@ using Already = std::vector<std::optional<std::vector<int>>>;
     if (!parsed) {
         return "解析失败，请确认你没有使用全角括号，逗号";
     }
-    if (parsed->infinity) {
-        return to_string(infinity_fs(term));
-    }
+
     if (parsed->rows.empty()) {
         DenExpr e;
         return to_string(e);

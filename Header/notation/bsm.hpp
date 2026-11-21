@@ -9,6 +9,8 @@
 // （记号极限 → 极限基本列；后继型 → 删除末列；极限表达式 → expand）。
 #pragma once
 
+#include "notation_base.hpp"
+
 #include <algorithm>
 #include <cstddef>
 #include <string>
@@ -19,13 +21,12 @@
 
 namespace omegay::notation {
 
-    struct BSMNotation {
+    struct BSMNotation : NotationBase {
         static constexpr const char* kName = "BSM";
 
         [[nodiscard]] static std::string
             expand_text(std::string_view text, int term);
 
-        [[nodiscard]] static std::string suffix() { return {}; }
     };
 
     namespace bsm_detail {
@@ -231,8 +232,6 @@ namespace omegay::notation {
         BSMNotation::expand_text(std::string_view text, int term) {
         const auto e = bmlike::parse(text);
         if (!e) return bmlike::kParseError;
-        if (e->infinity)
-            return bmlike::matrix_to_bm_string(bmlike::infinity_fs(term));
         if (e->m.cols() == 0) return {};
         const bmlike::Matrix r = bsm_detail::expand(e->m, term < 1 ? 1 : term);
         return bmlike::matrix_to_bm_string(r);

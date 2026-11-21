@@ -1,5 +1,7 @@
 #pragma once
 
+#include "notation_base.hpp"
+
 #include <array>
 #include <cctype>
 #include <functional>
@@ -13,10 +15,9 @@
 
 namespace omegay::notation {
 
-struct IpdNotation {
+struct IpdNotation : NotationBase {
     static constexpr const char* kName = "IPD";
     [[nodiscard]] static std::string expand_text(std::string_view text, int term);
-    [[nodiscard]] static std::string suffix() { return {}; }
 };
 
 namespace ipd_detail {
@@ -40,7 +41,6 @@ struct Node {
 };
 
 struct Graph {
-    bool isLimit = false;
     std::vector<std::vector<Edge>> cols;
     std::vector<std::string> texts;
     std::string key;
@@ -330,7 +330,6 @@ public:
     }
 
     Graph expandGraph(Graph g, int index) {
-        if (g.isLimit) return seedGraph(index);
         if (g.cols.empty()) return g;
         if (index == 0 || g.cols.back().empty()) {
             std::vector<std::vector<Edge>> trimmed(g.cols.begin(), g.cols.end() - 1);
@@ -461,16 +460,7 @@ public:
         Graph g;
         bool aliasOrTop = false;
         bool isDigit = !s.empty() && s[0] >= '0' && s[0] <= '9';
-        if (startsCi("LimitofIPD")) {
-            g.isLimit = true;
-            aliasOrTop = true;
-        } else if (startsCi("Limit")) {
-            g.isLimit = true;
-            aliasOrTop = true;
-        } else if (startsCi("TOP")) {
-            g.isLimit = true;
-            aliasOrTop = true;
-        } else if ((s[0] == 'A' || s[0] == 'a' || s[0] == 'T' || s[0] == 't') && !isDigit &&
+        if ((s[0] == 'A' || s[0] == 'a' || s[0] == 'T' || s[0] == 't') && !isDigit &&
                    s.size() > 1 && s[1] >= '0' && s[1] <= '9') {
             ++i;
             int v = integer(kLevel);
@@ -502,7 +492,7 @@ public:
                 take(']');
                 cols.push_back(std::move(column));
             }
-            if (cols.empty()) throw std::runtime_error("请输入 A0、A1[3]、Limit 或完整列列表");
+            if (cols.empty()) throw std::runtime_error("请输入 A0、A1[3] 或完整列列表");
             g = makeGraph(cols);
         }
 
@@ -523,7 +513,6 @@ inline std::string expand(std::string_view text, int term) {
     Core core;
     Graph g = core.parse(text);
     Graph r = core.expandGraph(std::move(g), term < 0 ? 0 : term);
-    if (r.isLimit) return "Limit";
     return r.key;
 }
 

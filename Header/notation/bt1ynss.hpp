@@ -7,6 +7,8 @@
 // FS_special 分支。start=1（n>=1）。
 #pragma once
 
+#include "notation_base.hpp"
+
 #include <algorithm>
 #include <cstddef>
 #include <memory>
@@ -25,27 +27,10 @@ namespace bt1_detail
 struct NodeC;
 using NodePtr = std::shared_ptr<NodeC>;
 struct ColumnC { std::vector<int> arr; std::vector<NodePtr> higher; };
-struct NodeC { bool inf = false; std::vector<ColumnC> cols; };
+struct NodeC { std::vector<ColumnC> cols; };
 
 inline NodePtr bt1_make_node() { return std::make_shared<NodeC>(); }
-inline NodePtr bt1_infinity() { auto e = bt1_make_node(); e->inf = true; return e; }
-inline bool bt1_is_infinity(const NodePtr& e) { return e->inf; }
 
-inline NodePtr bt1_infinity_fs(int index, int n)
-{
-    NodePtr chain = bt1_make_node();
-    for (int i = index; i > 0; --i)
-    {
-        auto wrapped = bt1_make_node();
-        ColumnC c; c.arr.assign(n, i); c.higher.push_back(chain);
-        wrapped->cols.push_back(std::move(c));
-        chain = wrapped;
-    }
-    auto full = bt1_make_node();
-    full->cols.push_back(ColumnC{ std::vector<int>(n, 0), {} });
-    for (const ColumnC& cc : chain->cols) full->cols.push_back(cc);
-    return full;
-}
 
 inline bool bt1_is_zero_column(const ColumnC& c)
 {
@@ -101,7 +86,6 @@ inline std::string bt1_top_display(const NodePtr& e)
 }
 inline std::string bt1_display(const NodePtr& e)
 {
-    if (bt1_is_infinity(e)) return "Limit";
     std::string s;
     for (const ColumnC& c : e->cols) s += bt1_column_display(c);
     return s;
@@ -109,7 +93,6 @@ inline std::string bt1_display(const NodePtr& e)
 
 inline bool bt1_is_limit(const NodePtr& e)
 {
-    if (bt1_is_infinity(e)) return true;
     if (e->cols.empty()) return false;
     return !bt1_is_zero_column(e->cols.back());
 }
@@ -118,7 +101,6 @@ inline bool bt1_is_limit(const NodePtr& e)
 inline NodePtr bt1_remove_base(const NodePtr& a, int base)
 {
     auto out = bt1_make_node();
-    out->inf = a->inf;
     for (const ColumnC& col : a->cols)
     {
         ColumnC nc;
@@ -365,7 +347,6 @@ inline std::vector<int> bt1_ascend_vector(const std::vector<int>& v, int A, cons
 inline NodePtr bt1_clone_slice_from_raw(const NodeC* e, int from)
 {
     auto out = bt1_make_node();
-    out->inf = e->inf;
     for (size_t i = from; i < e->cols.size(); ++i) out->cols.push_back(e->cols[i]);
     return out;
 }
@@ -376,7 +357,6 @@ inline NodePtr bt1_clone_slice(const NodePtr& e, int from)
 inline NodePtr bt1_pop_last(const NodePtr& e)
 {
     auto out = bt1_make_node();
-    out->inf = e->inf;
     for (size_t i = 0; i + 1 < e->cols.size(); ++i) out->cols.push_back(e->cols[i]);
     return out;
 }
@@ -451,7 +431,6 @@ NodePtr bt1_fs_special(const NodePtr& e, int tail_layer, int index)
 
 NodePtr bt1_fs(const NodePtr& e, int index, int n)
 {
-    if (bt1_is_infinity(e)) return bt1_infinity_fs(index, n);
     if (e->cols.empty()) return e;
     if (!bt1_is_limit(e)) return bt1_pop_last(e);
 
@@ -525,7 +504,6 @@ NodePtr bt1_fs(const NodePtr& e, int index, int n)
 
 inline NodePtr bt1_lnz(const NodePtr& e, int index, int n)
 {
-    if (bt1_is_infinity(e)) return bt1_infinity_fs(index, n);
     if (!bt1_is_limit(e)) return bt1_fs(e, 0, n);
     return bt1_fs(e, index, n);
 }
@@ -608,13 +586,6 @@ struct Parser
     {
         n_ = n;
         sp();
-        if (i_ + 5 <= s_.size() && s_.substr(i_, 5) == "Limit")
-        {
-            i_ += 5;
-            sp();
-            if (i_ != s_.size()) err();
-            return bt1_infinity();
-        }
         NodePtr out = parse_expr();
         sp();
         if (i_ != s_.size()) err();
@@ -622,9 +593,7 @@ struct Parser
     }
 };
 
-struct BT1Notation
-{
-    static std::string suffix() { return std::string{}; }
+struct BT1Notation : NotationBase {
     static constexpr int kParamMin = 1;
     static constexpr int kParamMax = 25;
     static std::string expand_text_n(std::string_view text, int term, int n)

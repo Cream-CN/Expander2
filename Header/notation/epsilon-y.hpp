@@ -3,6 +3,8 @@
 // 规范：omegay::notation::EpsilonYNotation
 // 依赖：仅标准库。纯函数，不抛异常。
 #pragma once
+
+#include "notation_base.hpp"
 #include <cstddef>
 #include <deque>
 #include <string>
@@ -737,11 +739,8 @@ namespace omegay::notation {
             return expand_impl(s, term, d, false, arena);
         }
     }  // namespace epsilon_y_detail
-    struct EpsilonYNotation {
+    struct EpsilonYNotation : NotationBase {
         static constexpr const char* kName = "\xCE\xB5-Y";  // UTF-8: ε-Y
-        [[nodiscard]] static std::string suffix() {
-            return {};
-        }
         [[nodiscard]] static std::vector<int> expand(const std::vector<int>& seq,
             int term) {
             return epsilon_y_detail::expand_entry(seq, term);

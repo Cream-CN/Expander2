@@ -205,6 +205,7 @@
     <ClInclude Include="Header\common\utf8.hpp" />
     <ClInclude Include="Header\core\arena.hpp" />
     <ClInclude Include="Header\core\entry.hpp" />
+    <ClInclude Include="Header\notation\notation_base.hpp" />
     <ClInclude Include="Header\notation\BMSFamily.hpp" />
     <ClInclude Include="Header\notation\registry.hpp" />
     <ClInclude Include="Header\notation\empty.hpp" />
