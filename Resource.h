@@ -15,11 +15,9 @@
 #define IDI_MFC					110
 #define IDR_LICENSE_TEXT		131
 #define IDC_MYICON				2
-
-// “关于作者”窗体头像（RCDATA 内嵌的 JPG/PNG 原始字节）
-#define IDB_AUTHOR_AVATAR		140   // Assets/pic1.jpg 作者头像
-#define IDB_ORG_AVATAR			141   // Assets/pic2.png 组织头像
-#define IDB_NAMEPIC				142   // Assets/namePic.jpg 顶部名字图
+#define IDB_AUTHOR_AVATAR		140
+#define IDB_ORG_AVATAR			141
+#define IDB_NAMEPIC				142
 #ifndef IDC_STATIC
 #define IDC_STATIC				-1
 #endif
