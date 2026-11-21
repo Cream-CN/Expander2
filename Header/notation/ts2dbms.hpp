@@ -10,6 +10,8 @@
 // 说明：纯函数；非法输入在 parse 层返回 nullopt；资源上限超出返回错误提示串。
 #pragma once
 
+#include "notation_base.hpp"
+
 #include <algorithm>
 #include <cstddef>
 #include <functional>
@@ -56,16 +58,12 @@ struct Ts2DbmsParsed {
     Ts2DbmsExpr expr;
 };
 
-struct Ts2DbmsNotation {
+struct Ts2DbmsNotation : NotationBase {
     static constexpr const char* kName = "TS2DBMS";
 
     [[nodiscard]] static std::string expand_text(std::string_view text, int term) {
-        return expand_text_impl(text, term, /*alter=*/false);
-    }
-    [[nodiscard]] static std::string expand_text_alter(std::string_view text, int term) {
         return expand_text_impl(text, term, /*alter=*/true);
     }
-    [[nodiscard]] static std::string suffix() { return {}; }
 
     [[nodiscard]] static std::optional<Ts2DbmsParsed> parse(std::string_view s) {
         try {

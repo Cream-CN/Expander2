@@ -52,33 +52,21 @@ namespace ton_drc_detail {
     });
 }
 
+// 策略：noraise 风格（裸 Ω）、DoR 极限项、无 mark 函数。
+struct TonDRCPolicy {
+    static constexpr bool kMainStyle = false;
+    static constexpr bool kHasMark = false;
+
+    [[nodiscard]] static bool is_standard(const tonshare::TonNode* a, tonshare::TonValue /*sys*/,
+                                          std::map<std::string, bool>& memo) {
+        return standard_q_drc(a, memo);
+    }
+};
+
 } // namespace ton_drc_detail
 
-struct TonDRCNotation {
+struct TonDRCNotation : tonshare::TonNotationBase<ton_drc_detail::TonDRCPolicy> {
     static constexpr const char* kName = "TON_DRC";
-
-    [[nodiscard]] static std::string expand_text(std::string_view text, int term) {
-        static std::map<std::string, bool> memo;
-        static tonshare::TonFsCache cache;
-        const tonshare::StdFn std_fn = [](const tonshare::TonNode* a,
-                                          tonshare::TonValue /*sys*/) -> bool {
-            return ton_drc_detail::standard_q_drc(a, memo);
-        };
-        return tonshare::ton_expand_text(text, term, /*main_style=*/false,
-                                         /*ibp_style_limit=*/false, std_fn, cache, nullptr);
-    }
-
-    [[nodiscard]] static std::string expand_text_alter(std::string_view text, int term) {
-        return expand_text(text, term);
-    }
-
-    [[nodiscard]] static std::string suffix() { return {}; }
-
-    [[nodiscard]] static std::string parse(std::string_view text) {
-        tonshare::TonArena arena;
-        const tonshare::TonNode* t = tonshare::parse_impl(arena, text, false);
-        return t ? tonshare::display_noraise(t) : "解析失败";
-    }
 };
 
 } // namespace omegay::notation

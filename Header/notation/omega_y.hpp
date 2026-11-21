@@ -1,4 +1,6 @@
 #pragma once
+
+#include "notation_base.hpp"
 #include "../core/arena.hpp"
 #include "../core/entry.hpp"
 #include <algorithm>
@@ -8,7 +10,7 @@
 
 namespace omegay::notation {
 
-    struct OmegaYNotation {
+    struct OmegaYNotation : NotationBase {
         static constexpr const char* kName = "ω-Y sequence";
         static int sequence_compare(const std::vector<int>& a,
             const std::vector<int>& b) {
@@ -467,7 +469,6 @@ namespace omegay::notation {
             }
         }
 
-        [[nodiscard]] static std::string suffix() { return {}; }
     };
 
 } // namespace omegay::notation

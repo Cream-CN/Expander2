@@ -4,10 +4,12 @@
 // 逻辑移植自 ne-rewritten/src/notations/BM-like/CMS.ts，仅保留核心展开
 // （FS）与 BM 文本接口，舍弃记忆化缓存（UI 层职责）。
 //
-// 该记号原版只有 FS（无 FS_alter / shorter），且后继型（末列全零）在展开
-// 内部以“删去末列”处理，因此 FS 与 FS_alter 菜单项都映射到同一展开。
+// 该记号只有一种展开（无较短 / 较长分支），且后继型（末列全零）在展开
+// 内部以“删去末列”处理。
 // 内部逐列用变长列向量表示，以严格对应原版对动态增长矩阵 m2 的父项计算。
 #pragma once
+
+#include "notation_base.hpp"
 
 #include <algorithm>
 #include <cstddef>
@@ -21,10 +23,9 @@
 
 namespace omegay::notation {
 
-    struct CMSNotation {
+    struct CMSNotation : NotationBase {
         static constexpr const char* kName = "CMS";
         [[nodiscard]] static std::string expand_text(std::string_view, int);
-        [[nodiscard]] static std::string suffix() { return {}; }
     };
 
     namespace cms_detail {
@@ -249,8 +250,6 @@ namespace omegay::notation {
         CMSNotation::expand_text(std::string_view text, int term) {
         const auto e = bmlike::parse(text);
         if (!e) return bmlike::kParseError;
-        if (e->infinity)
-            return bmlike::matrix_to_bm_string(bmlike::infinity_fs(term));
         if (e->m.cols() == 0) return {};
         const auto cols = cms_detail::expand(e->m, term);
         return cms_detail::cols_to_string(cols);

@@ -164,7 +164,6 @@ public:
 
     static bool is_limit(const Expr& e) { return !e.empty() && !e.back().empty(); }
 
-    static Expr infinity_fs(int index) { return Ops::infinity_fs(index); }
 
     // TS expand：标准 DBMS 基本列展开（短/长由 shorter 区分）。
     static Expr expand(const Expr& expr, int index, bool shorter) {
@@ -203,19 +202,12 @@ public:
 // 通用解析与显示骨架（行高语法经 Ops::parse_entry / entry_to_string 差异）
 // ---------------------------------------------------------------------
 
-// TS from_display：解析表达式；返回（是否 ∞, 矩阵）；失败返回 nullopt。
+// TS from_display：解析表达式；失败返回 nullopt（顶层 "Limit"/"∞" 视为非法）。
 template <typename Ops>
-inline std::optional<std::pair<bool, typename Machine<Ops>::Expr>> parse_expr(
-    std::string_view text) {
+inline std::optional<typename Machine<Ops>::Expr> parse_expr(std::string_view text) {
     using M = Machine<Ops>;
     Parser p(text);
     p.skip_spaces();
-    if (p.remaining() >= 5 && std::string_view(p.s + p.i, 5) == "Limit") {
-        p.i += 5;
-        p.skip_spaces();
-        if (!p.at_end()) return std::nullopt;
-        return std::pair{ true, typename M::Expr{} };
-    }
 
     typename M::Expr result;
     p.skip_spaces();
@@ -253,10 +245,10 @@ inline std::optional<std::pair<bool, typename Machine<Ops>::Expr>> parse_expr(
     }
     p.skip_spaces();
     if (!p.at_end()) return std::nullopt;
-    return std::pair{ false, std::move(result) };
+    return std::move(result);
 }
 
-// TS display（plain）：∞ 不经过本函数（外层处理）；空列 "(0)"。
+// TS display（plain）；空列 "(0)"。
 template <typename Ops>
 inline std::string display(const typename Machine<Ops>::Expr& e) {
     std::string out;

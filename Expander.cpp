@@ -42,8 +42,7 @@ namespace {
     constexpr int IDM_LEGAL = 1004;
     constexpr int IDM_THIRDPARTY_LICENSE = 1005;
     constexpr int IDM_FRIENDLINK = 1006;
-    constexpr int IDM_FS = 101;
-    constexpr int IDM_FSALTER = 102;
+    constexpr int IDM_EXPAND = 102;   // 唯一的“展开”按钮（每个记号只有这一种展开）
     constexpr int IDM_ENTRY_DEMO = 103;
     constexpr int IDC_NOTATION_BTN = 2100;
     constexpr int IDM_DEFINITION_PICK = 4000;
@@ -81,9 +80,7 @@ namespace {
         std::string(*suffix)();
         int definition_resource_id;
         std::string(*expand_text)(std::string_view, int) = nullptr;
-        std::string(*expand_text_alter)(std::string_view, int) = nullptr;
         std::string(*expand_text_n)(std::string_view, int, int) = nullptr;
-        std::string(*expand_text_n_alter)(std::string_view, int, int) = nullptr;
         int param_min = 0;
         int param_max = 25;
         int param_default = 0;
@@ -114,9 +111,7 @@ namespace {
                 e.suffix = caps.suffix;
                 e.definition_resource_id = meta.definition_resource_id;
                 e.expand_text = caps.text;
-                e.expand_text_alter = caps.text_alter;
                 e.expand_text_n = caps.text_n;
-                e.expand_text_n_alter = caps.text_n_alter;
                 e.param_min = meta.param_min;
                 e.param_max = meta.param_max;
                 e.param_default = meta.param_default;
@@ -124,7 +119,7 @@ namespace {
                 e.param_label = store.labels.back().c_str();
                 std::array<const wchar_t*, 16> tagArr{};
                 int slot = 0;
-                for (const auto& tag : meta.tags) {
+                for (auto tag : meta.tags) {
                     if (tag.empty() || slot >= 16) break;
                     store.names.push_back(utf8_to_wstring(tag));
                     tagArr[slot++] = store.names.back().c_str();
@@ -214,8 +209,10 @@ namespace {
 
     struct PickerState {
         HWND hSearch{};
+        HWND hLabelSearch{};
         HWND hList{};
         HWND hStatus{};
+        HFONT font{};
         BrushPtr background;
         std::vector<int> shown;
         int current = 0;
@@ -224,6 +221,46 @@ namespace {
 
     [[nodiscard]] PickerState* getPicker(HWND h) {
         return reinterpret_cast<PickerState*>(::GetWindowLongPtrW(h, GWLP_USERDATA));
+    }
+
+    // ——— 前置声明 ———
+    // createMessageFont / applyFontToChildren / measureText / fitStaticText 与 StaticFit
+    // 的实体定义在本文件“窗体文本自适应”一节（约第 525 行之后），而取号器、互译器
+    // 等窗口的创建代码位于更前面，必须先在这里声明，否则就是“先用后声明”（C3861）。
+    struct StaticFit {
+        int width{};    // 控件宽度：一行装得下就取文字宽，否则取 maxWidth
+        int height{};   // 控件高度：按实际行数算，保证最后一行的字形不被切
+        int lines{ 1 };
+        bool clipped{}; // 行数超过 maxLines（此时靠悬停提示看全文）
+    };
+    [[nodiscard]] HFONT createMessageFont();
+    void applyFontToChildren(HWND hParent, HFONT font);
+    [[nodiscard]] RECT measureText(HFONT font, const std::wstring& text,
+                                   int maxWidth, bool wrap);
+    [[nodiscard]] StaticFit fitStaticText(HFONT font, const std::wstring& text,
+                                          int maxWidth, int maxLines);
+
+    // “记号 / 标签”两列按内容宽度自适应：长记号名不再被固定列宽截断。
+    void autosizePickerColumns(PickerState* st) {
+        if (!st || !::IsWindow(st->hList)) return;
+        const auto& table = notationTable();
+        int maxName = 0, maxTags = 0;
+        for (int idx : st->shown) {
+            const NotationEntry& e = table[idx];
+            maxName = std::max(maxName, static_cast<int>(
+                measureText(st->font, std::wstring(e.display_name), 0, false).right));
+            maxTags = std::max(maxTags, static_cast<int>(
+                measureText(st->font, joinTags(e), 0, false).right));
+        }
+        RECT lr{}; ::GetClientRect(st->hList, &lr);
+        const int listW = std::max(static_cast<int>(lr.right), 300);
+        const int usable = listW - ::GetSystemMetrics(SM_CXVSCROLL) - 4;
+        int nameW = std::min(maxName + 24, 300);
+        if (nameW < 140) nameW = 140;
+        int tagsW = usable - nameW;               // 默认撑满列表剩余宽度
+        if (tagsW < maxTags + 24) tagsW = maxTags + 24;  // 标签更长就让列表横向滚动
+        ::SendMessageW(st->hList, LVM_SETCOLUMNWIDTH, 0, nameW);
+        ::SendMessageW(st->hList, LVM_SETCOLUMNWIDTH, 1, tagsW);
     }
 
     void refreshPickerList(PickerState* st) {
@@ -307,6 +344,8 @@ namespace {
         std::wstring status = L"匹配 " + std::to_wstring(st->shown.size()) +
             L" / " + std::to_wstring(table.size()) + L" 个记号";
         ::SetWindowTextW(st->hStatus, status.c_str());
+
+        autosizePickerColumns(st);
     }
 
     void acceptPicker(HWND hwnd) {
@@ -334,7 +373,9 @@ namespace {
 
             HINSTANCE hInst = cs->hInstance;
 
-            ::CreateWindowExW(0, L"STATIC", L"搜索:",
+            st->font = createMessageFont();
+
+            st->hLabelSearch = ::CreateWindowExW(0, L"STATIC", L"搜索:",
                 WS_CHILD | WS_VISIBLE | SS_LEFT,
                 12, 14, 42, 18, hwnd, nullptr, hInst, nullptr);
 
@@ -384,6 +425,17 @@ namespace {
                 reinterpret_cast<HMENU>(static_cast<UINT_PTR>(IDCANCEL)),
                 hInst, nullptr);
 
+            // 字体统一后再摆“搜索:”和搜索框，输入框右缘与列表对齐
+            applyFontToChildren(hwnd, st->font);
+            {
+                const StaticFit f = fitStaticText(st->font, L"搜索:", 120, 1);
+                ::MoveWindow(st->hLabelSearch, 12,
+                    14 + (22 - f.height) / 2, f.width, f.height, TRUE);
+                const int editX = 12 + f.width + 6;
+                const int editW = std::max(200, 548 - editX);
+                ::MoveWindow(st->hSearch, editX, 10, editW, 22, TRUE);
+            }
+
             refreshPickerList(st);
             break;
         }
@@ -420,10 +472,13 @@ namespace {
         case WM_CLOSE:
             ::DestroyWindow(hwnd);
             break;
-        case WM_DESTROY:
-            delete getPicker(hwnd);
+        case WM_DESTROY: {
+            PickerState* st = getPicker(hwnd);
+            if (st && st->font) ::DeleteObject(st->font);
+            delete st;
             ::SetWindowLongPtrW(hwnd, GWLP_USERDATA, 0);
             break;
+        }
         default:
             return ::DefWindowProcW(hwnd, msg, wParam, lParam);
         }
@@ -484,23 +539,169 @@ namespace {
         return result;
     }
 
+    // ——— 窗体文本自适应 ———
+    // 统一给子控件设系统“消息字体”：测量文字用的字体与控件实际绘制用的字体
+    // 完全一致，自适应宽度/折行才有意义（不设字体时控件用系统字体，量出来会偏小）。
+    [[nodiscard]] HFONT createMessageFont() {
+        LOGFONTW lf{};
+        NONCLIENTMETRICSW ncm{};
+        ncm.cbSize = sizeof(ncm);
+        if (::SystemParametersInfoW(SPI_GETNONCLIENTMETRICS, sizeof(ncm), &ncm, 0)) {
+            lf = ncm.lfMessageFont;
+        }
+        else {
+            HFONT stock = static_cast<HFONT>(::GetStockObject(DEFAULT_GUI_FONT));
+            ::GetObjectW(stock, sizeof(lf), &lf);
+        }
+        if (lf.lfHeight == 0) lf.lfHeight = -12;
+        if (lf.lfFaceName[0] == L'\0')
+            ::lstrcpyW(lf.lfFaceName, L"Microsoft YaHei UI");
+        lf.lfCharSet = DEFAULT_CHARSET;
+        return ::CreateFontIndirectW(&lf);
+    }
+
+    void applyFontToChildren(HWND hParent, HFONT font) {
+        if (!font) return;
+        ::EnumChildWindows(hParent, [](HWND hChild, LPARAM lp) -> BOOL {
+            ::SendMessageW(hChild, WM_SETFONT, static_cast<WPARAM>(lp), TRUE);
+            return TRUE;
+        }, reinterpret_cast<LPARAM>(font));
+    }
+
+    [[nodiscard]] int fontLineHeight(HFONT font) {
+        HFONT use = font ? font
+            : static_cast<HFONT>(::GetStockObject(DEFAULT_GUI_FONT));
+        HDC hdc = ::GetDC(nullptr);
+        HFONT old = static_cast<HFONT>(::SelectObject(hdc, use));
+        TEXTMETRICW tm{};
+        ::GetTextMetricsW(hdc, &tm);
+        ::SelectObject(hdc, old);
+        ::ReleaseDC(nullptr, hdc);
+        const int lh = tm.tmHeight + tm.tmExternalLeading;
+        return lh > 0 ? lh : 16;
+    }
+
+    // 量文字：wrap=false 量单行宽度（maxWidth 忽略），wrap=true 按 maxWidth 折行量高度。
+    [[nodiscard]] RECT measureText(HFONT font, const std::wstring& text,
+                                   int maxWidth, bool wrap) {
+        RECT r{};
+        if (text.empty()) return r;
+        r.right = wrap ? maxWidth : 0;
+        HFONT use = font ? font
+            : static_cast<HFONT>(::GetStockObject(DEFAULT_GUI_FONT));
+        HDC hdc = ::GetDC(nullptr);
+        HFONT old = static_cast<HFONT>(::SelectObject(hdc, use));
+        const UINT flags = DT_NOPREFIX | DT_CALCRECT |
+            (wrap ? DT_WORDBREAK : DT_SINGLELINE);
+        ::DrawTextW(hdc, text.c_str(), static_cast<int>(text.size()), &r, flags);
+        ::SelectObject(hdc, old);
+        ::ReleaseDC(nullptr, hdc);
+        if (r.right < r.left) r.right = r.left;
+        if (r.bottom < r.top) r.bottom = r.top;
+        return r;
+    }
+
+    // StaticFit 的定义已前置到本文件“前置声明”一段，这里不再重复定义。
+
+    // 给 STATIC 找一个装得下文字的尺寸：先试单行，超宽就按 maxWidth 折行，
+    // 折行数超过 maxLines 时按 maxLines 截断并标记 clipped。
+    [[nodiscard]] StaticFit fitStaticText(HFONT font, const std::wstring& text,
+                                          int maxWidth, int maxLines) {
+        const int lh = fontLineHeight(font);
+        StaticFit fit{};
+        fit.height = lh + 4;
+        fit.width = maxWidth;
+        if (text.empty() || maxWidth <= 0) return fit;
+
+        const int needW = static_cast<int>(measureText(font, text, 0, false).right) + 8;
+        if (needW <= maxWidth) {
+            fit.width = needW > 8 ? needW : 8;
+            return fit;
+        }
+
+        const int boxH = static_cast<int>(
+            measureText(font, text, maxWidth, true).bottom);
+        int lines = (boxH + lh - 1) / lh;
+        if (lines < 1) lines = 1;
+        if (lines > maxLines) {
+            lines = maxLines;
+            fit.clipped = true;
+        }
+        fit.lines = lines;
+        fit.height = lines * lh + 4;
+        return fit;
+    }
+
+    // ——— 悬停提示：文字仍被裁掉时鼠标移上去看全文 ———
+    [[nodiscard]] HWND createTipWindow(HWND hParent) {
+        return ::CreateWindowExW(WS_EX_TOPMOST, TOOLTIPS_CLASSW, nullptr,
+            WS_POPUP | TTS_ALWAYSTIP | TTS_NOPREFIX,
+            CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT,
+            hParent, nullptr, ::GetModuleHandleW(nullptr), nullptr);
+    }
+
+    // 给控件挂提示并写入完整文字；没挂过的自动挂上。
+    void tipSetText(HWND hTip, HWND hParent, HWND hCtl, const std::wstring& text) {
+        if (!hTip || !::IsWindow(hCtl)) return;
+        TOOLINFOW ti{};
+        ti.cbSize = sizeof(ti);
+        ti.uFlags = TTF_IDISHWND | TTF_SUBCLASS;
+        ti.hwnd = hParent;
+        ti.uId = reinterpret_cast<UINT_PTR>(hCtl);
+        ti.lpszText = const_cast<wchar_t*>(text.c_str());
+        if (::SendMessageW(hTip, TTM_UPDATETIPTEXTW, 0,
+                reinterpret_cast<LPARAM>(&ti)) == 0) {
+            ::SendMessageW(hTip, TTM_ADDTOOLW, 0, reinterpret_cast<LPARAM>(&ti));
+        }
+    }
+
+    // 按客户区尺寸反推窗体尺寸（边框与菜单都算进去），让窗体贴着内容长/缩。
+    void resizeClientArea(HWND hwnd, int clientW, int clientH) {
+        RECT cr{}; ::GetClientRect(hwnd, &cr);
+        if (static_cast<int>(cr.right) == clientW &&
+            static_cast<int>(cr.bottom) == clientH) return;
+        RECT r{ 0, 0, clientW, clientH };
+        const DWORD style = static_cast<DWORD>(
+            ::GetWindowLongPtrW(hwnd, GWL_STYLE));
+        const DWORD exStyle = static_cast<DWORD>(
+            ::GetWindowLongPtrW(hwnd, GWL_EXSTYLE));
+        ::AdjustWindowRectEx(&r, style, ::GetMenu(hwnd) != nullptr, exStyle);
+        ::SetWindowPos(hwnd, nullptr, 0, 0, r.right - r.left, r.bottom - r.top,
+            SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE);
+    }
+
     struct IconStrip;
 
     struct UiState {
         HWND hEditSeq{};
         HWND hEditTerm{};
-        HWND hBtnFS{};
-        HWND hBtnFSalter{};
+        HWND hBtnExpand{};
         HWND hBtnNotation{};
-        HWND hNotationLabel{};
+        HWND hNotationLabel{};  // 记号全名（含标签），太长时折行
         HWND hStaticParam{};
         HWND hEditParam{};
+        HWND hLabelSeq{};       // “序列 (用逗号分隔):”
+        HWND hLabelTerm{};      // “项数:”
+        HWND hLabelNotation{};  // “记号:”
+        HWND hTip{};            // 悬停提示（文字被裁时看全文）
+        HFONT font{};
+        std::wstring notationText;  // hNotationLabel 的完整文字
+        std::wstring paramText;     // hStaticParam 的完整文字
+        bool paramVisible = false;
         int notation_index = 0;
         IconStrip* icons{};
         BrushPtr background;
     };
 
-    void updateNotationLabel(UiState* ui) {
+    constexpr int kMainClientW = 420;  // 主窗体客户区宽度（高度随内容自适应）
+    constexpr int kMainPad = 10;
+    constexpr int kRowGap = 8;
+    constexpr int kEditH = 24;
+    constexpr int kBtnH = 26;
+
+    void layoutMainUi(HWND hwnd, UiState* ui);
+
+    void updateNotationLabel(HWND hwnd, UiState* ui) {
         const auto& table = notationTable();
         int idx = ui->notation_index;
         if (idx < 0 || idx >= static_cast<int>(table.size())) idx = 0;
@@ -512,18 +713,92 @@ namespace {
             label += tags;
             label += L"]";
         }
-        ::SetWindowTextW(ui->hNotationLabel, label.c_str());
+        ui->notationText = std::move(label);
+        ::SetWindowTextW(ui->hNotationLabel, ui->notationText.c_str());
+        tipSetText(ui->hTip, hwnd, ui->hNotationLabel, ui->notationText);
         if (ui->hStaticParam && ui->hEditParam) {
-            const bool hasParam = (e.expand_text_n != nullptr);
-            const int show = hasParam ? SW_SHOW : SW_HIDE;
+            ui->paramVisible = (e.expand_text_n != nullptr);
+            const int show = ui->paramVisible ? SW_SHOW : SW_HIDE;
             ::ShowWindow(ui->hStaticParam, show);
             ::ShowWindow(ui->hEditParam, show);
-            if (hasParam) {
-                ::SetWindowTextW(ui->hStaticParam, e.param_label);
+            if (ui->paramVisible) {
+                ui->paramText = e.param_label;
+                ::SetWindowTextW(ui->hStaticParam, ui->paramText.c_str());
                 ::SetWindowTextW(ui->hEditParam,
                     std::to_wstring(e.param_default).c_str());
+                tipSetText(ui->hTip, hwnd, ui->hStaticParam, ui->paramText);
             }
         }
+        layoutMainUi(hwnd, ui);
+    }
+
+    // 主窗体纵向流水布局：每一行的纵向位置由上几行的实际高度决定，
+    // 长文字（记号全名、参数标签）折行显示，窗体高度随内容一起长/缩，
+    // 这样任何一行变高都不会压到下一行，也不会被裁掉。
+    void layoutMainUi(HWND hwnd, UiState* ui) {
+        if (!ui || !::IsWindow(hwnd)) return;
+        constexpr int kW = kMainClientW - 2 * kMainPad;
+
+        int y = kMainPad;
+
+        // 行 1：“序列 (用逗号分隔):”
+        {
+            const StaticFit f =
+                fitStaticText(ui->font, L"序列 (用逗号分隔):", kW, 1);
+            ::MoveWindow(ui->hLabelSeq, kMainPad, y, f.width, f.height, TRUE);
+            y += f.height + 4;
+        }
+        // 行 2：序列输入框（占满内容宽度）
+        ::MoveWindow(ui->hEditSeq, kMainPad, y, kW, kEditH, TRUE);
+        y += kEditH + kRowGap;
+
+        // 行 3：“项数:” + 项数框 +（有参数记号才有的）“n (0-25):” + 参数框
+        {
+            const StaticFit fLab = fitStaticText(ui->font, L"项数:", 120, 1);
+            ::MoveWindow(ui->hLabelTerm, kMainPad,
+                y + (kEditH - fLab.height) / 2, fLab.width, fLab.height, TRUE);
+            int x = kMainPad + fLab.width + 6;
+            ::MoveWindow(ui->hEditTerm, x, y, 64, kEditH, TRUE);
+            x += 64 + 12;
+            if (ui->paramVisible) {
+                // 参数标签最宽占到“剩余宽度减去参数框”，超长就折行（最多 2 行）
+                const int maxLabelW =
+                    (std::max)(60, kW - (x - kMainPad) - 6 - 64);
+                const StaticFit fParam =
+                    fitStaticText(ui->font, ui->paramText, maxLabelW, 2);
+                ::MoveWindow(ui->hStaticParam, x,
+                    y + (kEditH - fParam.height) / 2, fParam.width, fParam.height,
+                    TRUE);
+                x += fParam.width + 6;
+                ::MoveWindow(ui->hEditParam, x, y, 64, kEditH, TRUE);
+            }
+            y += kEditH + kRowGap;
+        }
+
+        // 行 4：“记号:” + “选择记号…”按钮
+        {
+            const StaticFit fLab = fitStaticText(ui->font, L"记号:", 120, 1);
+            ::MoveWindow(ui->hLabelNotation, kMainPad,
+                y + (kBtnH - fLab.height) / 2, fLab.width, fLab.height, TRUE);
+            ::MoveWindow(ui->hBtnNotation, kMainPad + fLab.width + 6, y,
+                104, kBtnH, TRUE);
+            y += kBtnH + kRowGap;
+        }
+
+        // 行 5：记号全名（窄了就自动折行，最多 3 行；再长也有悬停提示兜底）
+        {
+            const StaticFit fName =
+                fitStaticText(ui->font, ui->notationText, kW, 3);
+            const int w = fName.lines > 1 ? kW : fName.width;
+            ::MoveWindow(ui->hNotationLabel, kMainPad, y, w, fName.height, TRUE);
+            y += fName.height + 10;
+        }
+
+        // 行 6：“展开”大按钮 + 底部留白
+        ::MoveWindow(ui->hBtnExpand, kMainPad, y, kW, 34, TRUE);
+        y += 34 + kMainPad;
+
+        resizeClientArea(hwnd, kMainClientW, y);
     }
 
     [[nodiscard]] UiState* getUi(HWND h) {
@@ -1218,11 +1493,14 @@ namespace {
         return s;
     }
 
+    // 释放图标条持有的 GDI 对象，并回收 createIconStrip 分配的 IconStrip 本身。
+    // 调用方只在窗口 WM_DESTROY 里调用一次，之后不再使用该指针。
     void destroyIconStrip(IconStrip* s) {
         if (!s) return;
         if (s->hIcoExpander) ::DestroyIcon(s->hIcoExpander);
         if (s->hIcoMfc)     ::DestroyIcon(s->hIcoMfc);
         if (s->hBmpNamePic) ::DeleteObject(s->hBmpNamePic);
+        delete s;
     }
 
     struct TranslatorState {
@@ -1231,12 +1509,22 @@ namespace {
         HWND hOutput{};   // 输出（目标记号表达式，只读 RichEdit）
         HWND hBtn{};      // “互译”按钮
         HWND hStatus{};   // 状态栏
-        HWND hDesc{};     // 互译器说明
-        HWND hDir{};      // 方向（源 → 目标）
+        HWND hDesc{};     // 互译器说明（长文字自动折行）
+        HWND hDir{};      // 方向（源 → 目标，长文字自动折行）
+        HWND hLabelTranslator{}; // “互译器:”
+        HWND hLabelInput{};      // “输入 (源记号表达式):”
+        HWND hLabelOutput{};     // “输出 (目标记号表达式):”
+        HWND hTip{};             // 悬停提示（文字被裁时看全文）
+        HFONT font{};
+        std::wstring dirText;    // 方向的完整文字
+        std::wstring descText;   // 说明的完整文字
         IconStrip* icons{}; // 顶部图标条（Expander.ico + MFC.ico）
         BrushPtr background;
         int index = 0;    // 当前选中的互译器表索引
     };
+
+    constexpr int kTranslatorClientW = 420;  // 互译器窗体客户区宽度
+    constexpr int kTranslatorOutH = 240;     // 输出 RichEdit 高度
 
     [[nodiscard]] TranslatorState* getTranslator(HWND h) {
         return reinterpret_cast<TranslatorState*>(::GetWindowLongPtrW(h, GWLP_USERDATA));
@@ -1250,13 +1538,81 @@ namespace {
         return table[idx];
     }
 
+    void layoutTranslatorUi(HWND hwnd, TranslatorState* st) {
+        if (!st || !::IsWindow(hwnd)) return;
+        constexpr int kW = kTranslatorClientW - 2 * kMainPad;
+
+        int y = kMainPad;
+
+        // 行 1：“互译器:” + 下拉列表（列表高度是展开后的高度，收起高度由字体决定）
+        {
+            const StaticFit f = fitStaticText(st->font, L"互译器:", 120, 1);
+            ::MoveWindow(st->hLabelTranslator, kMainPad,
+                y + (kEditH - f.height) / 2, f.width, f.height, TRUE);
+            const int x = kMainPad + f.width + 6;
+            ::MoveWindow(st->hCombo, x, y, kW - (x - kMainPad), 220, TRUE);
+            y += kEditH + kRowGap;
+        }
+
+        // 行 2：方向“源 → 目标”，装不下就折行（最多 2 行）
+        {
+            const StaticFit f = fitStaticText(st->font, st->dirText, kW, 2);
+            const int w = f.lines > 1 ? kW : f.width;
+            ::MoveWindow(st->hDir, kMainPad, y, w, f.height, TRUE);
+            y += f.height + 4;
+        }
+
+        // 行 3：互译器说明，多行折行（最多 4 行，再长有悬停提示）
+        {
+            const StaticFit f = fitStaticText(st->font, st->descText, kW, 4);
+            ::MoveWindow(st->hDesc, kMainPad, y, kW, f.height, TRUE);
+            y += f.height + kRowGap;
+        }
+
+        // 行 4：“输入 (源记号表达式):” + 输入框
+        {
+            const StaticFit f =
+                fitStaticText(st->font, L"输入 (源记号表达式):", kW, 1);
+            ::MoveWindow(st->hLabelInput, kMainPad, y, f.width, f.height, TRUE);
+            y += f.height + 4;
+            ::MoveWindow(st->hInput, kMainPad, y, kW, kEditH, TRUE);
+            y += kEditH + kRowGap;
+        }
+
+        // 行 5：“互译”按钮 + 状态文字（状态占按钮右侧剩余宽度）
+        {
+            constexpr int kBtnHeight = 28;
+            ::MoveWindow(st->hBtn, kMainPad, y, 90, kBtnHeight, TRUE);
+            const StaticFit f = fitStaticText(st->font, L"互译完成：", kW, 1);
+            ::MoveWindow(st->hStatus, kMainPad + 90 + 10,
+                y + (kBtnHeight - f.height) / 2, kW - 100, f.height, TRUE);
+            y += kBtnHeight + kRowGap + 2;
+        }
+
+        // 行 6：“输出 (目标记号表达式):” + 输出框
+        {
+            const StaticFit f =
+                fitStaticText(st->font, L"输出 (目标记号表达式):", kW, 1);
+            ::MoveWindow(st->hLabelOutput, kMainPad, y, f.width, f.height, TRUE);
+            y += f.height + 4;
+            ::MoveWindow(st->hOutput, kMainPad, y, kW, kTranslatorOutH, TRUE);
+            y += kTranslatorOutH + kMainPad;
+        }
+
+        resizeClientArea(hwnd, kTranslatorClientW, y);
+    }
+
     void updateTranslatorUI(HWND hwnd, TranslatorState* st) {
         const auto& e = currentTranslator(st);
-        std::wstring dir = e.source;
-        dir += L"  →  ";
-        dir += e.target;
-        ::SetWindowTextW(st->hDir, dir.c_str());
-        ::SetWindowTextW(st->hDesc, e.description);
+        st->dirText = e.source;
+        st->dirText += L"  →  ";
+        st->dirText += e.target;
+        st->descText = e.description;
+        ::SetWindowTextW(st->hDir, st->dirText.c_str());
+        ::SetWindowTextW(st->hDesc, st->descText.c_str());
+        tipSetText(st->hTip, hwnd, st->hDir, st->dirText);
+        tipSetText(st->hTip, hwnd, st->hDesc, st->descText);
+        layoutTranslatorUi(hwnd, st);
     }
 
     void runTranslator(HWND hwnd, TranslatorState* st) {
@@ -1293,62 +1649,63 @@ namespace {
 
             HINSTANCE hInst = cs->hInstance;
 
-            // 不再显示顶部图标条，ty 直接从 10 开始。
+            // 不再显示顶部图标条；控件先按 0 尺寸创建，位置交给 layoutTranslatorUi。
             st->icons = nullptr;
-            constexpr int ty = 10;
-            constexpr int outH = 240; // 输出 RichEdit 高度
-            // 互译器窗口 400×500：客户区宽约 370，内容宽度取 350。
-            constexpr int kW = 350;
+            st->font = createMessageFont();
 
-            ::CreateWindowExW(0, L"STATIC", L"互译器:",
+            st->hLabelTranslator = ::CreateWindowExW(0, L"STATIC", L"互译器:",
                 WS_CHILD | WS_VISIBLE | SS_LEFT,
-                10, ty + 14, 56, 18, hwnd, nullptr, hInst, nullptr);
+                0, 0, 0, 0, hwnd, nullptr, hInst, nullptr);
 
             st->hCombo = ::CreateWindowExW(0, WC_COMBOBOXW, L"",
                 WS_CHILD | WS_VISIBLE | WS_TABSTOP | CBS_DROPDOWNLIST | WS_VSCROLL,
-                66, ty + 10, 170, 220, hwnd,
+                0, 0, 0, 0, hwnd,
                 reinterpret_cast<HMENU>(static_cast<UINT_PTR>(IDC_TRANSLATOR_COMBO)),
                 hInst, nullptr);
 
+            // 方向与说明都用 SS_LEFT 自动折行，高度由布局按行数算
             st->hDir = ::CreateWindowExW(0, L"STATIC", L"",
                 WS_CHILD | WS_VISIBLE | SS_LEFT,
-                244, ty + 14, 116, 18, hwnd, nullptr, hInst, nullptr);
+                0, 0, 0, 0, hwnd, nullptr, hInst, nullptr);
 
             st->hDesc = ::CreateWindowExW(0, L"STATIC", L"",
                 WS_CHILD | WS_VISIBLE | SS_LEFT,
-                10, ty + 38, kW, 40, hwnd, nullptr, hInst, nullptr);
+                0, 0, 0, 0, hwnd, nullptr, hInst, nullptr);
 
-            ::CreateWindowExW(0, L"STATIC", L"输入 (源记号表达式):",
+            st->hLabelInput = ::CreateWindowExW(0, L"STATIC", L"输入 (源记号表达式):",
                 WS_CHILD | WS_VISIBLE | SS_LEFT,
-                10, ty + 84, 300, 18, hwnd, nullptr, hInst, nullptr);
+                0, 0, 0, 0, hwnd, nullptr, hInst, nullptr);
 
             st->hInput = ::CreateWindowExW(0, L"EDIT", L"",
                 WS_CHILD | WS_VISIBLE | WS_BORDER | WS_TABSTOP |
                 ES_LEFT | ES_AUTOHSCROLL,
-                10, ty + 104, kW, 24, hwnd,
+                0, 0, 0, 0, hwnd,
                 reinterpret_cast<HMENU>(static_cast<UINT_PTR>(IDC_TRANSLATOR_INPUT)),
                 hInst, nullptr);
 
             st->hBtn = ::CreateWindowExW(0, L"BUTTON", L"互译",
                 WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_DEFPUSHBUTTON,
-                10, ty + 138, 90, 28, hwnd,
+                0, 0, 0, 0, hwnd,
                 reinterpret_cast<HMENU>(static_cast<UINT_PTR>(IDC_TRANSLATOR_BTN)),
                 hInst, nullptr);
 
             st->hStatus = ::CreateWindowExW(0, L"STATIC", L"",
                 WS_CHILD | WS_VISIBLE | SS_LEFT,
-                110, ty + 144, 250, 22, hwnd, nullptr, hInst, nullptr);
+                0, 0, 0, 0, hwnd, nullptr, hInst, nullptr);
 
-            ::CreateWindowExW(0, L"STATIC", L"输出 (目标记号表达式):",
+            st->hLabelOutput = ::CreateWindowExW(0, L"STATIC", L"输出 (目标记号表达式):",
                 WS_CHILD | WS_VISIBLE | SS_LEFT,
-                10, ty + 180, 300, 18, hwnd, nullptr, hInst, nullptr);
+                0, 0, 0, 0, hwnd, nullptr, hInst, nullptr);
 
             st->hOutput = ::CreateWindowExW(0, MSFTEDIT_CLASS, L"",
                 WS_CHILD | WS_VISIBLE | WS_BORDER | WS_VSCROLL | WS_HSCROLL |
                 ES_MULTILINE | ES_READONLY | ES_AUTOVSCROLL | ES_AUTOHSCROLL,
-                10, ty + 200, kW, outH, hwnd,
+                0, 0, 0, 0, hwnd,
                 reinterpret_cast<HMENU>(static_cast<UINT_PTR>(IDC_TRANSLATOR_OUTPUT)),
                 hInst, nullptr);
+
+            applyFontToChildren(hwnd, st->font);
+            st->hTip = createTipWindow(hwnd);
             const auto& table = translatorTable();
             for (const auto& t : table)
                 ::SendMessageW(st->hCombo, CB_ADDSTRING, 0,
@@ -1397,9 +1754,12 @@ namespace {
         case WM_DESTROY:
             {
                 TranslatorState* st = getTranslator(hwnd);
-                if (st) destroyIconStrip(st->icons);
+                if (st) {
+                    destroyIconStrip(st->icons);
+                    if (st->font) ::DeleteObject(st->font);
+                }
+                delete st;
             }
-            delete getTranslator(hwnd);
             ::SetWindowLongPtrW(hwnd, GWLP_USERDATA, 0);
             g_hTranslatorWindow = nullptr;
             break;
@@ -1647,61 +2007,62 @@ namespace {
             HINSTANCE hInst = reinterpret_cast<HINSTANCE>(
                 ::GetWindowLongPtrW(hwnd, GWLP_HINSTANCE));
             ui->icons = nullptr;
-            constexpr int mh = 10;
-            constexpr int kW = 360;
+            ui->font = createMessageFont();
 
-            ::CreateWindowExW(0, L"STATIC", L"序列 (用逗号分隔):",
+            // 控件先按 0 尺寸建出来，统一交给 layoutMainUi 摆放：
+            // 位置/高度都由文字实际占用的行数算出来，长文字折行也不会重叠。
+            ui->hLabelSeq = ::CreateWindowExW(0, L"STATIC", L"序列 (用逗号分隔):",
                 WS_CHILD | WS_VISIBLE | SS_LEFT,
-                10, mh + 10, 150, 20,
-                hwnd, nullptr, hInst, nullptr);
+                0, 0, 0, 0, hwnd, nullptr, hInst, nullptr);
 
             ui->hEditSeq = ::CreateWindowExW(0, L"EDIT", L"",
-                WS_CHILD | WS_VISIBLE | WS_BORDER | ES_LEFT,
-                10, mh + 32, kW, 24,
-                hwnd, nullptr, hInst, nullptr);
+                WS_CHILD | WS_VISIBLE | WS_BORDER | ES_LEFT | ES_AUTOHSCROLL,
+                0, 0, 0, 0, hwnd, nullptr, hInst, nullptr);
 
-            ::CreateWindowExW(0, L"STATIC", L"项数:",
+            ui->hLabelTerm = ::CreateWindowExW(0, L"STATIC", L"项数:",
                 WS_CHILD | WS_VISIBLE | SS_LEFT,
-                10, mh + 72, 50, 20,
-                hwnd, nullptr, hInst, nullptr);
+                0, 0, 0, 0, hwnd, nullptr, hInst, nullptr);
 
             ui->hEditTerm = ::CreateWindowExW(0, L"EDIT", L"1",
-                WS_CHILD | WS_VISIBLE | WS_BORDER | ES_LEFT,
-                60, mh + 72, 70, 24,
-                hwnd, nullptr, hInst, nullptr);
+                WS_CHILD | WS_VISIBLE | WS_BORDER | ES_LEFT | ES_AUTOHSCROLL,
+                0, 0, 0, 0, hwnd, nullptr, hInst, nullptr);
+
+            // 参数标签/参数框：没有参数参数的记号会被 updateNotationLabel 隐藏
             ui->hStaticParam = ::CreateWindowExW(0, L"STATIC", L"",
                 WS_CHILD | SS_LEFT,
-                140, mh + 72, 80, 20,
-                hwnd, nullptr, hInst, nullptr);
-            ui->hEditParam = ::CreateWindowExW(0, L"EDIT", L"",
-                WS_CHILD | WS_BORDER | ES_LEFT,
-                225, mh + 72, 55, 24,
-                hwnd, nullptr, hInst, nullptr);
+                0, 0, 0, 0, hwnd, nullptr, hInst, nullptr);
 
-            ::CreateWindowExW(0, L"STATIC", L"记号:",
+            ui->hEditParam = ::CreateWindowExW(0, L"EDIT", L"",
+                WS_CHILD | WS_BORDER | ES_LEFT | ES_AUTOHSCROLL,
+                0, 0, 0, 0, hwnd, nullptr, hInst, nullptr);
+
+            ui->hLabelNotation = ::CreateWindowExW(0, L"STATIC", L"记号:",
                 WS_CHILD | WS_VISIBLE | SS_LEFT,
-                10, mh + 112, 50, 20,
-                hwnd, nullptr, hInst, nullptr);
+                0, 0, 0, 0, hwnd, nullptr, hInst, nullptr);
 
             ui->hBtnNotation = ::CreateWindowExW(0, L"BUTTON", L"选择记号…",
                 WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_PUSHBUTTON,
-                60, mh + 110, 90, 26,
-                hwnd,
+                0, 0, 0, 0, hwnd,
                 reinterpret_cast<HMENU>(static_cast<UINT_PTR>(IDC_NOTATION_BTN)),
                 hInst, nullptr);
 
+            // 记号全名用 SS_LEFT 的自动折行，宽度交给布局算
             ui->hNotationLabel = ::CreateWindowExW(0, L"STATIC", L"",
                 WS_CHILD | WS_VISIBLE | SS_LEFT,
-                160, mh + 114, 210, 20,
-                hwnd, nullptr, hInst, nullptr);
-            updateNotationLabel(ui);
+                0, 0, 0, 0, hwnd, nullptr, hInst, nullptr);
 
-            ui->hBtnFSalter = ::CreateWindowExW(0, L"BUTTON", L"展开",
+            ui->hBtnExpand = ::CreateWindowExW(0, L"BUTTON", L"展开",
                 WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
-                10, mh + 175, kW, 34,
-                hwnd,
-                reinterpret_cast<HMENU>(static_cast<UINT_PTR>(IDM_FSALTER)),
+                0, 0, 0, 0, hwnd,
+                reinterpret_cast<HMENU>(static_cast<UINT_PTR>(IDM_EXPAND)),
                 hInst, nullptr);
+
+            // 统一的字体 + 已建控件全部用上，再算一遍文字尺寸
+            applyFontToChildren(hwnd, ui->font);
+            ui->hTip = createTipWindow(hwnd);
+            tipSetText(ui->hTip, hwnd, ui->hNotationLabel, ui->notationText);
+            tipSetText(ui->hTip, hwnd, ui->hStaticParam, ui->paramText);
+            updateNotationLabel(hwnd, ui);
 
             break;
         }
@@ -1746,7 +2107,7 @@ namespace {
                 const int sel = showNotationPicker(hInst, hwnd, ui->notation_index);
                 if (sel >= 0 && sel < static_cast<int>(table.size())) {
                     ui->notation_index = sel;
-                    updateNotationLabel(ui);
+                    updateNotationLabel(hwnd, ui);
                 }
                 break;
             }
@@ -1804,17 +2165,12 @@ namespace {
                 showEntryDemo(hwnd, ui);
                 break;*/
 
-            case IDM_FS:
-            case IDM_FSALTER: {
+            case IDM_EXPAND: {
                 int sel = ui->notation_index;
                 if (sel < 0 || sel >= static_cast<int>(table.size())) sel = 0;
                 const NotationEntry& entry = table[sel];
 
                 std::string text;
-
-                const omegay::notation::ExpandMode mode =
-                    (id == IDM_FSALTER) ? omegay::notation::ExpandMode::FsAlter
-                                        : omegay::notation::ExpandMode::Fs;
 
                 if (entry.notation->has_text()) {
                     wchar_t bufSeq[512]{};
@@ -1844,7 +2200,7 @@ namespace {
                     }
 
                     omegay::notation::ExpandResult r =
-                        entry.notation->expand(mode, utf8Seq, term, 0);
+                        entry.notation->expand(utf8Seq, term, 0);
                     if (!r.ok) {
                         ::MessageBoxW(hwnd, utf8_to_wstring(r.err).c_str(), L"错误",
                             MB_OK | MB_ICONERROR);
@@ -1894,7 +2250,7 @@ namespace {
                         break;
                     }
                     omegay::notation::ExpandResult r =
-                        entry.notation->expand(mode, utf8Seq, term, param);
+                        entry.notation->expand(utf8Seq, term, param);
                     if (!r.ok) {
                         ::MessageBoxW(hwnd, utf8_to_wstring(r.err).c_str(), L"错误",
                             MB_OK | MB_ICONERROR);
@@ -1909,7 +2265,7 @@ namespace {
                     wchar_t bufSeq[256]{};
                     ::GetWindowTextW(ui->hEditSeq, bufSeq, 256);
                     omegay::notation::ExpandResult r = entry.notation->expand(
-                        mode, wstring_to_utf8(bufSeq), term, 0);
+                        wstring_to_utf8(bufSeq), term, 0);
                     if (!r.ok) {
                         ::MessageBoxW(hwnd, utf8_to_wstring(r.err).c_str(), L"错误",
                             MB_OK | MB_ICONERROR);
@@ -1934,8 +2290,11 @@ namespace {
         }
         case WM_DESTROY: {
             UiState* ui = getUi(hwnd);
-            if (ui) destroyIconStrip(ui->icons);
-            delete getUi(hwnd);
+            if (ui) {
+                destroyIconStrip(ui->icons);
+                if (ui->font) ::DeleteObject(ui->font);
+            }
+            delete ui;
             ::SetWindowLongPtrW(hwnd, GWLP_USERDATA, 0);
             ::PostQuitMessage(0);
             break;

@@ -1,5 +1,7 @@
 
 #pragma once
+
+#include "notation_base.hpp"
 #include <cstddef>
 #include <deque>
 #include <string>
@@ -732,11 +734,8 @@ namespace omegay::notation {
         }
     }  // namespace xy_v3_detail
 
-    struct XYV3Notation {
+    struct XYV3Notation : NotationBase {
         static constexpr const char* kName = "X-Y V3";  // UTF-8
-        [[nodiscard]] static std::string suffix() {
-            return {};
-        }
         [[nodiscard]] static std::vector<int> expand(const std::vector<int>& seq,
             int term) {
             return xy_v3_detail::expand_entry(seq, term);

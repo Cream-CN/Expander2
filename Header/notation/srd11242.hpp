@@ -1,5 +1,7 @@
 #pragma once
 
+#include "notation_base.hpp"
+
 #include <cctype>
 #include <cstdint>
 #include <stdexcept>
@@ -9,11 +11,10 @@
 
 namespace omegay::notation {
 
-struct SrdNotation {
+struct SrdNotation : NotationBase {
     static constexpr const char* kName = "SRD";
 
     [[nodiscard]] static std::string expand_text(std::string_view text, int term);
-    [[nodiscard]] static std::string suffix() { return {}; }
 };
 
 namespace srd_detail {
@@ -126,7 +127,7 @@ inline void check(const Expr& g) {
     for (char c : raw)
         if (!std::isspace(static_cast<unsigned char>(c))) s.push_back(c);
 
-    // 路由：Limit / Limit of SRD[PD]? / RPD0、SRD、SRPD、Top、Ω，后接若干 [n]
+    // 路由：SRD / SRPD，后接若干 [n]
     {
         std::size_t i = 0;
         auto eat = [&](const char* w) -> bool {
@@ -142,12 +143,7 @@ inline void check(const Expr& g) {
             return true;
         };
         bool route = false;
-        if (eat("Limit")) {
-            route = true;
-            if (eat("of")) {
-                if (!eat("SRD")) if (!eat("SRPD")) eat("RPD0");
-            }
-        } else if (eat("SRD") || eat("SRPD") || eat("Top") || eat("Ω")) {
+        if (eat("SRD") || eat("SRPD")) {
             route = true;
         }
         if (route) {

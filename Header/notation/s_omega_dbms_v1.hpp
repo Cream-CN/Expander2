@@ -1,6 +1,8 @@
 
 #pragma once
 
+#include "notation_base.hpp"
+
 #include <optional>
 #include <string>
 #include <string_view>
@@ -18,25 +20,17 @@ using SOmegaDbmsV1Column = std::vector<SOmegaDbmsV1Entry>;
 using SOmegaDbmsV1Expr = std::vector<SOmegaDbmsV1Column>;
 
 struct SOmegaDbmsV1Parsed {
-    bool infinity = false;
     SOmegaDbmsV1Expr expr;
 };
 
-struct SOmegaDBMSV1Notation {
+struct SOmegaDBMSV1Notation : NotationBase {
     static constexpr const char* kName = "SωDBMS v1";
 
     [[nodiscard]] static std::string expand_text(std::string_view text, int term) {
-        return expand_text_impl(text, term, /*longer=*/false);
-    }
-    [[nodiscard]] static std::string expand_text_alter(std::string_view text, int term) {
         return expand_text_impl(text, term, /*longer=*/true);
     }
-    [[nodiscard]] static std::string suffix() { return {}; }
 
     [[nodiscard]] static std::optional<SOmegaDbmsV1Parsed> parse(std::string_view s) {
-        if (s == "Limit" || s == "limit" || s == "LIMIT") {
-            return SOmegaDbmsV1Parsed{ true, {} };
-        }
         std::size_t i = 0;
         auto error = [&]() { return std::optional<SOmegaDbmsV1Parsed>{}; };
         auto skip_spaces = [&]() {
@@ -138,11 +132,10 @@ struct SOmegaDBMSV1Notation {
         }
         skip_spaces();
         if (i != s.size()) return std::nullopt;
-        return SOmegaDbmsV1Parsed{ false, std::move(result) };
+        return SOmegaDbmsV1Parsed{ std::move(result) };
     }
 
     [[nodiscard]] static std::string to_string(const SOmegaDbmsV1Parsed& p) {
-        if (p.infinity) return "Limit";
         return display(p.expr);
     }
 
@@ -294,13 +287,6 @@ private:
         return true;
     }
 
-    [[nodiscard]] static Expr infinity_fs(int index) {
-        Expr result;
-        result.emplace_back();
-        Height h(static_cast<std::size_t>(index + 1), 0);
-        result.push_back(Column{ Entry{ 0, std::move(h) } });
-        return result;
-    }
 
     [[nodiscard]] static Expr expand(const Expr& expr, int index, bool shorter) {
         if (expr.empty()) return expr;
@@ -342,7 +328,6 @@ private:
         if (!parsed) {
             return "解析失败，请确认你没有使用全角括号，逗号，分号";
         }
-        if (parsed->infinity) return display(infinity_fs(term));
         const Expr& e = parsed->expr;
         if (e.empty()) return {};
         // 值域校验：value 与行高首分量（rh 用作列索引）须在 [0, size)

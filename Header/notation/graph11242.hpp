@@ -1,5 +1,7 @@
 #pragma once
 
+#include "notation_base.hpp"
+
 #include <algorithm>
 #include <cctype>
 #include <map>
@@ -10,20 +12,17 @@
 
 namespace omegay::notation {
 
-struct RpdNotation {
+struct RpdNotation : NotationBase {
     static constexpr const char* kName = "RPD";
     [[nodiscard]] static std::string expand_text(std::string_view text, int term);
-    [[nodiscard]] static std::string suffix() { return {}; }
 };
-struct ArdNotation {
+struct ArdNotation : NotationBase {
     static constexpr const char* kName = "ARD";
     [[nodiscard]] static std::string expand_text(std::string_view text, int term);
-    [[nodiscard]] static std::string suffix() { return {}; }
 };
-struct Ard2Notation {
+struct Ard2Notation : NotationBase {
     static constexpr const char* kName = "ARD2";
     [[nodiscard]] static std::string expand_text(std::string_view text, int term);
-    [[nodiscard]] static std::string suffix() { return {}; }
 };
 
 namespace graph_detail {
@@ -34,7 +33,6 @@ struct Edge {
 enum class Kind { RPD, ARD, ARD2 };
 
 struct Graph {
-    bool isLimit = false;
     std::vector<std::vector<Edge>> cols;
 };
 
@@ -144,7 +142,6 @@ struct Budget {
 
 [[nodiscard]] inline Graph fs(Kind kind, const Graph& graph, int n, Budget& tick) {
     if (n < 0) throw std::runtime_error("需要非负整数");
-    if (graph.isLimit) return seed(kind, n);
     const int x = static_cast<int>(graph.cols.size()) - 1;
     if (x < 0) return {};
     if (n == 0 || graph.cols[x].empty()) {
@@ -209,7 +206,6 @@ struct Budget {
 }
 
 [[nodiscard]] inline std::string plain(const Graph& g) {
-    if (g.isLimit) return "Limit";
     if (g.cols.empty()) return "0";
     std::string out;
     for (const auto& col : g.cols) {
@@ -230,7 +226,7 @@ struct Budget {
     for (char ch : raw)
         if (!std::isspace(static_cast<unsigned char>(ch))) s.push_back(ch);
 
-    // 路由：Limit / Limit of (RPD|ARD|ARD2|Anchored-Rows) / Ω / Top / A<d>，后接 [n]*
+    // 路由：A<d>，后接 [n]*
     {
         std::size_t i = 0;
         auto eat = [&](const char* w) -> bool {
@@ -247,17 +243,7 @@ struct Budget {
         };
         bool route = false;
         Graph g;
-        if (eat("Limit")) {
-            route = true;
-            if (eat("of")) {
-                if (!eat("RPD"))
-                    if (!eat("ARD2")) if (!eat("ARD")) eat("Anchored-Rows");
-            }
-            g.isLimit = true;
-        } else if (eat("Ω") || eat("Top")) {
-            route = true;
-            g.isLimit = true;
-        } else if (eat("A")) {
+        if (eat("A")) {
             std::size_t b = i;
             while (i < s.size() && s[i] >= '0' && s[i] <= '9') ++i;
             if (i > b) {
@@ -294,13 +280,13 @@ struct Budget {
         int n = 0;
         for (char ch : s) n = n * 10 + (ch - '0');
         if (n < 0 || n > kWidth) throw std::runtime_error("输入过大");
-        return Graph{false, std::vector<std::vector<Edge>>(static_cast<std::size_t>(n))};
+        return Graph{std::vector<std::vector<Edge>>(static_cast<std::size_t>(n))};
     }
 
     std::vector<std::vector<Edge>> columns;
     std::size_t i = 0;
     while (i < s.size()) {
-        if (s[i] != '[') throw std::runtime_error("请输入 [(层,父列,根)] 列表或 Limit");
+        if (s[i] != '[') throw std::runtime_error("请输入 [(层,父列,根)] 列表");
         ++i;
         std::vector<Edge> col;
         while (i < s.size() && s[i] != ']') {
@@ -331,7 +317,7 @@ struct Budget {
             break;
         }
         if (i >= s.size() || s[i] != ']')
-            throw std::runtime_error("请输入 [(层,父列,根)] 列表或 Limit");
+            throw std::runtime_error("请输入 [(层,父列,根)] 列表");
         ++i;
         columns.push_back(std::move(col));
     }

@@ -1,6 +1,8 @@
 // Header/notation/gy.hpp
 #pragma once
 
+#include "notation_base.hpp"
+
 #include <vector>
 #include <string>
 #include <deque>
@@ -8,12 +10,11 @@
 
 namespace omegay::notation {
 
-    struct GYNotation {
+    struct GYNotation : NotationBase {
         static constexpr const char* kName = "G-Y";
 
         [[nodiscard]] static std::vector<int> expand(const std::vector<int>& seq, int term);
 
-        [[nodiscard]] static std::string suffix() { return ""; }
     };
 
     namespace gy_detail {

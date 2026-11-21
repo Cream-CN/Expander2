@@ -6,6 +6,8 @@
 // 提升基准也从 r 改为 r+1。这里复用 btbm_detail，只重写提升与 FS。
 #pragma once
 
+#include "notation_base.hpp"
+
 #include <algorithm>
 #include <memory>
 #include <optional>
@@ -116,7 +118,6 @@ inline Expr w_ascend_replace(const Expr& e, int start_index, int r, int diff,
 
 inline Expr w_fs(const Expr& e, int index)
 {
-    if (is_infinity(e)) return infinity_fs(index);
     if (e.cols.empty()) return e;
     const int t_layer = tail_layer(e);
     if (t_layer < 0)
@@ -217,9 +218,7 @@ inline Expr w_fs(const Expr& e, int index)
 }  // namespace btbw_detail
 
 // BTBM-weak 记号接口：仅 FS（weak 的 FS 内部直接处理后继删末列）。
-struct BTBMWeakNotation
-{
-    static std::string suffix() { return std::string{}; }
+struct BTBMWeakNotation : NotationBase {
     static std::string expand_text(std::string_view text, int term)
     {
         using namespace btbm_detail;

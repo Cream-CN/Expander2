@@ -2,15 +2,15 @@ SAω2MN
 
 SAω2MN（TS id "SA-omega2-MN"，逻辑移植自 notation-explorer 的 src/notations/MN/SMN/SA_omega2_MN.ts，家族 category-smile-mn，credit.n_mn；C++ 实现见 Header/notation/sa_omega2_mn.hpp）与 Sω2MN 同属 SMN 系列、山形骨架同构，主要区别在于条目带星号标记、S 函数与拉伸数据按标记和首元素归零判定，且前驱 subtract_1 分三条分支处理末项。
 
-表达式结构：Expr 是若干列 Column 的序列；每列是若干条目 Entry=(value, sep, mark) 的序列；value 是从 1 起的列标引用，sep 是整数向量（解析时去掉尾部 0 归一），mark 是布尔标记；竖向 Vertical 是 sep 的序列。空表达式表示 0；∞ 标志显示为 "Limit"。显示时 mark=true 的条目在列标前加 "*"；sep=(c0,c1) 先显示 c1 个分号再显示 c0 个逗号；每列包裹在一对括号中。解析只接受连续带括号的列，分隔符后可选一个 "*" 再写列标；展开前同样校验每个条目列标须落在 0 到列数范围内，非法输入返回解析失败提示。条目比较依次比较列标、sep（反字典序）、mark。
+表达式结构：Expr 是若干列 Column 的序列；每列是若干条目 Entry=(value, sep, mark) 的序列；value 是从 1 起的列标引用，sep 是整数向量（解析时去掉尾部 0 归一），mark 是布尔标记；竖向 Vertical 是 sep 的序列。空表达式表示 0；顶层 ∞（Limit）输入已按用户要求拆除。显示时 mark=true 的条目在列标前加 "*"；sep=(c0,c1) 先显示 c1 个分号再显示 c0 个逗号；每列包裹在一对括号中。解析只接受连续带括号的列，分隔符后可选一个 "*" 再写列标；展开前同样校验每个条目列标须落在 0 到列数范围内，非法输入返回解析失败提示。条目比较依次比较列标、sep（反字典序）、mark。
 
 比较规则：sep 按反字典序比较——长度不等时短者小，等长时从末元素向前逐位比较；竖向按字典序比较，元素相同则较长者大。竖向由 vertical_increase 逐条目生成；父位置 pi = value−1，pi=−1 时 pj=0，否则在父列竖向表中二分查找第一个严格小于当前竖向的位置。
 
 极限与后继：空表达式表示 0；末列为空的表达式是后继表达式，展开就是删去末列；其余非空表达式为极限表达式。
 
-∞ 的基本列：Limit[n] 展开为空列后接单条目 (value=1, sep={n, 1}, mark=false)，显示与 Sω2MN 相同：Limit[1] = ()(;,1)，Limit[2] = ()(;,,1)，余类推。解析 "Limit"、"limit"、"LIMIT" 均得到 ∞ 标志。
+∞ 的基本列：已按用户要求拆除（本记号不再解析 Limit / ∞ 输入，也不提供其显示与基本列）。
 
-展开（参数 m≥1；FS 较短展开 shorter=true，FS_alter 较长展开 shorter=false）：不做 fill_ghost；连续 m 次应用 extend；较短展开删去末列，较长展开再做一次 subtract_1。extend 的总体流程与 Sω2MN 相同：先求末列最右上条目的父位置 p=(Ri,Rj)，计算岩浆检查表 MI0 与拉伸数据表 SD0，subtract_1 后重算竖向与检查表，再把坏根列右侧各列按 offset = right−Ri 复制到新位置。
+展开（参数 m≥1）：不做 fill_ghost；连续 m 次应用 extend；随后再做一次 subtract_1。extend 的总体流程与 Sω2MN 相同：先求末列最右上条目的父位置 p=(Ri,Rj)，计算岩浆检查表 MI0 与拉伸数据表 SD0，subtract_1 后重算竖向与检查表，再把坏根列右侧各列按 offset = right−Ri 复制到新位置。
 
 magma_indices 与 Sω2MN 相同：坏根列右侧每个条目沿父链上溯，pi < Ri 中断，pi == Ri 记录 min(pj,Rj)，否则转记父条目检查值。
 

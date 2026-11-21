@@ -24,7 +24,7 @@ namespace ton_i_detail {
             const tonshare::TonValue v = x->v;
             if (v < 0) return builtq_i(x, b, n - 1, x);   // 第二分支的叶子子树为假
             if (v == 0) return true;                       // (x>=0||...) 且 x===0
-            return false;                                   // kInf 等非零非负叶子：子树 undefined
+            return false;                                   // 非零非负叶子：子树 undefined
         }
         return (tonshare::compare_noraise(x, tonshare::zero_leaf()) < 0 &&
                 builtq_i(x, b, n - 1, x)) ||
@@ -53,33 +53,21 @@ namespace ton_i_detail {
     });
 }
 
+// 策略：noraise 风格（裸 Ω）、IBP 风格极限项、无 mark 函数。
+struct TonIPolicy {
+    static constexpr bool kMainStyle = false;
+    static constexpr bool kHasMark = false;
+
+    [[nodiscard]] static bool is_standard(const tonshare::TonNode* a, tonshare::TonValue /*sys*/,
+                                          std::map<std::string, bool>& memo) {
+        return standard_q_i(a, memo);
+    }
+};
+
 } // namespace ton_i_detail
 
-struct TonINotation {
+struct TonINotation : tonshare::TonNotationBase<ton_i_detail::TonIPolicy> {
     static constexpr const char* kName = "TON_I";
-
-    [[nodiscard]] static std::string expand_text(std::string_view text, int term) {
-        static std::map<std::string, bool> memo;
-        static tonshare::TonFsCache cache;
-        const tonshare::StdFn std_fn = [](const tonshare::TonNode* a,
-                                          tonshare::TonValue /*sys*/) -> bool {
-            return ton_i_detail::standard_q_i(a, memo);
-        };
-        return tonshare::ton_expand_text(text, term, /*main_style=*/false,
-                                         /*ibp_style_limit=*/true, std_fn, cache, nullptr);
-    }
-
-    [[nodiscard]] static std::string expand_text_alter(std::string_view text, int term) {
-        return expand_text(text, term);
-    }
-
-    [[nodiscard]] static std::string suffix() { return {}; }
-
-    [[nodiscard]] static std::string parse(std::string_view text) {
-        tonshare::TonArena arena;
-        const tonshare::TonNode* t = tonshare::parse_impl(arena, text, false);
-        return t ? tonshare::display_noraise(t) : "解析失败";
-    }
 };
 
 } // namespace omegay::notation

@@ -8,6 +8,8 @@
 // 因此这里复用 btbm_detail 的全部原语，只重写 is_special / expand_special 与 FS。
 #pragma once
 
+#include "notation_base.hpp"
+
 #include <memory>
 #include <optional>
 #include <string>
@@ -71,7 +73,6 @@ inline Expr b_expand_special(const Expr& e, int t_layer, int index)
 // 与 btbm_detail::fs_core 逐字相同，仅把 special 判定/展开换成 BBM 版本。
 inline Expr b_fs_core(const Expr& e, int index)
 {
-    if (is_infinity(e)) return infinity_fs(index);
     if (e.cols.empty()) return e;
     const int t_layer = tail_layer(e);
     if (t_layer < 0)
@@ -163,16 +164,13 @@ inline Expr b_fs_core(const Expr& e, int index)
 // FS_default_LNZ_variant 分派。
 inline Expr b_fs(const Expr& e, int index)
 {
-    if (is_infinity(e)) return infinity_fs(index);
     if (!is_limit(e)) return b_fs_core(e, 0);
     return b_fs_core(e, index);
 }
 }  // namespace bbm_detail
 
 // BBM 记号接口：仅 FS。
-struct BBMNotation
-{
-    static std::string suffix() { return std::string{}; }
+struct BBMNotation : NotationBase {
     static std::string expand_text(std::string_view text, int term)
     {
         using namespace btbm_detail;

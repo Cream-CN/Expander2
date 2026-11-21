@@ -7,6 +7,8 @@
 #include <string_view>
 #include <vector>
 
+#include "notation_base.hpp"
+
 namespace omegay::notation {
 namespace aw2mn_share {
 
@@ -109,12 +111,11 @@ inline std::string mountain_display(const Expr& m) {
 // ---- 解析（TS from_display；非法输入返回 nullopt）----
 
 struct Parsed {
-    bool infinity = false;
     Expr expr;
 };
 
 inline std::optional<Parsed> parse(std::string_view s) {
-    if (s == "Limit" || s == "limit" || s == "LIMIT") return Parsed{ true, {} };
+
     std::size_t i = 0;
     auto error = [&]() { return std::optional<Parsed>{}; };
 
@@ -222,7 +223,7 @@ inline std::optional<Parsed> parse(std::string_view s) {
         result.push_back(std::move(*col));
         skip_spaces();
     }
-    return Parsed{ false, std::move(result) };
+    return Parsed{ std::move(result) };
 }
 
 // ---- 山结构辅助 ----
@@ -540,27 +541,46 @@ inline Expr expand(const Expr& A0, int index, bool shorter, bool weak, SubtractK
     return extend(A, /*small=*/true, weak, kind);
 }
 
-// TS infinity_FS(n) = [[], [[1, [Omega, ...(n 个空列)]]]]
-inline Expr infinity_fs(int n) {
-    Sep sep;
-    sep.emplace_back();
-    {
-        Column c1;
-        Sep inner;
-        inner.emplace_back();
-        c1.push_back(Entry{ 1, std::move(inner), false });
-        sep.push_back(std::move(c1));
-    }
-    for (int k = 0; k < n; ++k) sep.emplace_back();
-    Expr result;
-    result.emplace_back();
-    Column col;
-    col.push_back(Entry{ 1, std::move(sep), false });
-    result.push_back(std::move(col));
-    return result;
-}
 
 inline constexpr const char* kParseFail = "解析失败，请确认你没有使用全角括号，逗号，分号";
+
+// ---------------------------------------------------------------------
+// Aω2MN 家族的记号公共骨架
+//
+// Aω2MN2 / Aω2MN3 / wAω2MN2 / wAω2MN3 四个记号的 expand_text 原本逐字重复，
+// 差异只有两个编译期开关：weak（是否弱版）与 subtract1 的版本（V2 / V3）。
+// 解析、显示、值域校验全部走本命名空间的既有函数，这里只把它们串成一条流水线。
+// ---------------------------------------------------------------------
+template <bool kWeak, SubtractKind kSubtract>
+struct Aw2MnFamilyNotation : NotationBase {
+    [[nodiscard]] static std::string expand_text(std::string_view text, int term) {
+        if (term < 1) term = 1;
+        const auto parsed = parse(text);
+        if (!parsed) return kParseFail;
+        const Expr& e = parsed->expr;
+        if (e.empty()) return {};
+        if (e.back().empty()) {
+            return mountain_display(Expr(e.begin(), e.end() - 1));
+        }
+        // 值域校验：value(1-based) 作为父列索引 value-1 须在 [0, size)
+        for (const auto& col : e) {
+            for (const auto& en : col) {
+                if (en.value < 1 || en.value > static_cast<int>(e.size())) return kParseFail;
+            }
+        }
+        return mountain_display(
+            expand(e, term, /*shorter=*/false, kWeak, kSubtract));
+    }
+
+    // 供测试 / 调试使用的解析与格式化。
+    [[nodiscard]] static std::optional<Parsed> parse(std::string_view text) {
+        return aw2mn_share::parse(text);
+    }
+
+    [[nodiscard]] static std::string to_string(const Parsed& p) {
+        return mountain_display(p.expr);
+    }
+};
 
 } // namespace aw2mn_share
 } // namespace omegay::notation

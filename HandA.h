@@ -37,7 +37,7 @@ namespace expander_help_about {
 
     // 将 RichEdit 字号设为 10pt（供本窗体与定义弹窗共用）。
     inline void applyRichEdit10pt(HWND hRich, const wchar_t* face = L"Microsoft YaHei UI") {
-        const LONG sizeTwips = 10 * 20;
+        constexpr LONG sizeTwips = 10 * 20;
 
         CHARFORMAT2W cf{};
         cf.cbSize = sizeof(cf);

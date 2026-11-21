@@ -10,6 +10,8 @@
 // 未移植。纯函数；非法输入在 parse 层返回 nullopt；资源上限超出返回错误提示串。
 #pragma once
 
+#include "notation_base.hpp"
+
 #include <algorithm>
 #include <cstddef>
 #include <functional>
@@ -61,16 +63,12 @@ struct TsOmegaDbmsParsed {
     TsOmegaDbmsExpr expr;
 };
 
-struct TsOmegaDbmsNotation {
+struct TsOmegaDbmsNotation : NotationBase {
     static constexpr const char* kName = "TSωDBMS";
 
     [[nodiscard]] static std::string expand_text(std::string_view text, int term) {
-        return expand_text_impl(text, term, /*alter=*/false);
-    }
-    [[nodiscard]] static std::string expand_text_alter(std::string_view text, int term) {
         return expand_text_impl(text, term, /*alter=*/true);
     }
-    [[nodiscard]] static std::string suffix() { return {}; }
 
     [[nodiscard]] static std::optional<TsOmegaDbmsParsed> parse(std::string_view s) {
         try {

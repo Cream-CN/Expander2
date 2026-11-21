@@ -4,8 +4,10 @@
 //
 // 逻辑移植自 ne-rewritten/src/notations/BM-like/BHM.ts，仅保留核心展开与
 // BM 文本接口；BM4 核心展开复用 bmlike_share.hpp::bm4_expand。
-// FS / FS_alter 由 shorter 参数区分（对应 sequence_FS_variants）。
+// 较长 / 较短两支算法由 shorter 参数区分（对应 sequence_FS_variants）。
 #pragma once
+
+#include "notation_base.hpp"
 
 #include <algorithm>
 #include <cstddef>
@@ -17,11 +19,9 @@
 
 namespace omegay::notation {
 
-    struct BHMNotation {
+    struct BHMNotation : NotationBase {
         static constexpr const char* kName = "BHM";
         [[nodiscard]] static std::string expand_text(std::string_view, int);
-        [[nodiscard]] static std::string expand_text_alter(std::string_view, int);
-        [[nodiscard]] static std::string suffix() { return {}; }
     };
 
     namespace bhm_detail {
@@ -110,7 +110,7 @@ namespace omegay::notation {
             return pack_columns(cols);
         }
 
-        // BHM.ts extend：一次较短展开后再追加提升后的末列。
+        // BHM.ts extend：一次较短支展开后再追加提升后的末列。
         [[nodiscard]] inline Matrix
             extend(const Matrix& m, int r, const std::vector<int>& V,
                    const std::vector<int>& A) {
@@ -184,15 +184,6 @@ namespace omegay::notation {
     [[nodiscard]] inline std::string
         BHMNotation::expand_text(std::string_view text, int term) {
         return bmlike::expand_text_with(
-            text, term, true,
-            [](const bmlike::Matrix& m, int idx, bool) {
-                return bhm_detail::bhm_expand(m, idx, true);
-            });
-    }
-
-    [[nodiscard]] inline std::string
-        BHMNotation::expand_text_alter(std::string_view text, int term) {
-        return bmlike::expand_text_with(
             text, term, false,
             [](const bmlike::Matrix& m, int idx, bool) {
                 return bhm_detail::bhm_expand(m, idx, false);
@@ -201,20 +192,11 @@ namespace omegay::notation {
 
     // nBM-BHM：N 为 BM_BHM(N) 的行数参数（顶行小于 N 时走 BM4 展开）。
     template <int N>
-    struct BM_BHMNotation {
+    struct BM_BHMNotation : NotationBase {
         static constexpr int kRows = N;
 
         [[nodiscard]] static std::string
             expand_text(std::string_view text, int term) {
-            return bmlike::expand_text_with(
-                text, term, true,
-                [](const bmlike::Matrix& m, int idx, bool) {
-                    return bhm_detail::bm_bhm_expand(m, idx, N, true);
-                });
-        }
-
-        [[nodiscard]] static std::string
-            expand_text_alter(std::string_view text, int term) {
             return bmlike::expand_text_with(
                 text, term, false,
                 [](const bmlike::Matrix& m, int idx, bool) {
@@ -222,7 +204,6 @@ namespace omegay::notation {
                 });
         }
 
-        [[nodiscard]] static std::string suffix() { return {}; }
     };
 
 }  // namespace omegay::notation

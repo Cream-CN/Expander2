@@ -5,6 +5,12 @@
 > `CliEntry` 表、命令行为、展开结果保持完全不变。
 >
 > 日期：2026-11-02　状态：实施中
+>
+> **2026-11-15 后记（本文档为历史记录）**：双展开已被清理——`ExpandMode`、
+> `expand_text_alter` / `expand_text_n_alter` 槽、`truncate_fs()` 策略虚函数、
+> GUI 的 `IDM_FS` / `IDM_FSALTER` 双分支、CLI 的 `fsalter` 命令均已删除。
+> 现在每个记号只有一种展开（记号自身的“保留末项”展开），
+> 权威说明见 `Docs/CONTRIBUTING.md` 第 3.2–3.4 节；下列代码片段保留重构当时的样子。
 
 ## 1. 现状与问题
 
@@ -340,3 +346,40 @@ FS 截断（`truncate_fs`）：
 **说明**：排序会改变 GUI 选择表与 CLI `list` 的展示顺序（用户主动要求）。
 `_refactor_baseline/list.txt` 是旧顺序基线，不再适用于顺序类输出；如需回归应重建新基线
 或改为"排序规则校验 + 非顺序内容一致"式对比。展开结果类对比（samples.txt）仍适用。
+
+## 6. 2026-11-20 追记：记号实现层的基类
+
+第 5 节的 OOP 内核把多态施加在**调度/契约层**，但 100+ 个记号头文件内部仍是
+"struct + static 方法"的逐字重复。本次把这段样板也收敛掉，原则与第 2 节一致——
+壳层（GUI/CLI）与 `registry.hpp` 零改动，记号对外静态接口不变：
+
+- 新增 `Header/notation/notation_base.hpp`：
+  `struct NotationBase { suffix(); clamp_term(); }`，所有记号结构体继承它，
+  删除各自手写的空 `suffix()`（`empty.hpp` 因后缀非空保留自己的定义）。
+- 同构记号族改用策略模板（`tonshare::TonNotationBase` / `aw2mn_share::Aw2MnFamilyNotation` /
+  `mnup2::Up2DbmsFamilyNotation` / `mnup2::Up2MnFamilyNotation` / `mnordshare::E0MnFamilyNotation`），
+  每个变体只剩 `kName` 与若干编译期开关；各族自己的 StandardQ / subtract1 等语义逻辑
+  仍留在原 `*_detail` 命名空间，未搬运。
+- **边界**：基类与模板都不承担 `"Limit"` / `∞` 的解析语义——极限项与基本列由
+  各族既有解析器与 `*_infinity_fs` 提供，模板只做转发。
+- 验证：CLI（`cl /O2`）与 GUI（MSBuild Rebuild）均通过；107 条 expand 语料
+  （覆盖 119 个记号的抽样 + Limit / 错误输入分支）与重构前输出**逐字节一致**，
+  `list` 输出一致。
+
+
+## 7. 2026-11-21 追记：拆除顶层 Limit / ∞ 解析
+
+按用户要求，**顶层** `"Limit"` / `"∞"`（以及图记号的 `Top` / `Ω` 顶层路由）解析整体拆除：
+记号不再接受这类输入（一律返回解析失败），也不再生成 `"Limit"` 显示。
+
+- 删除的样板：各族的 `infinity` / `inf` / `isLimit` 标志、`*_infinity_fs` /
+  `nt_infinity_fs` / `infinity_value`、`make_limit`、`to_string`/`display` 里的
+  `"Limit"` 分支、各解析器的 `Limit` 分支与 `Limit[n]` 分支；
+  `sdbms_core::parse_expr` 的返回类型从 `optional<pair<bool, Expr>>` 收成 `optional<Expr>`。
+- **保留**：表达式内部的极限 / 后继判定（`is_limit` 族、`kInfinity` 哨兵、
+  `limit_approximation`、`compute_new_height` 等），以及 TON 的 `kInf` 叶子在
+  比较算法里的数值语义；`ts2dbms` / `ts_omega_dbms` 的 `source.find("Limit")` 负向守卫保留。
+- 文档：`defs/def_*.txt` 中描述 `Limit` 输入/∞ 基本列的句子统一改为"顶层 ∞（Limit）输入已拆除"，
+  `Definitions.h` 由 `build.ps1` 重新生成。
+- 验证：以备份头文件编译出的**改动前基线** CLI 为参照，174 条 expand 语料（含参数化记号）
+  输出逐字节一致；66 个文本记号输入 `Limit` 全部落到各族解析失败提示，无崩溃。

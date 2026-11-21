@@ -2,7 +2,7 @@ Sω2MN
 
 Sω2MN（TS id "S-omega2-MN"，逻辑移植自 notation-explorer 的 src/notations/MN/SMN/S_omega2_MN.ts，家族 category-smile-mn，credit.n_mn；C++ 实现见 Header/notation/s_omega2_mn.hpp）属于 Smile's MN（SMN）系列，与 SAω2MN、Sω^ωMN 共用同一套山形骨架，区别在于分隔符比较、拉伸数据与前驱分支的具体规则。
 
-表达式结构：一个表达式 Expr 是若干列 Column 的序列；每列是若干条目 Entry=(value, sep) 的序列；value 是从 1 起的列标引用（决定父位置），sep 是整数向量（解析时去掉尾部 0 归一）；竖向 Vertical 是 sep 的序列。空表达式表示 0；另外用 ∞ 标志表示极限，显示为 "Limit"。
+表达式结构：一个表达式 Expr 是若干列 Column 的序列；每列是若干条目 Entry=(value, sep) 的序列；value 是从 1 起的列标引用（决定父位置），sep 是整数向量（解析时去掉尾部 0 归一）；竖向 Vertical 是 sep 的序列。空表达式表示 0；顶层 ∞（Limit）输入已按用户要求拆除。
 
 显示：sep = (c0, c1) 时先显示 c1 个分号再显示 c0 个逗号；条目显示为分隔符加列标；每列包裹在一对括号中。解析接受带括号列与不带括号列，单独的 "0" 或紧跟分隔符、空格、括号的 "0" 表示空列；解析时若发现条目列标超出 0 到列数的范围，直接返回解析失败提示。
 
@@ -12,9 +12,9 @@ Sω2MN（TS id "S-omega2-MN"，逻辑移植自 notation-explorer 的 src/notatio
 
 极限与后继：空表达式表示 0；末列为空的表达式是后继表达式，展开就是删去末列；其余非空表达式为极限表达式。
 
-∞ 的基本列：Limit[n] 展开为空列后接单条目 (value=1, sep={n, 1})，即 Limit[1] = ()(;,1)，Limit[2] = ()(;,,1)，余类推。解析 "Limit"、"limit"、"LIMIT" 均得到 ∞ 标志。
+∞ 的基本列：已按用户要求拆除（本记号不再解析 Limit / ∞ 输入，也不提供其显示与基本列）。
 
-展开（参数 m≥1；FS 采用较短展开 shorter=true，FS_alter 采用较长展开 shorter=false）：本记号不做 fill_ghost；对极限表达式连续 m 次应用 extend；较短展开在最后删去末列，较长展开再做一次 subtract_1。
+展开（参数 m≥1）：本记号不做 fill_ghost；对极限表达式连续 m 次应用 extend；随后再做一次 subtract_1。
 
 extend（一次反射式扩展）：设 right 为末列列标、top 为末列最右上条目下标；计算竖向表 V0；求末列最右上条目的父位置 p=(Ri, Rj)；magma_indices 得岩浆检查表 MI0；stretch_data_list 得拉伸数据表 SD0；先调用 subtract_1(m0, V0, SD0[Rj]) 得到中间山形 m，重算末列竖向，取 MI0 的前 right 列部分继续计算 magma_indices 得 MI；offset = right−Ri；随后对列 Ri+1 到 right 依次调用 copy_column，把源列复制到列标加 offset 的新位置，拉伸竖向上限取 V0[right][top]。
 

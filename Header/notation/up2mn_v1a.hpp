@@ -1,6 +1,8 @@
 
 #pragma once
 
+#include "notation_base.hpp"
+
 #include <optional>
 #include <string>
 #include <string_view>
@@ -12,20 +14,13 @@ namespace omegay::notation {
 
 using Up2MnV1aExpr = smnshare::Mountain;
 
-struct UP2MNV1ANotation {
+struct UP2MNV1ANotation : NotationBase {
     static constexpr const char* kName = "UP2MN v1A";
 
     [[nodiscard]] static std::string expand_text(std::string_view text, int term) {
-        return expand_text_impl(text, term, /*longer=*/false);
-    }
-    [[nodiscard]] static std::string expand_text_alter(std::string_view text, int term) {
         return expand_text_impl(text, term, /*longer=*/true);
     }
-    [[nodiscard]] static std::string suffix() { return {}; }
     [[nodiscard]] static std::optional<Up2MnV1aExpr> parse(std::string_view text) {
-        if (text == "Limit" || text == "limit" || text == "LIMIT") {
-            return smnshare::Mountain{};
-        }
         return smnshare::from_display(text);
     }
 
@@ -38,20 +33,8 @@ private:
     using Column = smnshare::Column;
     using Vertical = smnshare::Vertical;
 
-    // TS UP2MN-v1a 的 INFINITY()：[[], [[1,1]], [[2,1]]]。
-    [[nodiscard]] static Mountain infinity_value() {
-        return Mountain{ Column{}, Column{ smnshare::Entry{ 1, 1 } },
-                         Column{ smnshare::Entry{ 2, 1 } } };
-    }
 
-    [[nodiscard]] static bool is_infinity(const Mountain& m) {
-        return smnshare::mountain_compare(m, infinity_value()) == 0;
-    }
 
-    // TS infinity_FS(index) = MN_expand(INFINITY(), index)。
-    [[nodiscard]] static Mountain infinity_fs(int index) {
-        return smnshare::expand(infinity_value(), index, false);
-    }
 
     [[nodiscard]] static bool has_infinite(const Column& col) {
         return !col.empty() && col.back().sep > 0;
@@ -164,7 +147,6 @@ private:
 
     // TS expand。
     [[nodiscard]] static Mountain expand(const Mountain& m, int index, bool shorter) {
-        if (is_infinity(m)) return infinity_fs(index);
         if (m.empty()) return m;
         const int right = static_cast<int>(m.size()) - 1;
         if (m[static_cast<std::size_t>(right)].empty()) {
@@ -178,19 +160,16 @@ private:
 
     static std::string expand_text_impl(std::string_view text, int term, bool longer) {
         if (term < 1) term = 1;
-        const bool is_inf = text == "Limit" || text == "limit" || text == "LIMIT";
-        auto parsed = parse(text);
-        if (!parsed && !is_inf) {
+        const auto parsed = parse(text);
+        if (!parsed) {
             return "解析失败，请确认你没有使用全角括号，逗号，分号";
         }
-        const Mountain& m = is_inf ? infinity_value() : *parsed;
+        const Mountain& m = *parsed;
         // 值域校验：value 1-based 作为父列索引（value-1），越界时 TS 在 expand 中抛错。
-        if (!is_inf) {
-            for (const Column& col : m) {
-                for (const smnshare::Entry& en : col) {
-                    if (en.value < 1 || en.value > static_cast<int>(m.size())) {
-                        return "解析失败，请确认你没有使用全角括号，逗号，分号";
-                    }
+        for (const Column& col : m) {
+            for (const smnshare::Entry& en : col) {
+                if (en.value < 1 || en.value > static_cast<int>(m.size())) {
+                    return "解析失败，请确认你没有使用全角括号，逗号，分号";
                 }
             }
         }

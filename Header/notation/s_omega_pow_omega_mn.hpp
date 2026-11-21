@@ -1,6 +1,8 @@
 
 #pragma once
 
+#include "notation_base.hpp"
+
 #include <cstddef>
 #include <optional>
 #include <string>
@@ -94,7 +96,6 @@ inline std::string mountain_display(const Mountain& m) {
 // ---- 解析（TS from_display；支持 [..] 分隔符；非法输入返回 nullopt）----
 
 inline std::optional<Mountain> from_display(std::string_view s) {
-    if (s == "Limit") return std::nullopt;
     std::size_t i = 0;
 
     auto normalize_sep = [](Sep& sep) {
@@ -342,7 +343,7 @@ inline Sep S(const Column& c, int j, const Sep& bound) {
 struct StretchData {
     Sep threshold;
     Sep stretch_to;
-    bool force;
+    bool force = false;
 };
 
 inline StretchData stretch_data_top(const Mountain& m, const std::vector<std::vector<Vertical>>& V) {
@@ -353,7 +354,7 @@ inline StretchData stretch_data_top(const Mountain& m, const std::vector<std::ve
 
     const Sep& top_right_sep = m[static_cast<std::size_t>(right)][static_cast<std::size_t>(top)].second;
 
-    const Sep threshold = S(m[static_cast<std::size_t>(Ri)], Rj - 1, top_right_sep);
+    Sep threshold = S(m[static_cast<std::size_t>(Ri)], Rj - 1, top_right_sep);
     Sep stretch_to = S(m[static_cast<std::size_t>(right)], top - 1, top_right_sep);
     bool force = false;
     if (sep_is_one(top_right_sep)) {
@@ -497,15 +498,6 @@ inline Mountain extend(const Mountain& m0) {
     return m;
 }
 
-// TS infinity_FS(index) = [[], [[1, [...(index 个 0), 1]]]]。
-inline Mountain infinity_fs(int index) {
-    Mountain m;
-    m.push_back(Column{});
-    Sep sep(static_cast<std::size_t>(index < 0 ? 0 : index), 0);
-    sep.push_back(1);
-    m.push_back(Column{ Entry{ 1, std::move(sep) } });
-    return m;
-}
 
 inline Mountain expand(const Mountain& m, int index, bool shorter) {
     if (m.empty()) return m;
@@ -519,32 +511,25 @@ inline Mountain expand(const Mountain& m, int index, bool shorter) {
 
 } // namespace s_omega_pow_omega_mn_detail
 
-// Expr：非 ∞ 时持有 Mountain；∞（显示 "Limit"）用标志表示。
+// Expr：解析结果（顶层 ∞ / "Limit" 已拆除）。
 struct SOmegaPowOmegaMnExpr {
-    bool infinity = false;
     s_omega_pow_omega_mn_detail::Mountain mountain;
 };
 
-struct SOmegaPowOmegaMNNotation {
+struct SOmegaPowOmegaMNNotation : NotationBase {
     static constexpr const char* kName = "Sω^ωMN";
 
     [[nodiscard]] static std::string expand_text(std::string_view text, int term) {
-        return expand_text_impl(text, term, /*longer=*/false);
-    }
-    [[nodiscard]] static std::string expand_text_alter(std::string_view text, int term) {
         return expand_text_impl(text, term, /*longer=*/true);
     }
-    [[nodiscard]] static std::string suffix() { return {}; }
 
     [[nodiscard]] static std::optional<SOmegaPowOmegaMnExpr> parse(std::string_view text) {
-        if (text == "Limit" || text == "limit" || text == "LIMIT") return SOmegaPowOmegaMnExpr{ true, {} };
         auto m = s_omega_pow_omega_mn_detail::from_display(text);
         if (!m) return std::nullopt;
-        return SOmegaPowOmegaMnExpr{ false, std::move(*m) };
+        return SOmegaPowOmegaMnExpr{ std::move(*m) };
     }
 
     [[nodiscard]] static std::string to_string(const SOmegaPowOmegaMnExpr& e) {
-        if (e.infinity) return "Limit";
         return s_omega_pow_omega_mn_detail::mountain_display(e.mountain);
     }
 
@@ -554,10 +539,6 @@ private:
         const auto expr = parse(text);
         if (!expr) {
             return "解析失败，请确认你没有使用全角括号，逗号，分号";
-        }
-        if (expr->infinity) {
-            const auto m = s_omega_pow_omega_mn_detail::infinity_fs(term);
-            return s_omega_pow_omega_mn_detail::mountain_display(m);
         }
         using namespace s_omega_pow_omega_mn_detail;
         const Mountain& m = expr->mountain;

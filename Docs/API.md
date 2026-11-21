@@ -638,8 +638,7 @@ DEN3 的 `Limit_row(n)`：entries `[0..2+n]`（`3 <= nn < 2+n` 标真）追加 2
 ```cpp
 struct Den1Notation {
     static constexpr const char* kName = "DEN1";
-    static std::string expand_text(std::string_view text, int term);        // FS（较短）
-    static std::string expand_text_alter(std::string_view text, int term);  // FS_alter（较长）
+    static std::string expand_text(std::string_view text, int term);  // 唯一展开
     static std::string suffix();                                            // 空串
     static std::optional<denshare::Den1Expr> parse(std::string_view text);
     static std::string to_string(const denshare::Den1Expr&);
@@ -650,7 +649,7 @@ DEN1 的表达式是"扁平行"序列：`rows[0]` 是父标号列表（display �
 
 文本格式（display）：主体行 `'('` 值,值,... `')'` step 拼接，再 `';'` + 父标号列表；例如 `(1,0)1(2,1,0)1;0`。
 
-`expand_text` / `expand_text_alter` 契约：
+`expand_text` 契约：
 
 - 纯函数，不抛异常。
 - `term < 1` 时按 1 处理。
@@ -687,8 +686,7 @@ limit_r / limit_row / limit
 ```cpp
 struct BlpNotation {
     static constexpr const char* kName = "blp";
-    static std::string expand_text(std::string_view text, int term);        // FS（较短）
-    static std::string expand_text_alter(std::string_view text, int term);  // FS_alter（较长）
+    static std::string expand_text(std::string_view text, int term);  // 唯一展开
     static std::string suffix();                                            // 空串
     static std::optional<denshare::DenExpr> parse(std::string_view text);
     static std::string to_string(const denshare::DenExpr&);
@@ -699,7 +697,7 @@ struct BlpNotation {
 
 文本格式：每行 `'('` 条目,... `')'` step，条目 `'*'` 前缀表示标记，例如 `(1,0)1(2,1,0)1(*3,2,1,0)2`。
 
-`expand_text` / `expand_text_alter` 契约：
+`expand_text` 契约：
 
 - 纯函数，不抛异常；`term < 1` 按 1 处理。
 - `"Limit"` → 极限的第 `term` 个基本列；空表达式 → 空文本；
@@ -735,8 +733,7 @@ comp_to / comp_from / expand / limit_row / infinity_fs
 ```cpp
 struct IblpNotation {
     static constexpr const char* kName = "iblp";
-    static std::string expand_text(std::string_view text, int term);        // FS（较短）
-    static std::string expand_text_alter(std::string_view text, int term);  // FS_alter（较长）
+    static std::string expand_text(std::string_view text, int term);  // 唯一展开
     static std::string suffix();                                            // 空串
     static std::optional<denshare::Den3Expr> parse(std::string_view text);
     static std::string to_string(const denshare::Den3Expr&);
@@ -745,11 +742,11 @@ struct IblpNotation {
 
 表达式是"带标记的扁平行"序列：行内位置 0 是 step，位置 `1..` 是条目。记号极限输入/输出为 `"Limit"`。文本格式同 blp（但括号内允许为空）。
 
-`expand_text` / `expand_text_alter` 契约：
+`expand_text` 契约：
 
 - 纯函数，不抛异常；`term < 1` 按 1 处理。
 - 与 blp 不同，FS 不做 `is_limit` 预判：直接交给 `expand`（`expand` 内部处理非极限）。
-- FS_alter 在全部压缩完成后把结果裁剪回 `len0` 行（TS 原语义）。
+- 展开在全部压缩完成后把结果裁剪回 `len0` 行（TS 原语义）。
 
 ## 二、内部实现（iblp_detail）
 
@@ -815,10 +812,10 @@ struct XxxNotation {
 
 UI 参数约定（`Expander.cpp` `notationTable` 条目）：
 
-- `param_min` / `param_max` / `param_default` / `param_label`：选中该记号时主窗口显示参数输入框；展开时经 `IDM_FS` / `IDM_FSALTER` 分支读取并校验 `n ∈ [param_min, param_max]` 后调用 `expand_text_n`。
+- `param_min` / `param_max` / `param_default` / `param_label`：选中该记号时主窗口显示参数输入框；展开时经“展开”按钮读取并校验 `n ∈ [param_min, param_max]` 后调用 `expand_text_n`。
 - `param_min=0` 的族（基础族、T 族、Abs/Rel）`n` 从 0 起（1SS 起）；
 - `param_min=1` 的族（BT v1/v2/v3、BTL）`n` 从 1 起（2SS 起），上限均为 25。
-- 参数化族的结果不做通用截断。
+- 参数化族的结果不做额外截断。
 
 ## 二、各族说明
 
@@ -839,7 +836,7 @@ UI 参数约定（`Expander.cpp` `notationTable` 条目）：
   与 v1 同构，顶层父 = `compute_lower_parents` + `fill_top_parents`（相对差分 key + `rel_compare`，排除 `outer_stack`）。
 
 - **`bt3ynss.hpp`** — weak `BT*(n+1)SS` v3（IDR 20110）。
-  显示依赖 BM 的 `column_display`（无 higher 截尾零 / 有 higher 全量+`*^`）；顶层父 = `compute_top_parents`（vertical 差分高度比较）；同时提供 FS 与 FS_short：`expand_text_n` 对应 FS，`expand_text_n_alter` 对应 FS_short（经 `expand_text_n_alter` 槽接入 FS_alter 按钮）。
+  显示依赖 BM 的 `column_display`（无 higher 截尾零 / 有 higher 全量+`*^`）；顶层父 = `compute_top_parents`（vertical 差分高度比较）；只有一种展开：`expand_text_n`（项数大时先截掉尾列 / 先展开一次再进入常规展开的 lnz_m1 分支）。
 
 - **`btlynss.hpp`** — `BTL(n+1)SS`（IDR 20111）。
   每列 `{lower, mark, higher}`；显示：有 higher → `(lower全量;u^e0,u^e1)`，无 higher → `(lower截尾零)`；空子表达式 → 裸 mark 数字；同一列内 mark 值须一致，有 higher 时 mark 必 `> 0`。父计算求出 type（lower/higher/star/mark/mark*/undefined）与 is_tail；标记型展开经 `copy_part` 重组 + `tail_top`/`tail_mark` 回填的 `ascend_replace`。核心 Expand 直接以 mark 字段建模（TS 侧 ExprCompact 的等价落地）。

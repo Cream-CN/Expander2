@@ -1,6 +1,8 @@
 
 #pragma once
 
+#include "notation_base.hpp"
+
 #include <cstddef>
 #include <optional>
 #include <string>
@@ -441,40 +443,20 @@ inline TExpr expand(const TExpr& A0, int index, bool shorter) {
     return A;
 }
 
-inline TExpr infinity_fs(int n) {
-    if (n <= 0) {
-        TExpr e;
-        e.push_back(TColumn{});
-        return e;
-    }
-    TExpr e;
-    e.push_back(TColumn{});
-    TColumn col;
-    col.push_back(TEntry{ 1, infinity_fs(n - 1) });
-    e.push_back(std::move(col));
-    return e;
-}
 
 } // namespace t_omega_mn_detail
 
-// Expr：非 ∞ 时持有 TExpr；∞（显示 "Limit"）用标志表示。
+// Expr：解析结果（顶层 ∞ / "Limit" 已拆除）。
 struct TOmegaMnExpr {
-    bool infinity = false;
     t_omega_mn_detail::TExpr expr;
 };
 
-struct TOmegaMNNotation {
+struct TOmegaMNNotation : NotationBase {
     static constexpr const char* kName = "TωMN";
 
-    // FS：较短展开。
     [[nodiscard]] static std::string expand_text(std::string_view text, int term) {
-        return expand_text_impl(text, term, /*longer=*/false);
-    }
-    // FS_alter：较长展开。
-    [[nodiscard]] static std::string expand_text_alter(std::string_view text, int term) {
         return expand_text_impl(text, term, /*longer=*/true);
     }
-    [[nodiscard]] static std::string suffix() { return {}; }
 
     // 供测试 / 调试使用的解析与格式化。
     [[nodiscard]] static std::optional<TOmegaMnExpr> parse(std::string_view text) {
@@ -483,27 +465,20 @@ struct TOmegaMNNotation {
         while (b < e && (s0[b] == ' ' || s0[b] == '\t')) ++b;
         while (e > b && (s0[e - 1] == ' ' || s0[e - 1] == '\t')) --e;
         const std::string_view raw = std::string_view(s0).substr(b, e - b);
-        if (raw == "Limit" || raw == "limit" || raw == "LIMIT") {
-            return TOmegaMnExpr{ true, {} };
-        }
         if (raw.empty() || raw == "0" || raw == "∅") {
-            return TOmegaMnExpr{ false, {} };
+            return TOmegaMnExpr{};
         }
         auto m = t_omega_mn_detail::from_display(raw);
         if (!m) return std::nullopt;
-        return TOmegaMnExpr{ false, std::move(*m) };
+        return TOmegaMnExpr{ std::move(*m) };
     }
 
     [[nodiscard]] static std::string to_string(const TOmegaMnExpr& e) {
-        if (e.infinity) return "Limit";
         return t_omega_mn_detail::mountain_display(e.expr, false);
     }
 
-    // 非 ∞ 表达式的比较（供测试用）。
     [[nodiscard]] static int compare(const TOmegaMnExpr& a, const TOmegaMnExpr& b) {
-        if (a.infinity || b.infinity) {
-            return a.infinity == b.infinity ? 0 : (a.infinity ? 1 : -1);
-        }
+
         return t_omega_mn_detail::mountain_compare(a.expr, b.expr);
     }
 
@@ -513,10 +488,6 @@ private:
         const auto parsed = parse(text);
         if (!parsed) {
             return "解析失败，请确认你没有使用全角括号，逗号，分号";
-        }
-        if (parsed->infinity) {
-            return t_omega_mn_detail::mountain_display(
-                t_omega_mn_detail::infinity_fs(term), false);
         }
         const t_omega_mn_detail::TExpr& m = parsed->expr;
         if (m.empty()) return {};

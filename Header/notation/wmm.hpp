@@ -10,6 +10,8 @@
 // 这里改为每个 Grid 自带缓存，并在每轮复制后清空（对应 vertical_cache.delete）。
 #pragma once
 
+#include "notation_base.hpp"
+
 #include <algorithm>
 #include <cstddef>
 #include <string>
@@ -21,11 +23,9 @@
 
 namespace omegay::notation {
 
-    struct WMMNotation {
+    struct WMMNotation : NotationBase {
         static constexpr const char* kName = "wMM";
         [[nodiscard]] static std::string expand_text(std::string_view, int);
-        [[nodiscard]] static std::string expand_text_alter(std::string_view, int);
-        [[nodiscard]] static std::string suffix() { return {}; }
     };
 
     namespace wmm_detail {
@@ -363,8 +363,6 @@ namespace omegay::notation {
             run(std::string_view text, int term, bool shorter) {
             const auto e = bmlike::parse(text);
             if (!e) return bmlike::kParseError;
-            if (e->infinity)
-                return bmlike::matrix_to_bm_string(bmlike::infinity_fs(term));
             if (e->m.cols() == 0) return {};
             if (!bmlike::is_limit(e->m))
                 return bmlike::matrix_to_bm_string(
@@ -384,11 +382,6 @@ namespace omegay::notation {
 
     [[nodiscard]] inline std::string
         WMMNotation::expand_text(std::string_view text, int term) {
-        return wmm_detail::run(text, term, true);
-    }
-
-    [[nodiscard]] inline std::string
-        WMMNotation::expand_text_alter(std::string_view text, int term) {
         return wmm_detail::run(text, term, false);
     }
 

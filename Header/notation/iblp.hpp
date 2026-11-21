@@ -1,6 +1,8 @@
 // Header/notation/iblp.hpp
 #pragma once
 
+#include "notation_base.hpp"
+
 #include "denshare.hpp"
 
 #include <optional>
@@ -10,12 +12,10 @@
 
 namespace omegay::notation {
 
-struct IblpNotation {
+struct IblpNotation : NotationBase {
     static constexpr const char* kName = "iblp";
 
     [[nodiscard]] static std::string expand_text(std::string_view text, int term);
-    [[nodiscard]] static std::string expand_text_alter(std::string_view text, int term);
-    [[nodiscard]] static std::string suffix() { return {}; }
 
     [[nodiscard]] static std::optional<denshare::Den3Expr> parse(std::string_view text);
     [[nodiscard]] static std::string to_string(const denshare::Den3Expr& expr);
@@ -46,7 +46,7 @@ using denshare::TextParser;
 }
 
 [[nodiscard]] inline std::string to_string(const Den3Expr& expr) {
-    if (expr.infinity) return "Limit";
+
     std::string out;
     for (const Den3Row& row : expr.rows) {
         out += '(';
@@ -66,13 +66,6 @@ using denshare::TextParser;
 [[nodiscard]] inline std::optional<Den3Expr> parse(std::string_view s) {
     TextParser p(s);
     p.skip_spaces();
-    if (p.match("Limit")) {
-        p.skip_spaces();
-        if (!p.eof()) return std::nullopt;
-        Den3Expr e;
-        e.infinity = true;
-        return e;
-    }
 
     Den3Expr expr;
     while (!p.eof()) {
@@ -110,7 +103,7 @@ using denshare::TextParser;
 // ---------------------------------------------------------------------
 
 [[nodiscard]] inline int compare(const Den3Expr& a, const Den3Expr& b) {
-    if (a.infinity || b.infinity) return denshare::bool_compare(a.infinity, b.infinity);
+
     std::vector<std::vector<int>> sa, sb;
     for (const Den3Row& row : a.rows) sa.push_back(to_short_row(row));
     for (const Den3Row& row : b.rows) sb.push_back(to_short_row(row));
@@ -118,7 +111,7 @@ using denshare::TextParser;
 }
 
 [[nodiscard]] inline bool is_limit(const Den3Expr& expr) {
-    if (expr.infinity) return true;
+
     if (expr.rows.empty()) return false;
     const Den3Row& active = expr.rows.back();
     const std::size_t idx = 1 + static_cast<std::size_t>(active[0].value);
@@ -341,8 +334,8 @@ using Rec = std::vector<std::optional<std::vector<int>>>;
     return expr;
 }
 
-// expand：核心展开。longer=false 对应 FS（较短），true 对应 FS_alter（较长）。
-// FS_alter 在全部压缩完成后会把结果裁剪回 len0 行。
+// expand：核心展开。longer=true 为较长支（对外唯一入口）。
+// 较长支在全部压缩完成后会把结果裁剪回 len0 行。
 [[nodiscard]] inline Den3Expr expand(const Den3Expr& raw, int fs_term, bool longer) {
     if (raw.rows.empty()) return raw;
     const Den3Row& active = raw.rows.back();
@@ -409,25 +402,10 @@ using Rec = std::vector<std::optional<std::vector<int>>>;
     return expr;
 }
 
-// ---------------------------------------------------------------------
-// 极限的 FS（TS 的 Limit）
-// ---------------------------------------------------------------------
 
-// DEN3 的 Limit_row 与 DEN1 同构：末尾追加 2 再整体反转；
-// 反转后位置 0 恰好是 step=2。
-[[nodiscard]] inline Den3Row limit_row(int n) {
-    return denshare::limit_row_entries(n);
-}
 
-[[nodiscard]] inline Den3Expr limit(int n) {
-    Den3Expr expr;
-    expr.rows.push_back({ {1, false}, {1, false}, {0, false} });
-    expr.rows.push_back({ {1, false}, {2, false}, {1, false}, {0, false} });
-    for (int i = 0; i < n; ++i) expr.rows.push_back(limit_row(1 + i));
-    return expr;
-}
 
-// FS / FS_alter 的公共骨架。与 DEN2 不同，DEN3 的 FS 不做 is_limit 预判，
+// 文本接口的公共骨架。与 DEN2 不同，DEN3 的 FS 不做 is_limit 预判，
 // 直接交给 expand（expand 内部会处理非极限情形）。
 [[nodiscard]] inline std::string expand_text_impl(std::string_view text, int term, bool longer) {
     if (term < 1) term = 1;
@@ -435,9 +413,7 @@ using Rec = std::vector<std::optional<std::vector<int>>>;
     if (!parsed) {
         return "解析失败，请确认你没有使用全角括号，逗号";
     }
-    if (parsed->infinity) {
-        return to_string(limit(term));
-    }
+
     if (parsed->rows.empty()) {
         Den3Expr e;
         return to_string(e);
@@ -452,10 +428,6 @@ using Rec = std::vector<std::optional<std::vector<int>>>;
 // ---------------------------------------------------------------------
 
 [[nodiscard]] inline std::string IblpNotation::expand_text(std::string_view text, int term) {
-    return iblp_detail::expand_text_impl(text, term, /*longer=*/false);
-}
-
-[[nodiscard]] inline std::string IblpNotation::expand_text_alter(std::string_view text, int term) {
     return iblp_detail::expand_text_impl(text, term, /*longer=*/true);
 }
 

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "notation_base.hpp"
+
 #include "../core/entry.hpp"
 
 #include <algorithm>
@@ -366,7 +368,7 @@ enum class MagmaKind { Medium, Strong };
 } // namespace omegay::notation::omega_y_detail
 namespace omegay::notation {
 
-struct OmegaYMediumNotation {
+struct OmegaYMediumNotation : NotationBase {
     static constexpr const char* kName = "ω-Y (medium magma)";
 
     [[nodiscard]] static std::vector<int> expand(
@@ -383,10 +385,9 @@ struct OmegaYMediumNotation {
             return {};
         }
     }
-    [[nodiscard]] static std::string suffix() { return {}; }
 };
 
-struct OmegaYStrongNotation {
+struct OmegaYStrongNotation : NotationBase {
     static constexpr const char* kName = "ω-Y (strong magma)";
 
     [[nodiscard]] static std::vector<int> expand(
@@ -403,7 +404,6 @@ struct OmegaYStrongNotation {
             return {};
         }
     }
-    [[nodiscard]] static std::string suffix() { return {}; }
 };
 
 } // namespace omegay::notation

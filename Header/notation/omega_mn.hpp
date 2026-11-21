@@ -1,6 +1,8 @@
 
 #pragma once
 
+#include "notation_base.hpp"
+
 #include <cstddef>
 #include <optional>
 #include <string>
@@ -11,9 +13,8 @@
 
 namespace omegay::notation {
 
-// Expr：非 ∞ 时持有 Mountain；∞（显示 "Limit"）用标志表示。
+// Expr：解析结果（顶层 ∞ / "Limit" 已拆除）。
 struct OmegaMnExpr {
-    bool infinity = false;
     smnshare::Mountain m;
 };
 
@@ -130,12 +131,6 @@ inline bool is_limit(const Mountain& m) {
     return !m.empty() && !m.back().empty();
 }
 
-inline Mountain infinity_fs(int n) {
-    Mountain m;
-    m.push_back(Column{});
-    m.push_back(Column{ Entry{ 1, n } });
-    return m;
-}
 
 // ---------------------------------------------------------------------
 // 展开（TS get_references + expand）
@@ -294,18 +289,12 @@ inline Mountain expand(const Mountain& m0, int index, bool shorter) {
 
 } // namespace omega_mn_detail
 
-struct OmegaMNNotation {
+struct OmegaMNNotation : NotationBase {
     static constexpr const char* kName = "ωMN";
 
-    // FS：较短展开。
     [[nodiscard]] static std::string expand_text(std::string_view text, int term) {
-        return expand_text_impl(text, term, /*longer=*/false);
-    }
-    // FS_alter：较长展开。
-    [[nodiscard]] static std::string expand_text_alter(std::string_view text, int term) {
         return expand_text_impl(text, term, /*longer=*/true);
     }
-    [[nodiscard]] static std::string suffix() { return {}; }
 
     // 供测试 / 调试使用的解析与格式化。
     [[nodiscard]] static std::optional<OmegaMnExpr> parse(std::string_view text) {
@@ -314,27 +303,20 @@ struct OmegaMNNotation {
         while (b < e && (s0[b] == ' ' || s0[b] == '\t')) ++b;
         while (e > b && (s0[e - 1] == ' ' || s0[e - 1] == '\t')) --e;
         const std::string_view raw = std::string_view(s0).substr(b, e - b);
-        if (raw == "Limit" || raw == "limit" || raw == "LIMIT") {
-            return OmegaMnExpr{ true, {} };
-        }
         if (raw.empty() || raw == "0" || raw == "∅") {
-            return OmegaMnExpr{ false, {} };
+            return OmegaMnExpr{};
         }
         auto m = omega_mn_detail::from_display(raw);
         if (!m) return std::nullopt;
-        return OmegaMnExpr{ false, std::move(*m) };
+        return OmegaMnExpr{ std::move(*m) };
     }
 
     [[nodiscard]] static std::string to_string(const OmegaMnExpr& e) {
-        if (e.infinity) return "Limit";
         return smnshare::mountain_display(e.m, false);
     }
 
-    // 非 ∞ 表达式的比较（供测试用）。
     [[nodiscard]] static int compare(const OmegaMnExpr& a, const OmegaMnExpr& b) {
-        if (a.infinity || b.infinity) {
-            return a.infinity == b.infinity ? 0 : (a.infinity ? 1 : -1);
-        }
+
         return omega_mn_detail::mountain_compare(a.m, b.m);
     }
 
@@ -344,9 +326,6 @@ private:
         const auto parsed = parse(text);
         if (!parsed) {
             return "解析失败，请确认你没有使用全角括号，逗号，分号";
-        }
-        if (parsed->infinity) {
-            return smnshare::mountain_display(omega_mn_detail::infinity_fs(term), false);
         }
         const smnshare::Mountain& m = parsed->m;
         if (m.empty()) return {};

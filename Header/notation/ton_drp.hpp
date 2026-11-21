@@ -23,7 +23,7 @@ namespace ton_drp_detail {
         const tonshare::TonValue v = a->v;
         if (v == 0) return true;
         // 负数叶子（-1）：TS 中 compare(a, b) < 0 对任意 b（节点）恒真；
-        // 其余非负叶子（kInf）按防御处理，不访问 a[0]/a[1]。
+        // 其余非负叶子按防御处理，不访问 a[0]/a[1]。
         return tonshare::compare_noraise(a, b) < 0;
     }
     if (tonshare::compare_noraise(a, b) < 0) return true;
@@ -52,33 +52,21 @@ namespace ton_drp_detail {
     });
 }
 
+// 策略：noraise 风格（裸 Ω）、DoR 极限项、无 mark 函数。
+struct TonDRPPolicy {
+    static constexpr bool kMainStyle = false;
+    static constexpr bool kHasMark = false;
+
+    [[nodiscard]] static bool is_standard(const tonshare::TonNode* a, tonshare::TonValue /*sys*/,
+                                          std::map<std::string, bool>& memo) {
+        return standard_q_drp(a, memo);
+    }
+};
+
 } // namespace ton_drp_detail
 
-struct TonDRPNotation {
+struct TonDRPNotation : tonshare::TonNotationBase<ton_drp_detail::TonDRPPolicy> {
     static constexpr const char* kName = "TON_DRP";
-
-    [[nodiscard]] static std::string expand_text(std::string_view text, int term) {
-        static std::map<std::string, bool> memo;
-        static tonshare::TonFsCache cache;
-        const tonshare::StdFn std_fn = [](const tonshare::TonNode* a,
-                                          tonshare::TonValue /*sys*/) -> bool {
-            return ton_drp_detail::standard_q_drp(a, memo);
-        };
-        return tonshare::ton_expand_text(text, term, /*main_style=*/false,
-                                         /*ibp_style_limit=*/false, std_fn, cache, nullptr);
-    }
-
-    [[nodiscard]] static std::string expand_text_alter(std::string_view text, int term) {
-        return expand_text(text, term);
-    }
-
-    [[nodiscard]] static std::string suffix() { return {}; }
-
-    [[nodiscard]] static std::string parse(std::string_view text) {
-        tonshare::TonArena arena;
-        const tonshare::TonNode* t = tonshare::parse_impl(arena, text, false);
-        return t ? tonshare::display_noraise(t) : "解析失败";
-    }
 };
 
 } // namespace omegay::notation

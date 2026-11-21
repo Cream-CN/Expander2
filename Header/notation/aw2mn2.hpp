@@ -1,55 +1,20 @@
-
+// Header/notation/aw2mn2.hpp
+// Aω2MN2 记号（display 名 "Aω2MN2"，TS id "a-omega2-mn-2"）。
+// 与 Aω2MN3 / wAω2MN2 / wAω2MN3 同构，差异只有两个编译期开关（weak、subtract1 版本），
+// 共享实现见 Header/notation/aw2mn_share.hpp 的 Aw2MnFamilyNotation 模板。
 #pragma once
+
+#include "aw2mn_share.hpp"
 
 #include <optional>
 #include <string>
 #include <string_view>
 
-#include "Header/notation/aw2mn_share.hpp"
-
 namespace omegay::notation {
 
-struct Aw2MN2Notation {
+struct Aw2MN2Notation
+    : aw2mn_share::Aw2MnFamilyNotation</*kWeak=*/false, aw2mn_share::SubtractKind::V2> {
     static constexpr const char* kName = "Aω2MN2";
-
-    [[nodiscard]] static std::string expand_text(std::string_view text, int term) {
-        return expand_text_impl(text, term, /*longer=*/false);
-    }
-    [[nodiscard]] static std::string expand_text_alter(std::string_view text, int term) {
-        return expand_text_impl(text, term, /*longer=*/true);
-    }
-    [[nodiscard]] static std::string suffix() { return {}; }
-
-    [[nodiscard]] static std::optional<aw2mn_share::Parsed> parse(std::string_view text) {
-        return aw2mn_share::parse(text);
-    }
-
-    [[nodiscard]] static std::string to_string(const aw2mn_share::Parsed& p) {
-        if (p.infinity) return "Limit";
-        return aw2mn_share::mountain_display(p.expr);
-    }
-
-private:
-    static std::string expand_text_impl(std::string_view text, int term, bool longer) {
-        if (term < 1) term = 1;
-        const auto parsed = aw2mn_share::parse(text);
-        if (!parsed) return aw2mn_share::kParseFail;
-        if (parsed->infinity) return aw2mn_share::mountain_display(aw2mn_share::infinity_fs(term));
-        const aw2mn_share::Expr& e = parsed->expr;
-        if (e.empty()) return {};
-        if (e.back().empty()) {
-            return aw2mn_share::mountain_display(aw2mn_share::Expr(e.begin(), e.end() - 1));
-        }
-        // 值域校验：value(1-based) 作为父列索引 value-1 须在 [0, size)
-        for (const auto& col : e) {
-            for (const auto& en : col) {
-                if (en.value < 1 || en.value > static_cast<int>(e.size())) return aw2mn_share::kParseFail;
-            }
-        }
-        return aw2mn_share::mountain_display(
-            aw2mn_share::expand(e, term, /*shorter=*/!longer, /*weak=*/false,
-                                aw2mn_share::SubtractKind::V2));
-    }
 };
 
 } // namespace omegay::notation

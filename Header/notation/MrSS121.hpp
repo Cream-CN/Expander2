@@ -1,4 +1,6 @@
 #pragma once
+
+#include "notation_base.hpp"
 #include "../common/mrssshare.hpp"
 
 #include <optional>
@@ -8,7 +10,7 @@
 
 namespace omegay::notation {
 
-    struct Mrss121Notation {
+    struct Mrss121Notation : NotationBase {
         static constexpr const char* kName = "MrSS1.2.1";
 
         // 标准 notation 接口：仅支持顶层纯整数序列。
@@ -22,7 +24,6 @@ namespace omegay::notation {
             return opt ? *opt : seq;
         }
 
-        [[nodiscard]] static std::string suffix() { return {}; }
         [[nodiscard]] static std::string expand_string(
             std::string_view seq, int term) {
             if (term < 1) term = 1;

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "notation_base.hpp"
+
 #include <vector>
 #include <string>
 
@@ -76,14 +78,13 @@ namespace omegay::notation {
         }
     } // namespace prss_detail
 
-    struct PrSSNotation {
+    struct PrSSNotation : NotationBase {
         static constexpr const char* kName = "PrSS";
         [[nodiscard]] static std::vector<int> expand(
             const std::vector<int>& seq, int term)
         {
             return prss_detail::expand_prss(seq, term);
         }
-        static std::string suffix() { return ""; }
     };
 
 } // namespace omegay::notation

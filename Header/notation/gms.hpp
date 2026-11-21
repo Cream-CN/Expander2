@@ -14,6 +14,8 @@
 // 在 expand_text 边界统一转换为 bmlike::kParseError。
 #pragma once
 
+#include "notation_base.hpp"
+
 #include <algorithm>
 #include <cstddef>
 #include <stdexcept>
@@ -586,17 +588,6 @@ namespace omegay::notation {
             return out;
         }
 
-        [[nodiscard]] inline FMat
-            limit_builder(GmsProj proj, int index) {
-            switch (proj) {
-                case GmsProj::OmegaP: return limit_omega_p(index);
-                case GmsProj::PQSS: return limit_pqss(index);
-                case GmsProj::QSS: return limit_qss(index);
-                case GmsProj::Full: return limit_full(index);
-                case GmsProj::WeirdlyFull: return limit_weirdly_full(index);
-            }
-            return {};
-        }
         [[nodiscard]] inline bool trim_enabled(GmsProj proj) noexcept {
             return proj == GmsProj::Full || proj == GmsProj::WeirdlyFull;
         }
@@ -610,9 +601,9 @@ namespace omegay::notation {
         }
 
         [[nodiscard]] inline FMat
-            raw_adjusted_fs(const FMat& a, bool infinity, int index,
+            raw_adjusted_fs(const FMat& a, int index,
                             GmsSystem system, GmsProj proj) {
-            if (infinity) return limit_builder(proj, index);
+
             int old_index = index;
             if (index >= 2) {
                 const FMat old1 = old_finite_fs(a, 1, system);
@@ -625,17 +616,17 @@ namespace omegay::notation {
 
         // 对外的有限/极限 FS；重复段保护失败时抛 GmsError。
         [[nodiscard]] inline FMat
-            fs(const FMat& a, bool infinity, int index,
+            fs(const FMat& a, int index,
                GmsSystem system, GmsProj proj) {
             if (index < 0)
                 throw GmsError("GMS: 基本序列下标必须是非负整数");
-            FMat result = raw_adjusted_fs(a, infinity, 0, system, proj);
+            FMat result = raw_adjusted_fs(a, 0, system, proj);
             if (index == 0) return result;
             int logical = 0, raw_index = 1;
             while (logical < index) {
                 if (raw_index > index + 10000)
                     throw GmsError("GMS: 基本序列含有过长的重复段");
-                FMat candidate = raw_adjusted_fs(a, infinity, raw_index++,
+                FMat candidate = raw_adjusted_fs(a, raw_index++,
                                                  system, proj);
                 if (compare_for(proj, candidate, result) == 0) continue;
                 result = std::move(candidate);
@@ -666,10 +657,6 @@ namespace omegay::notation {
             const auto e = bmlike::parse(text);
             if (!e) return bmlike::kParseError;
             try {
-                if (e->infinity) {
-                    // 极限构造器严格递增，无需去重，等价于 fs 包装。
-                    return fmat_to_string(limit_builder(proj, term));
-                }
                 if (e->m.cols() == 0) return {};
                 FMat a;
                 for (int c = 0; c < e->m.cols(); ++c)
@@ -681,7 +668,7 @@ namespace omegay::notation {
                         return v;
                     }());
                 const FMat result =
-                    fs(a, false, term, system, proj);
+                    fs(a, term, system, proj);
                 return fmat_to_string(result);
             } catch (const GmsError&) {
                 return bmlike::kParseError;
@@ -691,12 +678,11 @@ namespace omegay::notation {
     }  // namespace gms_detail
 
     template <GmsSystem SystemV, GmsProj ProjV>
-    struct GMSNotation {
+    struct GMSNotation : NotationBase {
         [[nodiscard]] static std::string
             expand_text(std::string_view text, int term) {
             return gms_detail::run(text, term, SystemV, ProjV);
         }
-        [[nodiscard]] static std::string suffix() { return {}; }
     };
 
     using GbmsOmegaP = GMSNotation<GmsSystem::GBMS, GmsProj::OmegaP>;

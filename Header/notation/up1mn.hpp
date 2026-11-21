@@ -1,6 +1,8 @@
 
 #pragma once
 
+#include "notation_base.hpp"
+
 #include <optional>
 #include <string>
 #include <string_view>
@@ -12,18 +14,14 @@ namespace omegay::notation {
 
 using Up1MnExpr = std::vector<std::vector<int>>;
 
-struct UP1MNNotation {
+struct UP1MNNotation : NotationBase {
     static constexpr const char* kName = "UP1MN";
 
     [[nodiscard]] static std::string expand_text(std::string_view text, int term) {
-        return expand_text_impl(text, term, /*longer=*/false);
-    }
-    [[nodiscard]] static std::string expand_text_alter(std::string_view text, int term) {
         return expand_text_impl(text, term, /*longer=*/true);
     }
-    [[nodiscard]] static std::string suffix() { return {}; }
 
-    // parse：∞ 不在此处理（"Limit" 走 expand_text_impl）；解析失败返回 nullopt。
+    // parse：解析失败返回 nullopt。
     [[nodiscard]] static std::optional<Up1MnExpr> parse(std::string_view text) {
         auto m = smnshare::from_display(text);
         if (!m) return std::nullopt;
@@ -58,13 +56,6 @@ struct UP1MNNotation {
 private:
     using Expr = Up1MnExpr;
 
-    // TS infinity_FS(index) = [[], [0]×(index+1)]。
-    [[nodiscard]] static Expr infinity_fs(int index) {
-        Expr result;
-        result.emplace_back();
-        result.emplace_back(static_cast<std::size_t>(index < 0 ? 0 : index + 1), 0);
-        return result;
-    }
 
     [[nodiscard]] static std::vector<int> compute_up(const Expr& expr, int r, int b) {
         const int right = static_cast<int>(expr.size()) - 1;
@@ -204,8 +195,6 @@ private:
 
     static std::string expand_text_impl(std::string_view text, int term, bool longer) {
         if (term < 1) term = 1;
-        const bool is_inf = text == "Limit" || text == "limit" || text == "LIMIT";
-        if (is_inf) return to_string(infinity_fs(term));
         auto parsed = parse(text);
         if (!parsed) {
             return "解析失败，请确认你没有使用全角括号，逗号，分号";

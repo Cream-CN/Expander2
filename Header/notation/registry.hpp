@@ -10,9 +10,9 @@
 //    · 130+ 个记号头文件的内部实现零改动，通过模板适配器（静态多态）接入
 //      运行时多态接口；
 //    · GUI 的 NotationEntry 表 / CLI 的 CliEntry 表都从本注册中心派生（单一
-//      事实来源），对外行为逐字节不变；
-//    · 原 GUI/CLI 重复的 FS 分派 / FS 截断 / BMS/UPMS 文本⇄Matrix 逻辑收敛
-//      到 INotation::expand() 与 truncate_fs()（策略虚函数）；
+//      事实来源）；
+//    · 每个记号只有一种展开：INotation::expand() 直接取记号自身实现的
+//      “保留末项”展开（不再有 FS / FS_alter 双模式，也不做通用截断）；
 //    · header-only，兼容 GUI（MSVC /std:c++20）与 CLI（cl.exe / g++ 单文件）。
 //============================================================================
 
@@ -113,9 +113,9 @@
 namespace omegay::notation {
 
 //--------------------------------------------------------------------------
-// 展开模式：Fs = “展开”按钮（含 FS 通用截断）；FsAlter = “FS_alter”按钮。
+// 展开语义：每个记号只有一种展开——记号自身实现的“保留末项”展开
+// （不再有“移除末项”的 FS 通用截断，也不再区分 FS / FS_alter 两种按钮）。
 //--------------------------------------------------------------------------
-enum class ExpandMode { Fs, FsAlter };
 
 // 一次展开的结果：成功返回 text；失败置 ok=false 并给出人可读错误（与
 // 原 GUI/CLI 的错误提示逐字一致）。
@@ -144,14 +144,12 @@ struct NotationCaps {
     std::vector<int> (*expand_seq)(const std::vector<int>&, int) = nullptr;
     std::string (*suffix)() = nullptr;
     std::string (*text)(std::string_view, int) = nullptr;
-    std::string (*text_alter)(std::string_view, int) = nullptr;
     std::string (*text_n)(std::string_view, int, int) = nullptr;
-    std::string (*text_n_alter)(std::string_view, int, int) = nullptr;
 };
 
 //==========================================================================
-// 抽象记号接口：元数据 + 能力虚函数 + 统一展开入口 + FS 截断策略。
-// 展开语义复刻原 GUI IDM_FS / CLI expandFs 的分派逻辑，逐字节等价。
+// 抽象记号接口：元数据 + 能力虚函数 + 统一展开入口。
+// 每个记号只有一种展开（记号自身的“保留末项”展开），不存在 FS 截断分支。
 //==========================================================================
 class INotation {
 public:
@@ -170,37 +168,24 @@ public:
     // ---- 能力（默认无） ----
     [[nodiscard]] virtual bool has_seq() const noexcept { return false; }
     [[nodiscard]] virtual bool has_text() const noexcept { return false; }
-    [[nodiscard]] virtual bool has_text_alter() const noexcept { return false; }
     [[nodiscard]] virtual bool has_text_n() const noexcept { return false; }
-    [[nodiscard]] virtual bool has_text_n_alter() const noexcept { return false; }
 
     // ---- 展开入口（未支持时返回空，调用方按能力查询） ----
     [[nodiscard]] virtual std::vector<int> expand_seq(
         const std::vector<int>& seq, int term) const { (void)seq; (void)term; return {}; }
     [[nodiscard]] virtual std::string expand_text(
         std::string_view text, int term) const { (void)text; (void)term; return {}; }
-    [[nodiscard]] virtual std::string expand_text_alter(
-        std::string_view text, int term) const { (void)text; (void)term; return {}; }
     [[nodiscard]] virtual std::string expand_text_n(
-        std::string_view text, int term, int param) const {
-        (void)text; (void)term; (void)param; return {}; }
-    [[nodiscard]] virtual std::string expand_text_n_alter(
         std::string_view text, int term, int param) const {
         (void)text; (void)term; (void)param; return {}; }
     [[nodiscard]] virtual std::string suffix() const { return {}; }
 
-    // ---- 统一展开入口（原 GUI/CLI 分派语义的收敛；返回含 suffix 的最终文本）----
-    [[nodiscard]] ExpandResult expand(ExpandMode mode, std::string_view text,
+    // ---- 统一展开入口（返回含 suffix 的最终文本）----
+    [[nodiscard]] ExpandResult expand(std::string_view text,
                                       int term, int param) const {
-        // 文本型记号（优先于参数化/序列型，与原分派顺序一致）
+        // 文本型记号（优先于参数化/序列型）
         if (has_text()) {
-            if (mode == ExpandMode::FsAlter && has_text_alter())
-                return { expand_text_alter(text, term) + suffix(), true, {} };
-
             std::string out = expand_text(text, term);
-            // 仅 FS 且记号未自带 FS_alter 语义时做通用截断
-            if (mode == ExpandMode::Fs && !has_text_alter())
-                out = truncate_fs(std::move(out), term);
             out += suffix();
             return { std::move(out), true, {} };
         }
@@ -215,9 +200,7 @@ public:
                       + " 之间的整数";
                 return r;
             }
-            std::string out = (mode == ExpandMode::FsAlter && has_text_n_alter())
-                ? expand_text_n_alter(text, term, param)
-                : expand_text_n(text, term, param);
+            std::string out = expand_text_n(text, term, param);
             out += suffix();
             return { std::move(out), true, {} };
         }
@@ -229,25 +212,10 @@ public:
         if (seq.empty())
             return { {}, false, "序列不能为空" };
         std::vector<int> result = expand_seq(seq, term);
-        if (mode == ExpandMode::Fs && result.size() > 1)
-            result.pop_back();
         return { common::seq_to_string(result) + suffix(), true, {} };
     }
 
 protected:
-    // ---- FS 通用截断策略（虚函数；BMS / UPMS 覆盖为删末列） ----
-    // 默认：MrSS 向量语义尝试（复刻原 else 分支——对 cms/gms/blm 等文本
-    // 记号尝试 MrSS 解析，失败则原样返回）。
-    [[nodiscard]] virtual std::string truncate_fs(std::string out, int term) const {
-        (void)term;
-        auto parsed = Mrss121Notation::parse(out);
-        if (parsed && parsed->size() > 1) {
-            parsed->pop_back();
-            return Mrss121Notation::to_string(*parsed);
-        }
-        return out;
-    }
-
     NotationMeta meta_;
     NotationCaps caps_;
 };
@@ -259,7 +227,8 @@ protected:
 template<class T>
 class SequenceNotation : public INotation {
 public:
-    explicit SequenceNotation(NotationMeta meta) : INotation(std::move(meta)) {
+    explicit SequenceNotation(NotationMeta meta) noexcept
+        : INotation(std::move(meta)) {
         caps_.expand_seq = &T::expand;
         caps_.suffix = &T::suffix;
     }
@@ -274,7 +243,8 @@ public:
 template<class T>
 class TextNotation : public INotation {
 public:
-    explicit TextNotation(NotationMeta meta) : INotation(std::move(meta)) {
+    explicit TextNotation(NotationMeta meta) noexcept
+        : INotation(std::move(meta)) {
         caps_.text = &T::expand_text;
         caps_.suffix = &T::suffix;
     }
@@ -282,35 +252,6 @@ public:
     [[nodiscard]] std::string expand_text(
         std::string_view text, int term) const override {
         return T::expand_text(text, term);
-    }
-    [[nodiscard]] std::string suffix() const override { return T::suffix(); }
-};
-
-template<class T>
-class TextAlterNotation : public INotation {
-public:
-    explicit TextAlterNotation(NotationMeta meta) : INotation(std::move(meta)) {
-        caps_.text = &T::expand_text;
-        caps_.suffix = &T::suffix;
-        // BSM 类记号没有独立 expand_text_alter（alter 与 text 同函数），
-        // 此处 if constexpr 自动选择，保证旧表字段语义不变。
-        if constexpr (requires { T::expand_text_alter(std::string_view{}, 0); })
-            caps_.text_alter = &T::expand_text_alter;
-        else
-            caps_.text_alter = &T::expand_text;
-    }
-    [[nodiscard]] bool has_text() const noexcept override { return true; }
-    [[nodiscard]] bool has_text_alter() const noexcept override { return true; }
-    [[nodiscard]] std::string expand_text(
-        std::string_view text, int term) const override {
-        return T::expand_text(text, term);
-    }
-    [[nodiscard]] std::string expand_text_alter(
-        std::string_view text, int term) const override {
-        if constexpr (requires { T::expand_text_alter(std::string_view{}, 0); })
-            return T::expand_text_alter(text, term);
-        else
-            return T::expand_text(text, term);
     }
     [[nodiscard]] std::string suffix() const override { return T::suffix(); }
 };
@@ -318,7 +259,8 @@ public:
 template<class T>
 class ParametricNotation : public INotation {
 public:
-    explicit ParametricNotation(NotationMeta meta) : INotation(std::move(meta)) {
+    explicit ParametricNotation(NotationMeta meta) noexcept
+        : INotation(std::move(meta)) {
         caps_.text_n = &T::expand_text_n;
         caps_.suffix = &T::suffix;
     }
@@ -326,27 +268,6 @@ public:
     [[nodiscard]] std::string expand_text_n(
         std::string_view text, int term, int param) const override {
         return T::expand_text_n(text, term, param);
-    }
-    [[nodiscard]] std::string suffix() const override { return T::suffix(); }
-};
-
-template<class T>
-class ParametricAlterNotation : public INotation {
-public:
-    explicit ParametricAlterNotation(NotationMeta meta) : INotation(std::move(meta)) {
-        caps_.text_n = &T::expand_text_n;
-        caps_.text_n_alter = &T::expand_text_n_alter;
-        caps_.suffix = &T::suffix;
-    }
-    [[nodiscard]] bool has_text_n() const noexcept override { return true; }
-    [[nodiscard]] bool has_text_n_alter() const noexcept override { return true; }
-    [[nodiscard]] std::string expand_text_n(
-        std::string_view text, int term, int param) const override {
-        return T::expand_text_n(text, term, param);
-    }
-    [[nodiscard]] std::string expand_text_n_alter(
-        std::string_view text, int term, int param) const override {
-        return T::expand_text_n_alter(text, term, param);
     }
     [[nodiscard]] std::string suffix() const override { return T::suffix(); }
 };
@@ -413,18 +334,6 @@ public:
     }
     [[nodiscard]] std::string suffix() const override {
         return BMSFamilyNotation::suffix();
-    }
-
-protected:
-    // FS 截断：删除最后一列（BMS 标准文本）
-    [[nodiscard]] std::string truncate_fs(std::string out, int term) const override {
-        long t = term;
-        omegay::common::Matrix m = omegay::common::parse_matrix(out, t);
-        if (m.cols() > 1) {
-            m.resize_cols(m.cols() - 1);
-            return omegay::common::matrix_to_string(m);
-        }
-        return out;
     }
 
 private:
@@ -528,21 +437,9 @@ public:
     [[nodiscard]] std::string suffix() const override {
         return UPMSNotation::suffix();
     }
-
-protected:
-    // FS 截断：删除最后一列（省略尾随零文本）
-    [[nodiscard]] std::string truncate_fs(std::string out, int term) const override {
-        (void)term;
-        auto m = parseUpmsText(out);
-        if (m.cols() > 1) {
-            m.resize_cols(m.cols() - 1);
-            return formatUpmsText(m);
-        }
-        return out;
-    }
 };
 
-// MrSS1.2.1：文本 + 序列双入口；FS 截断沿用默认（MrSS pop_back 语义）
+// MrSS1.2.1：文本 + 序列双入口
 class MrssNotation : public INotation {
 public:
     explicit MrssNotation(NotationMeta meta) : INotation(std::move(meta)) {
@@ -773,19 +670,9 @@ inline constexpr std::array<NotationMeta, 119> kMetaArray = {
             return std::make_unique<TextNotation<T>>(m);
         }
     };
-    template<class T> struct MakeTextAlter {
-        std::unique_ptr<INotation> operator()(const NotationMeta& m) const {
-            return std::make_unique<TextAlterNotation<T>>(m);
-        }
-    };
     template<class T> struct MakeParametric {
         std::unique_ptr<INotation> operator()(const NotationMeta& m) const {
             return std::make_unique<ParametricNotation<T>>(m);
-        }
-    };
-    template<class T> struct MakeParametricAlter {
-        std::unique_ptr<INotation> operator()(const NotationMeta& m) const {
-            return std::make_unique<ParametricAlterNotation<T>>(m);
         }
     };
     template<BMSFamilyNotation::Version V> struct MakeBms {
@@ -831,15 +718,15 @@ using AllNotations = TypeList<
     Reg<MakeSeq<notation::OmegaYNotation>, 22>,
     Reg<MakeSeq<notation::EpsilonYNotation>, 23>,
     Reg<MakeUpms, 24>,
-    Reg<MakeTextAlter<notation::BSMNotation>, 25>,
-    Reg<MakeTextAlter<notation::BHMNotation>, 26>,
-    Reg<MakeTextAlter<notation::BM_BHMNotation<1>>, 27>,
-    Reg<MakeTextAlter<notation::BM_BHMNotation<2>>, 28>,
-    Reg<MakeTextAlter<notation::BM_BHMNotation<3>>, 29>,
+    Reg<MakeText<notation::BSMNotation>, 25>,
+    Reg<MakeText<notation::BHMNotation>, 26>,
+    Reg<MakeText<notation::BM_BHMNotation<1>>, 27>,
+    Reg<MakeText<notation::BM_BHMNotation<2>>, 28>,
+    Reg<MakeText<notation::BM_BHMNotation<3>>, 29>,
     Reg<MakeText<notation::CMSNotation>, 30>,
-    Reg<MakeTextAlter<notation::DSMNotation>, 31>,
+    Reg<MakeText<notation::DSMNotation>, 31>,
     Reg<MakeText<notation::BLMNotation>, 32>,
-    Reg<MakeTextAlter<notation::WMMNotation>, 33>,
+    Reg<MakeText<notation::WMMNotation>, 33>,
     Reg<MakeText<notation::GbmsOmegaP>, 34>,
     Reg<MakeText<notation::GbmsPQSS>, 35>,
     Reg<MakeText<notation::GbmsQSS>, 36>,
@@ -866,7 +753,7 @@ using AllNotations = TypeList<
     Reg<MakeParametric<notation::TM1YnssNotation>, 57>,
     Reg<MakeParametric<notation::BT1Notation>, 58>,
     Reg<MakeParametric<notation::BT2Notation>, 59>,
-    Reg<MakeParametricAlter<notation::BT3Notation>, 60>,
+    Reg<MakeParametric<notation::BT3Notation>, 60>,
     Reg<MakeParametric<notation::BTlNotation>, 61>,
     Reg<MakeParametric<notation::AbsBM1Notation>, 62>,
     Reg<MakeParametric<notation::RelBM1Notation>, 63>,
@@ -874,57 +761,57 @@ using AllNotations = TypeList<
     Reg<MakeSeq<notation::XYV1Notation>, 65>,
     Reg<MakeSeq<notation::XYV2Notation>, 66>,
     Reg<MakeSeq<notation::XYV3Notation>, 67>,
-    Reg<MakeTextAlter<notation::Den1Notation>, 68>,
-    Reg<MakeTextAlter<notation::BlpNotation>, 69>,
-    Reg<MakeTextAlter<notation::IblpNotation>, 70>,
-    Reg<MakeTextAlter<notation::TonNotation>, 71>,
-    Reg<MakeTextAlter<notation::TonINotation>, 72>,
-    Reg<MakeTextAlter<notation::TonDoRNotation>, 73>,
-    Reg<MakeTextAlter<notation::TonDRCNotation>, 74>,
-    Reg<MakeTextAlter<notation::TonDRPNotation>, 75>,
-    Reg<MakeTextAlter<notation::TonDRPCNotation>, 76>,
-    Reg<MakeTextAlter<notation::TonIbpNotation>, 77>,
-    Reg<MakeTextAlter<notation::TonMcNotation>, 78>,
-    Reg<MakeTextAlter<notation::TonMpcNotation>, 79>,
-    Reg<MakeTextAlter<notation::E0MNNotation>, 80>,
-    Reg<MakeTextAlter<notation::StrongE0MNNotation>, 81>,
-    Reg<MakeTextAlter<notation::OmegaMNNotation>, 82>,
-    Reg<MakeTextAlter<notation::PcfOmegaMNNotation>, 83>,
-    Reg<MakeTextAlter<notation::TOmegaMNNotation>, 84>,
-    Reg<MakeTextAlter<notation::NMnNotation<1>>, 85>,
-    Reg<MakeTextAlter<notation::NMnNotation<2>>, 86>,
-    Reg<MakeTextAlter<notation::NMnNotation<3>>, 87>,
-    Reg<MakeTextAlter<notation::SOmega2MNNotation>, 88>,
-    Reg<MakeTextAlter<notation::SAOmega2MNNotation>, 89>,
-    Reg<MakeTextAlter<notation::SOmegaPowOmegaMNNotation>, 90>,
-    Reg<MakeTextAlter<notation::UP1MNNotation>, 91>,
-    Reg<MakeTextAlter<notation::UP2MNV1ANotation>, 92>,
-    Reg<MakeTextAlter<notation::UP2MNV1BNotation>, 93>,
-    Reg<MakeTextAlter<notation::UP2MNV1BPlusNotation>, 94>,
-    Reg<MakeTextAlter<notation::UP1DBMSNotation>, 95>,
-    Reg<MakeTextAlter<notation::UP2DBMSV1Notation>, 96>,
-    Reg<MakeTextAlter<notation::UP2DBMSV1BPlusNotation>, 97>,
-    Reg<MakeTextAlter<notation::UP2DBMSV1CNotation>, 98>,
-    Reg<MakeTextAlter<notation::Up2DbmsV2Notation>, 99>,
-    Reg<MakeTextAlter<notation::S1DBMSNotation>, 100>,
-    Reg<MakeTextAlter<notation::S2DBMSNotation>, 101>,
-    Reg<MakeTextAlter<notation::SOmegaDBMSV1Notation>, 102>,
-    Reg<MakeTextAlter<notation::SOmegaDBMSV2Notation>, 103>,
-    Reg<MakeTextAlter<notation::SOmegaDBMSV3Notation>, 104>,
-    Reg<MakeTextAlter<notation::SOmegaP1DBMSNotation>, 105>,
-    Reg<MakeTextAlter<notation::SOmega2DBMSNotation>, 106>,
-    Reg<MakeTextAlter<notation::SOmegaSquareDBMSNotation>, 107>,
-    Reg<MakeTextAlter<notation::Ts2DbmsNotation>, 108>,
-    Reg<MakeTextAlter<notation::TsOmegaDbmsNotation>, 109>,
-    Reg<MakeTextAlter<notation::Aw2MN2Notation>, 110>,
-    Reg<MakeTextAlter<notation::WAw2MN2Notation>, 111>,
-    Reg<MakeTextAlter<notation::Aw2MN3Notation>, 112>,
-    Reg<MakeTextAlter<notation::WAw2MN3Notation>, 113>,
-    Reg<MakeTextAlter<notation::SrdNotation>, 114>,
-    Reg<MakeTextAlter<notation::RpdNotation>, 115>,
-    Reg<MakeTextAlter<notation::ArdNotation>, 116>,
-    Reg<MakeTextAlter<notation::Ard2Notation>, 117>,
-    Reg<MakeTextAlter<notation::IpdNotation>, 118>
+    Reg<MakeText<notation::Den1Notation>, 68>,
+    Reg<MakeText<notation::BlpNotation>, 69>,
+    Reg<MakeText<notation::IblpNotation>, 70>,
+    Reg<MakeText<notation::TonNotation>, 71>,
+    Reg<MakeText<notation::TonINotation>, 72>,
+    Reg<MakeText<notation::TonDoRNotation>, 73>,
+    Reg<MakeText<notation::TonDRCNotation>, 74>,
+    Reg<MakeText<notation::TonDRPNotation>, 75>,
+    Reg<MakeText<notation::TonDRPCNotation>, 76>,
+    Reg<MakeText<notation::TonIbpNotation>, 77>,
+    Reg<MakeText<notation::TonMcNotation>, 78>,
+    Reg<MakeText<notation::TonMpcNotation>, 79>,
+    Reg<MakeText<notation::E0MNNotation>, 80>,
+    Reg<MakeText<notation::StrongE0MNNotation>, 81>,
+    Reg<MakeText<notation::OmegaMNNotation>, 82>,
+    Reg<MakeText<notation::PcfOmegaMNNotation>, 83>,
+    Reg<MakeText<notation::TOmegaMNNotation>, 84>,
+    Reg<MakeText<notation::NMnNotation<1>>, 85>,
+    Reg<MakeText<notation::NMnNotation<2>>, 86>,
+    Reg<MakeText<notation::NMnNotation<3>>, 87>,
+    Reg<MakeText<notation::SOmega2MNNotation>, 88>,
+    Reg<MakeText<notation::SAOmega2MNNotation>, 89>,
+    Reg<MakeText<notation::SOmegaPowOmegaMNNotation>, 90>,
+    Reg<MakeText<notation::UP1MNNotation>, 91>,
+    Reg<MakeText<notation::UP2MNV1ANotation>, 92>,
+    Reg<MakeText<notation::UP2MNV1BNotation>, 93>,
+    Reg<MakeText<notation::UP2MNV1BPlusNotation>, 94>,
+    Reg<MakeText<notation::UP1DBMSNotation>, 95>,
+    Reg<MakeText<notation::UP2DBMSV1Notation>, 96>,
+    Reg<MakeText<notation::UP2DBMSV1BPlusNotation>, 97>,
+    Reg<MakeText<notation::UP2DBMSV1CNotation>, 98>,
+    Reg<MakeText<notation::Up2DbmsV2Notation>, 99>,
+    Reg<MakeText<notation::S1DBMSNotation>, 100>,
+    Reg<MakeText<notation::S2DBMSNotation>, 101>,
+    Reg<MakeText<notation::SOmegaDBMSV1Notation>, 102>,
+    Reg<MakeText<notation::SOmegaDBMSV2Notation>, 103>,
+    Reg<MakeText<notation::SOmegaDBMSV3Notation>, 104>,
+    Reg<MakeText<notation::SOmegaP1DBMSNotation>, 105>,
+    Reg<MakeText<notation::SOmega2DBMSNotation>, 106>,
+    Reg<MakeText<notation::SOmegaSquareDBMSNotation>, 107>,
+    Reg<MakeText<notation::Ts2DbmsNotation>, 108>,
+    Reg<MakeText<notation::TsOmegaDbmsNotation>, 109>,
+    Reg<MakeText<notation::Aw2MN2Notation>, 110>,
+    Reg<MakeText<notation::WAw2MN2Notation>, 111>,
+    Reg<MakeText<notation::Aw2MN3Notation>, 112>,
+    Reg<MakeText<notation::WAw2MN3Notation>, 113>,
+    Reg<MakeText<notation::SrdNotation>, 114>,
+    Reg<MakeText<notation::RpdNotation>, 115>,
+    Reg<MakeText<notation::ArdNotation>, 116>,
+    Reg<MakeText<notation::Ard2Notation>, 117>,
+    Reg<MakeText<notation::IpdNotation>, 118>
 >;
     // <<< 生成类型列表结束 <<<
 

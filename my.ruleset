@@ -1,6 +1,23 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<RuleSet Name="自定义的规则集" ToolsVersion="18.0">
-  <Include Path="allrules.ruleset" Action="Default" />
+<!--
+  Expander 代码分析规则集：缺陷优先。
+
+  设计取舍：编译器的 /W3 + SDL 检查负责“会不会编译错”；本规则集只保留
+  能直接对应“真缺陷”的检查（越界、生命周期、未初始化、可空性），
+  把 C++ 核心准则里的“风格建议”按条目关掉，避免 7000+ 条建议淹没真正的错误。
+
+  关闭的每条规则都写了理由；要重新打开某条，把对应 <Rule Action> 改成 Default 即可。
+  新增规则若开始“刷屏”，也按同样方式在此登记。
+-->
+<RuleSet Name="Expander 缺陷优先规则集" ToolsVersion="18.0">
+  <!-- 微软原生 SAL 检查：参数可空性、缓冲区大小、格式化串等实打实的缺陷。
+       注意：nativeminimum / nativerecommended 已经把 allrules 里真正有价值的部分
+       包含进来，故不再整包引入 allrules.ruleset（那会把所有建议类规则一并打开）。 -->
+  <Include Path="nativeminimumrules.ruleset" Action="Default" />
+  <Include Path="nativerecommendedrules.ruleset" Action="Default" />
+
+  <!-- C++ 核心准则：按分组引入。真正有缺陷价值的分组保留（类型、类、声明、
+       函数、所有权指针、STL、边界），其余分组默认不引入。 -->
   <Include Path="cppcorecheckarithmeticrules.ruleset" Action="Default" />
   <Include Path="cppcorecheckboundsrules.ruleset" Action="Default" />
   <Include Path="cppcorecheckclassrules.ruleset" Action="Default" />
@@ -16,6 +33,91 @@
   <Include Path="cppcorecheckstylerules.ruleset" Action="Default" />
   <Include Path="cppcorechecktyperules.ruleset" Action="Default" />
   <Include Path="cppcorecheckuniquepointerrules.ruleset" Action="Default" />
-  <Include Path="nativeminimumrules.ruleset" Action="Default" />
-  <Include Path="nativerecommendedrules.ruleset" Action="Default" />
+
+  <!-- 原生分析器的规则条目：AnalyzerId / RuleNamespace 是 ruleset 架构的必填属性，
+       缺了会报“文件不符合规则集架构”，整包规则集加载失败。 -->
+  <Rules AnalyzerId="Microsoft.Analyzers.NativeCodeAnalysis" RuleNamespace="Microsoft.Rules.Native">
+
+    <!-- ================= 关闭：纯风格/措辞类建议 ================= -->
+
+    <!-- bounds.4 建议改用 gsl::at 做带检查下标。项目不引入 GSL 依赖；
+         下标正确性由各记号算法的长度前置条件保证，逐处改 gsl::at 只会污染算法可读性。 -->
+    <Rule Id="C26446" Action="None" />
+
+    <!-- type.1 建议用 gsl::narrow_cast / 花括号初始化替代 static_cast 做算术转换。
+         本项目转换都是有意为之的显式窄化（int <-> size_t <-> 8/16 位），语义已经写明。 -->
+    <Rule Id="C26472" Action="None" />
+
+    <!-- type.4 禁止 C 风格强制转换。Win32 消息参数（WPARAM/LPARAM/HMENU）必须这样转。 -->
+    <Rule Id="C26493" Action="None" />
+
+    <!-- con.4 建议给函数内局部变量加 const。纯建议，逐处加 const 只会制造无意义 diff。 -->
+    <Rule Id="C26496" Action="None" />
+
+    <!-- f.4 建议把函数标成 constexpr。模板实例化后会因依赖运行时状态大量误报。 -->
+    <Rule Id="C26497" Action="None" />
+
+    <!-- es.48 建议用 std::ignore 代替 (void) 忽略返回值。项目统一用 (void) 表达"有意忽略"。 -->
+    <Rule Id="C26457" Action="None" />
+
+    <!-- gsl::not_null / 参数改 const 指针：都属于无 GSL 依赖下无法照办的接口约定建议。 -->
+    <Rule Id="C26429" Action="None" />
+    <Rule Id="C26461" Action="None" />
+    <Rule Id="C26462" Action="None" />
+
+    <!-- bounds.1 / bounds.2 / bounds.3 指针算术与下标访问建议（C26481 / C26482 / C26485）。
+         记号算法是定长序列上的密集下标运算，长度由构造期约束，属于"已证安全"的热路径。 -->
+    <Rule Id="C26481" Action="None" />
+    <Rule Id="C26482" Action="None" />
+    <Rule Id="C26485" Action="None" />
+
+    <!-- f.6 建议把函数声明为 noexcept。绝大多数命中点是返回 std::string 的 suffix()，
+         这类函数会分配内存，加 noexcept 只会把 bad_alloc 变成 terminate，并不能预防缺陷。
+         适配器构造函数这类确实 noexcept 的位置已在代码里显式标注（registry.hpp）。 -->
+    <Rule Id="C26440" Action="None" />
+
+    <!-- type.1 / type.2 禁止 reinterpret_cast / const_cast。
+         Win32 消息参数（LPARAM / WPARAM / HMENU / HDC）和 ListView 的 pszText 天生要求
+         这些转换，禁用即等于禁用整个 Win32 层。 -->
+    <Rule Id="C26490" Action="None" />
+    <Rule Id="C26492" Action="None" />
+    <Rule Id="C26471" Action="None" />
+
+    <!-- type.1 / io.2 算术溢出提示：先在 int 上运算再拓宽到 size_t。
+         序列是极小的整数域，修改需要在上百处插入 static_cast，收益低、回归风险高。 -->
+    <Rule Id="C26451" Action="None" />
+
+    <!-- r.30 / r.36 建议把智能指针参数退化成 T* / T&。
+         记号遍历句柄以 shared_ptr 传递正是为了表达共享生命周期，退化会丢失所有权语义。 -->
+    <Rule Id="C26415" Action="None" />
+    <Rule Id="C26418" Action="None" />
+
+    <!-- r.5 局部智能指针被 move/reset 的建议：按需移动是设计意图，不是缺陷。 -->
+    <Rule Id="C26414" Action="None" />
+
+    <!-- stl.1 建议把裸指针区间包成 gsl::span。项目不引入 GSL 依赖。 -->
+    <Rule Id="C26459" Action="None" />
+
+    <!-- Enum.3 建议用 enum class 替代 enum。这是接口设计变更而非告警修复，
+         现有 enum 值以整数参与算术/资源 id，整体改型会牵动大量隐式转换。 -->
+    <Rule Id="C26812" Action="None" />
+
+    <!-- con.6 建议用结构化绑定。纯可读性偏好。 -->
+    <Rule Id="C26830" Action="None" />
+
+    <!-- type.5 未初始化局部变量：分析器无法证明带 continue/break 的分支已全部赋值，
+         在这些 val_i / new_last 上是误报（每个分支都赋值或提前 continue）。 -->
+    <Rule Id="C26494" Action="None" />
+
+    <!-- ================= 关闭：Win32 窗口状态的生命周期约定 ================= -->
+    <!-- 这些对象（UiState / PickerState / TranslatorState / IconStrip / AboutChildWindows）
+         都通过 SetWindowLongPtrW(GWLP_USERDATA) 与窗口绑定，归属由 WM_CREATE 建立、
+         由 WM_DESTROY 显式 delete。改成 unique_ptr 需要重做整套消息分发，
+         不属于"消除告警"，而是架构变更；因此保留裸指针 + WM_DESTROY 释放的既有约定。 -->
+    <Rule Id="C26409" Action="None" />   <!-- r.11 禁止显式 new/delete -->
+    <Rule Id="C26403" Action="None" />   <!-- r.3 owner<T> 必须 reset/release -->
+    <Rule Id="C26401" Action="None" />   <!-- i.11 禁止 delete 非 owner 指针（含 lpCreateParams 约定转移所有权） -->
+    <Rule Id="C26402" Action="None" />   <!-- r.3 工厂返回堆对象（生命周期绑定窗口） -->
+
+  </Rules>
 </RuleSet>

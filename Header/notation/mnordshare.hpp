@@ -4,8 +4,7 @@
 // src/notations/MN/strong_e0MN.ts（两者为各自独立的副本，仅三处实质差异，
 // 本共享头用 bool strong 参数区分，见 shift_ord_numbers / down / short_expansion）。
 // 表达式结构（TS）：Term={exp:Ord, coeff:int}；Ord=Term[]（[]=0）；
-// Entry={a:int, x:Ord}；Column=Entry[]；Expr=Column[]；∞ 由外层 E0MnExpr 的标志表示
-// （display 为 "Limit"）。
+// Entry={a:int, x:Ord}；Column=Entry[]；Expr=Column[]。
 // 说明：纯函数、不抛异常；非法输入在解析层返回 nullopt。行高差显示等 UI 等价
 // 表示未移植（C++ 侧仅需 plain 显示往返）。
 #pragma once
@@ -16,6 +15,8 @@
 #include <string>
 #include <string_view>
 #include <vector>
+
+#include "notation_base.hpp"
 
 namespace omegay::notation::mnordshare {
 
@@ -509,39 +510,17 @@ inline std::optional<Column> parse_column(std::string_view s) {
 }
 
 struct ParseResult {
-    bool infinity = false;
     Expr expr;
 };
 
-// TS parseExpr。注意 "Limit" 返回 ∞ 标志、"Limit[n]" 返回具体的第 n 个基本列。
+// TS parseExpr（"Limit" / "Limit[n]" 一律视为非法输入，返回 nullopt）。
 inline std::optional<ParseResult> parse_expr(std::string_view text) {
     // 去首尾空白
     std::size_t begin = 0, end = text.size();
     while (begin < end && (text[begin] == ' ' || text[begin] == '\t')) ++begin;
     while (end > begin && (text[end - 1] == ' ' || text[end - 1] == '\t')) --end;
     const std::string_view raw = text.substr(begin, end - begin);
-    if (raw.empty() || raw == "0" || raw == "∅") return ParseResult{ false, {} };
-    if (raw == "Limit" || raw == "limit" || raw == "LIMIT") return ParseResult{ true, {} };
-    // Limit[n]
-    if (raw.size() >= 7 && (raw[0] == 'L' || raw[0] == 'l')) {
-        const std::string lower = [&]() {
-            std::string l;
-            l.reserve(raw.size());
-            for (char ch : raw) l.push_back(static_cast<char>(std::tolower(static_cast<unsigned char>(ch))));
-            return l;
-        }();
-        if (lower.rfind("limit[", 0) == 0 && lower.back() == ']') {
-            int n = 0;
-            bool ok = lower.size() > 7;
-            for (std::size_t k = 6; k + 1 < lower.size(); ++k) {
-                if (lower[k] < '0' || lower[k] > '9') { ok = false; break; }
-                n = n * 10 + (lower[k] - '0');
-                if (n > 1000000) { ok = false; break; }
-            }
-            if (ok) return ParseResult{ false, Expr{ Column{}, Column{ Entry{ 1, omega_tower(n) } } } };
-        }
-        return std::nullopt;
-    }
+    if (raw.empty() || raw == "0" || raw == "∅") return ParseResult{};
     Expr out;
     std::size_t i = 0;
     while (i < raw.size()) {
@@ -565,7 +544,7 @@ inline std::optional<ParseResult> parse_expr(std::string_view text) {
         out.push_back(std::move(*col));
         i = endpos + 1;
     }
-    return ParseResult{ false, std::move(out) };
+    return ParseResult{ std::move(out) };
 }
 
 // ---------------------------------------------------------------------
@@ -591,7 +570,6 @@ inline std::string expr_to_plain(const Expr& e) {
     return out;
 }
 
-inline std::string infinity_display() { return "Limit"; }
 
 // ---------------------------------------------------------------------
 // 基本列机制（TS down / processRflCol / rfl / FS / shortExpansion / FSShort）
@@ -661,12 +639,6 @@ inline Expr fs(const Expr& src0, int m, bool shorter, bool strong) {
     return r;
 }
 
-inline Expr infinity_fs(int index) {
-    Expr e;
-    e.push_back(Column{});
-    e.push_back(Column{ Entry{ 1, omega_tower(index) } });
-    return e;
-}
 
 // TS shortExpansion（FS_equiv.fast 的截断用）。
 inline Expr short_expansion(const Expr& src0, bool strong) {
@@ -705,5 +677,45 @@ inline Expr fs_short(const Expr& src0, int m, bool strong) {
     const Expr first = fs(src0, 1, true, strong);
     return fs(src0, expr_compare(short_ex, first) == 0 ? m : m - 1, true, strong);
 }
+
+// ---------------------------------------------------------------------
+// 记号公共骨架：e0MN / strong e0MN
+//
+// 两个记号原本是两份逐字重复的包装器，唯一实质差异是 strong 开关
+// （shift_ord_numbers / down / short_expansion 的强弱版本）。
+// 本族不支持顶层 ∞（"Limit"/"Limit[n]"）输入，只处理普通表达式。
+// ---------------------------------------------------------------------
+struct E0MnExpr {
+    Expr expr;
+};
+
+template <bool kStrong>
+struct E0MnFamilyNotation : NotationBase {
+    [[nodiscard]] static std::string expand_text(std::string_view text, int term) {
+        if (term < 1) term = 1;
+        const auto parsed = parse(text);
+        if (!parsed) {
+            return "解析失败，请确认你没有使用全角括号，逗号，分号";
+        }
+
+        const Expr& e = parsed->expr;
+        if (e.empty()) return {};
+        if (!is_limit_expr(e)) {
+            return expr_to_plain(predecessor(e));
+        }
+        return expr_to_plain(fs(e, term, /*shorter=*/false, kStrong));
+    }
+
+    // 供测试 / 调试使用的解析与格式化。
+    [[nodiscard]] static std::optional<E0MnExpr> parse(std::string_view text) {
+        auto parsed = parse_expr(text);
+        if (!parsed) return std::nullopt;
+        return E0MnExpr{ std::move(parsed->expr) };
+    }
+
+    [[nodiscard]] static std::string to_string(const E0MnExpr& e) {
+        return expr_to_plain(e.expr);
+    }
+};
 
 } // namespace omegay::notation::mnordshare
